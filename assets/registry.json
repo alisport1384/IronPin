@@ -1,0 +1,2994 @@
+{
+  "report_date": "2026-11-05",
+  "report_date_jalali": "1405/08/14",
+  "scope_note": "فهرست گسترده منابع عمومی کشف‌شده؛ نه ادعای شمول همه فروشندگان، کانال‌های خصوصی یا همه ردیف‌های بازار. مشاهده یک‌روزه تضمین استمرار روزانه نیست.",
+  "sources": [
+    {
+      "id": "S01",
+      "name": "بورس کالای ایران",
+      "url": "https://www.ime.co.ir/",
+      "type": "رسمی / معاملات",
+      "coverage": "عرضه و معامله فولاد، میلگرد، تیرآهن، ورق، شمش و آهن اسفنجی؛ بسته به روز عرضه",
+      "priority": "مرجع اولیه",
+      "note": "واکشی مستقیم در این بررسی موفق نشد؛ مسیر مراجعه از راهنمای رسمی فولاد مبارکه تایید شد. قیمت پایه با قیمت پایانی و قیمت بازار آزاد متفاوت است.",
+      "evidence_url": "https://msc.ir/fa-IR/portal/4986/page/بورس-کالای-ایران",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S02",
+      "name": "فولاد مبارکه — راهنمای بورس",
+      "url": "https://msc.ir/fa-IR/portal/4986/page/بورس-کالای-ایران",
+      "type": "تولیدکننده / رسمی",
+      "coverage": "ورق و شرایط عرضه فولاد مبارکه",
+      "priority": "مرجع اولیه",
+      "note": "راهنمای رسمی مشاهده اطلاعیه عرضه و قیمت کشف‌شده؛ جدول نرخ روز بازار آزاد نیست.",
+      "evidence_url": "https://msc.ir/fa-IR/portal/4986/page/بورس-کالای-ایران",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S03",
+      "name": "گروه صنعتی شکفته",
+      "url": "https://www.shekofte.com/",
+      "type": "تولیدکننده / رسمی",
+      "coverage": "نبشی؛ ناودانی؛ سپری؛ محصولات مشهد و یزد",
+      "priority": "مرجع اولیه با کنترل تاریخ",
+      "note": "لیست قیمت و تفکیک محل تولید دارد؛ تاریخ دیده‌شده 1405/08/10 ساعت 11:00، نه روز گزارش.",
+      "evidence_url": "https://www.shekofte.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S04",
+      "name": "فولاد ناب تبریز",
+      "url": "https://www.nabsteel.com/",
+      "type": "تولیدکننده / رسمی",
+      "coverage": "نبشی؛ ناودانی؛ تیرآهن",
+      "priority": "مرجع اولیه با کنترل واحد",
+      "note": "صفحه قیمت با تاریخ 1405/8/14 دیده شد؛ سرصفحه «ریال» و برچسب ردیف‌ها «تومان» ناسازگار است؛ اعداد تا رفع ابهام واحد، مناسب ورود خودکار نیستند.",
+      "evidence_url": "https://www.nabsteel.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S05",
+      "name": "فولاد کویر کاشان",
+      "url": "https://kavirsteel.ir/contact",
+      "type": "تولیدکننده / رسمی",
+      "coverage": "میلگرد ساختمانی و صنعتی؛ کلاف",
+      "priority": "تایید فروش کارخانه",
+      "note": "تماس واحدهای صنعتی، ساختمانی و کلاف در سایت رسمی موجود است؛ صفحه اصلی Network Error نشان داد؛ وجود جدول عمومی روزانه تایید نشد.",
+      "evidence_url": "https://kavirsteel.ir/contact",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S06",
+      "name": "صنایع هفت الماس",
+      "url": "https://haftalmas.com/",
+      "type": "تولیدکننده / رسمی",
+      "coverage": "ورق گالوانیزه؛ سرد؛ رنگی؛ قلع‌اندود",
+      "priority": "تایید محصول/شرایط فروش",
+      "note": "محصولات در صفحه رسمی دیده شد؛ جدول عمومی نرخ روز در صفحه بررسی‌شده دیده نشد.",
+      "evidence_url": "https://haftalmas.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S07",
+      "name": "فولاد زرند ایرانیان — فروش داخلی",
+      "url": "https://zisco.midhco.com/fa/page/domestic_sales.html",
+      "type": "تولیدکننده / رسمی",
+      "coverage": "محصولات زنجیره فولاد عرضه‌شده توسط شرکت",
+      "priority": "مرجع اولیه عرضه",
+      "note": "راهنمای عرضه و معاملات شرکت در بورس؛ منبع نرخ خرده‌فروشی مقاطع نیست.",
+      "evidence_url": "https://zisco.midhco.com/fa/page/domestic_sales.html",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S08",
+      "name": "آهن ملل",
+      "url": "https://ahanmelal.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ مفتولی؛ شمش؛ آهن اسفنجی؛ فروآلیاژ",
+      "priority": "هسته پایش",
+      "note": "صفحه مستقیم و جدول‌های محصول بررسی شد؛ تفکیک کارخانه، بارگیری، واحد و تاریخ ردیف دارد. عنوان روز صفحه به معنی تازه بودن همه ردیف‌ها نیست.",
+      "evidence_url": "https://ahanmelal.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S09",
+      "name": "آهن پرایس",
+      "url": "https://ahanprice.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ ورق صنعتی و آلیاژی",
+      "priority": "هسته پایش",
+      "note": "جدول‌های میلگرد و تیرآهن و کانال‌های تخصصی شناسایی شد؛ دسترسی وب ابزار موفق و درخواست مستقیم گاهی timeout بود.",
+      "evidence_url": "https://ahanprice.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S10",
+      "name": "مرکزآهن",
+      "url": "https://www.markazeahan.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ مفتولی و پوشش",
+      "priority": "هسته پایش",
+      "note": "مشخصات محصول، واحد، محل بارگیری و گزینه ارزش افزوده؛ کانال‌های محصول با پیام روز گزارش دیده شد.",
+      "evidence_url": "https://www.markazeahan.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S11",
+      "name": "مدیران آهن",
+      "url": "https://www.modiranahan.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ آلیاژی؛ استیل؛ ریل",
+      "priority": "هسته پایش",
+      "note": "صفحه تیرآهن و هاش در جستجو و کانال روز گزارش تایید شد؛ درخواست مستقیم سایت timeout شد.",
+      "evidence_url": "https://www.modiranahan.com/price/steel-beam/beam",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S12",
+      "name": "آهن آنلاین",
+      "url": "https://ahanonline.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ استیل و آلیاژی",
+      "priority": "هسته پایش وب",
+      "note": "وب‌سایت پاسخ داد و جداول با تاریخ ردیف در دسترس جستجو بود؛ کانال اصلی تلگرام در نمای برگشتی قدیمی‌تر از کانال تخصصی ورق بود.",
+      "evidence_url": "https://ahanonline.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S13",
+      "name": "عصرآهن",
+      "url": "https://asreahan.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن؛ ورق؛ نبشی؛ ناودانی؛ پروفیل",
+      "priority": "هسته پایش",
+      "note": "قیمت برحسب کارخانه و کانال با پیام روز گزارش؛ برای پوشش برندهای شمال‌غرب در کنار منابع دیگر مناسب است.",
+      "evidence_url": "https://asreahan.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S14",
+      "name": "آهنگر",
+      "url": "https://ahangar.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "منبع مقایسه",
+      "note": "جداول و شرح کانال در جستجو دیده شد؛ درخواست مستقیم سایت timeout؛ لینک کانال مقاله به asroon می‌رود ولی نمای عمومی پیام نداد.",
+      "evidence_url": "https://ahangar.com/products/rebar/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S15",
+      "name": "فولادسل",
+      "url": "https://fooladsell.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ مفتولی؛ مواد اولیه",
+      "priority": "منبع مقایسه وب",
+      "note": "سایت پاسخ داد؛ کانال عمومی در نمای برگشتی تا سپتامبر 2026 بود، بنابراین روزانه بودن فعلی تلگرام تایید نشد.",
+      "evidence_url": "https://fooladsell.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S16",
+      "name": "فولاد ایرانیان",
+      "url": "https://www.fooladiranian.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ استیل؛ آلیاژی؛ ورق A516",
+      "priority": "هسته ورق تخصصی",
+      "note": "صفحات صنعتی و استیل شناسایی شد؛ تاریخ هر جدول کنترل شود.",
+      "evidence_url": "https://www.fooladiranian.com/productlist/ورق-a516/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S17",
+      "name": "فولاد ایرانیان — میز بورس",
+      "url": "https://www.fooladiranian.com/bourse/",
+      "type": "بازنشر / تحلیل بورس",
+      "coverage": "عرضه؛ پایه؛ پایانی؛ رقابت؛ حجم؛ شرایط تحویل",
+      "priority": "مقایسه با بورس رسمی",
+      "note": "صفحه مستقیم بررسی شد؛ آخرین معاملات 1405/08/13 را از امروز تفکیک می‌کند و بعضی پیوست‌های رسمی IME را لینک می‌دهد؛ خود بورس نیست.",
+      "evidence_url": "https://www.fooladiranian.com/bourse/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S18",
+      "name": "پیوان",
+      "url": "https://pivan.co/metal-landing/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "منبع مقایسه",
+      "note": "جدول‌های سایز، وزن تئوری، محل تحویل و دو حالت مالیاتی در نمای جستجو؛ سایت پاسخ داد.",
+      "evidence_url": "https://pivan.co/metal-landing/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S19",
+      "name": "آهن پخش",
+      "url": "https://www.ahanpakhsh.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "منبع مکمل مشروط به تازگی",
+      "note": "جداول و نوار تغییرات زمان‌دار در جستجو دیده شد؛ نمونه ایندکس قدیمی و درخواست مستقیم timeout؛ بدون کنترل تاریخ ردیف استفاده نشود.",
+      "evidence_url": "https://www.ahanpakhsh.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S20",
+      "name": "فولاد 24",
+      "url": "https://foolad24.com/",
+      "type": "بازارگاه / چندفروشنده‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل؛ موجودی و صورت‌بار",
+      "priority": "منبع مقایسه عرضه‌کنندگان",
+      "note": "قیمت فروشنده، موجودی و زمان به‌روزرسانی؛ قیمت‌های فروشندگان مستقل الزاماً معامله قطعی نیستند.",
+      "evidence_url": "https://foolad24.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S21",
+      "name": "آیرومارت",
+      "url": "https://iromart.com/",
+      "type": "فروشنده / صنعتی",
+      "coverage": "مقاطع طویل؛ ورق؛ مواد اولیه؛ تامین صنعتی",
+      "priority": "منبع تکمیلی",
+      "note": "صفحه اصلی فعلی بیشتر معرفی تامین و تولیدات بود؛ جدول عمومی کامل نرخ روز در همان صفحه دیده نشد؛ برای داده روزانه ابتدا صفحه محصول/واحد فروش بررسی شود.",
+      "evidence_url": "https://iromart.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S22",
+      "name": "آهن اینفو",
+      "url": "https://www.ahaninfo.ir/products/ورق-گالوانیزه",
+      "type": "فروشنده / تخصصی ورق",
+      "coverage": "ورق گرم، سرد، گالوانیزه، رنگی، اسیدشویی، کرکره",
+      "priority": "هسته ورق تخصصی",
+      "note": "صفحه گالوانیزه پاسخ داد؛ صفحات سیاه و کرکره نیز شناسایی شد. متن مقاله و نرخ ردیف ممکن است تاریخ متفاوت داشته باشند.",
+      "evidence_url": "https://www.ahaninfo.ir/products/ورق-گالوانیزه",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S23",
+      "name": "اصفهان آهن",
+      "url": "https://esfahanahan.com/steel/تیرآهن/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "تیرآهن؛ میلگرد؛ ورق؛ پروفیل و سایر مقاطع",
+      "priority": "منبع مقایسه",
+      "note": "جداول با ریال و ارزش افزوده در سرستون دیده شد؛ با تومان منابع دیگر مستقیم مقایسه نشود؛ درخواست مستقیم timeout.",
+      "evidence_url": "https://esfahanahan.com/steel/تیرآهن/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S24",
+      "name": "امروز آهن",
+      "url": "https://emroozahan.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن؛ نبشی؛ ناودانی و سایر مقاطع",
+      "priority": "منبع مقایسه",
+      "note": "سایت پاسخ داد؛ نمایش حالت فاکتور عادی و مالیاتی در جستجو؛ مبنای فاکتور هر محصول بررسی شود.",
+      "evidence_url": "https://emroozahan.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S25",
+      "name": "آهن صد",
+      "url": "https://ahan100.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "منبع مقایسه",
+      "note": "سایت پاسخ داد؛ قیمت بازار و قیمت فروش مجموعه را جدا نمایش می‌دهد.",
+      "evidence_url": "https://ahan100.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S26",
+      "name": "وب آهن",
+      "url": "https://webahan.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن؛ هاش؛ ورق؛ پروفیل؛ نبشی؛ ناودانی",
+      "priority": "منبع مکمل",
+      "note": "جداول با گزینه مالیات دیده شد؛ درخواست مستقیم timeout؛ زمان تازگی ردیف بررسی شود.",
+      "evidence_url": "https://webahan.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S27",
+      "name": "فولاد کاویان — بازرگانی",
+      "url": "https://kaviaan.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "منبع مکمل",
+      "note": "سایت پاسخ داد؛ برخی ردیف‌های ایندکس‌شده قدیمی‌اند. این دامنه با وب‌سایت خود کارخانه فولاد کاویان یکسان فرض نشده است.",
+      "evidence_url": "https://kaviaan.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S28",
+      "name": "آهن اینجا",
+      "url": "https://ahaninja.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "منبع مکمل",
+      "note": "سایت پاسخ داد؛ جداول آنالیز، سایز، بارگیری و واحد در جستجو دیده شد.",
+      "evidence_url": "https://ahaninja.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S29",
+      "name": "آهن‌چی",
+      "url": "https://ahanchee.com/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "منبع مکمل مشروط",
+      "note": "منو و جداول قیمت در جستجو دیده شد؛ نمونه تاریخ صفحه قدیمی؛ درخواست مستقیم timeout؛ روزانه بودن فعلی تایید نشده.",
+      "evidence_url": "https://ahanchee.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S30",
+      "name": "شهرآهن",
+      "url": "https://www.shahrahan.com/sheet",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "ورق؛ مقاطع ساختمانی؛ فولاد آلیاژی؛ محصولات کارخانه‌ها",
+      "priority": "منبع تخصصی/مقایسه",
+      "note": "صفحات ورق، آلیاژی و شکفته و ناب تبریز در جستجو دیده شد؛ درخواست مستقیم timeout.",
+      "evidence_url": "https://www.shahrahan.com/sheet",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S31",
+      "name": "فولاد حامیران",
+      "url": "https://hamiransteel.com/alloy-steel/heat-treatable/mo40",
+      "type": "فروشنده / تخصصی",
+      "coverage": "فولاد آلیاژی؛ MO40؛ A105؛ صنعتی؛ میلگرد صنعتی",
+      "priority": "هسته آلیاژی",
+      "note": "جداول گرید و سازنده در جستجو؛ معمولاً ریال در نمونه‌ها؛ درخواست مستقیم timeout؛ نرخ و وضعیت موجودی تلفنی تایید شود.",
+      "evidence_url": "https://hamiransteel.com/alloy-steel/heat-treatable/mo40",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S32",
+      "name": "تجارت آلیاژ",
+      "url": "https://www.tejarataliaj.com/قیمت-فولاد/",
+      "type": "فروشنده / تخصصی",
+      "coverage": "عملیات حرارتی؛ ابزار؛ فنر؛ سمانته؛ استیل و ورق صنعتی",
+      "priority": "هسته آلیاژی/استیل",
+      "note": "جدول گریدهای متنوع و واحد ریال در جستجو؛ صفحه استیل نیز جدول دارد؛ درخواست مستقیم timeout.",
+      "evidence_url": "https://www.tejarataliaj.com/قیمت-فولاد/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S33",
+      "name": "ایران ضایعات",
+      "url": "https://iranzayeat.com/",
+      "type": "بازارگاه / قراضه",
+      "coverage": "قراضه آهن؛ درجه‌بندی؛ ورق روغنی؛ سفاله؛ پرسی؛ چدن",
+      "priority": "هسته ضایعات",
+      "note": "تفکیک خرده‌بار/عمده‌بار و مبنای تحویل؛ نرخ خرید ضایعات را با نرخ فروش مقطع نو ادغام نکنید.",
+      "evidence_url": "https://iranzayeat.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S34",
+      "name": "بورس آهن اصفهان",
+      "url": "https://bourse-ahan.com/",
+      "type": "فروشنده / نه بورس رسمی",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "priority": "مشروط / مانع دسترسی",
+      "note": "جداول در جستجو دیده شد ولی درخواست مستقیم 403 داشت؛ نام «بورس» به معنی وابستگی به بورس کالای ایران نیست.",
+      "evidence_url": "https://bourse-ahan.com/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S35",
+      "name": "آهن اسپات",
+      "url": "https://ahanspot.com/cat/round-bar/ribbed/",
+      "type": "فروشنده / چندکارخانه‌ای",
+      "coverage": "میلگرد آجدار؛ برند و سایز",
+      "priority": "قدیمی / خارج هسته",
+      "note": "صفحه پاسخ 200 و جدول داشت؛ نمونه زمان جستجو 1405/04/22 و ارقام ناسازگار با منابع جدیدتر؛ برای روز جاری بدون تایید مستقل استفاده نشود.",
+      "evidence_url": "https://ahanspot.com/cat/round-bar/ribbed/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S36",
+      "name": "آهنک",
+      "url": "https://ahanak.com/cat/varagh/",
+      "type": "فروشنده / سابقه ایندکس",
+      "coverage": "ورق و مقاطع؛ دانلود اکسل در نمونه ایندکس‌شده",
+      "priority": "خارج هسته / تعلیق",
+      "note": "در بازدید مستقیم به صفحه Account Suspended رفت؛ برای پایش روزانه فعلی قابل اتکا نیست.",
+      "evidence_url": "https://ahanak.com/cat/varagh/",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S37",
+      "name": "PersianAPI — بازار آهن‌آلات",
+      "url": "https://persianapi.com/product/بازار-آهن-آلات/",
+      "type": "عرضه‌کننده API / ادعای ایندکس",
+      "coverage": "میلگرد؛ تیرآهن؛ هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ مفتولی",
+      "priority": "تاییدنشده / 404",
+      "note": "نتیجه جستجو JSON/XML و هر 10 دقیقه را ذکر می‌کند؛ صفحه مستقیم 404 داد؛ سرویس و مستندات عملیاتی تایید نشد؛ اشتراک و endpoint توصیه قطعی نشده است.",
+      "evidence_url": "https://persianapi.com/product/بازار-آهن-آلات/",
+      "checked_date": "2026-11-05"
+    }
+  ],
+  "telegram_channels": [
+    {
+      "owner": "آهن ملل",
+      "handle": "ahanmelal",
+      "url": "https://t.me/ahanmelal",
+      "web_url": "https://t.me/s/ahanmelal",
+      "coverage": "تمام گروه‌های اصلی؛ مواد اولیه؛ مفتولی",
+      "latest_visible_date": "2026-11-05T09:39:04+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanmelal.com/",
+      "note": ""
+    },
+    {
+      "owner": "آهن پرایس",
+      "handle": "ahanprice",
+      "url": "https://t.me/ahanprice",
+      "web_url": "https://t.me/s/ahanprice",
+      "coverage": "عمومی؛ نرخ و جهت تغییر",
+      "latest_visible_date": "2026-11-05T08:16:00+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanprice.com/Blog/-کانال-قیمت-لحظه‌ای-آهن-آلات/Post/5238",
+      "note": ""
+    },
+    {
+      "owner": "آهن پرایس",
+      "handle": "MilgerdPrice",
+      "url": "https://t.me/MilgerdPrice",
+      "web_url": "https://t.me/s/MilgerdPrice",
+      "coverage": "میلگرد",
+      "latest_visible_date": "2026-11-04T11:17:12+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanprice.com/Blog/-کانال-قیمت-لحظه‌ای-آهن-آلات/Post/5238",
+      "note": ""
+    },
+    {
+      "owner": "آهن پرایس",
+      "handle": "Tirahanprice",
+      "url": "https://t.me/Tirahanprice",
+      "web_url": "https://t.me/s/Tirahanprice",
+      "coverage": "تیرآهن و هاش",
+      "latest_visible_date": "2026-11-04T11:17:49+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanprice.com/Blog/-کانال-قیمت-لحظه‌ای-آهن-آلات/Post/5238",
+      "note": ""
+    },
+    {
+      "owner": "آهن پرایس",
+      "handle": "VaraghPrice",
+      "url": "https://t.me/VaraghPrice",
+      "web_url": "https://t.me/s/VaraghPrice",
+      "coverage": "انواع ورق",
+      "latest_visible_date": "2026-11-04T11:17:40+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanprice.com/Blog/-کانال-قیمت-لحظه‌ای-آهن-آلات/Post/5238",
+      "note": ""
+    },
+    {
+      "owner": "آهن پرایس",
+      "handle": "L_Uprice",
+      "url": "https://t.me/L_Uprice",
+      "web_url": "https://t.me/s/L_Uprice",
+      "coverage": "نبشی و ناودانی",
+      "latest_visible_date": "2026-11-04T11:17:30+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanprice.com/Blog/-کانال-قیمت-لحظه‌ای-آهن-آلات/Post/5238",
+      "note": ""
+    },
+    {
+      "owner": "آهن پرایس",
+      "handle": "ProfilePrice",
+      "url": "https://t.me/ProfilePrice",
+      "web_url": "https://t.me/s/ProfilePrice",
+      "coverage": "قوطی و پروفیل",
+      "latest_visible_date": "2026-11-04T11:17:17+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanprice.com/Blog/-کانال-قیمت-لحظه‌ای-آهن-آلات/Post/5238",
+      "note": ""
+    },
+    {
+      "owner": "آهن پرایس",
+      "handle": "LoolePrice",
+      "url": "https://t.me/LoolePrice",
+      "web_url": "https://t.me/s/LoolePrice",
+      "coverage": "لوله",
+      "latest_visible_date": "2026-11-04T11:17:23+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://ahanprice.com/Blog/-کانال-قیمت-لحظه‌ای-آهن-آلات/Post/5238",
+      "note": ""
+    },
+    {
+      "owner": "مرکزآهن",
+      "handle": "markazeahan",
+      "url": "https://t.me/markazeahan",
+      "web_url": "https://t.me/s/markazeahan",
+      "coverage": "عمومی",
+      "latest_visible_date": "2026-11-05T09:39:09+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://www.markazeahan.com/social/",
+      "note": ""
+    },
+    {
+      "owner": "مرکزآهن",
+      "handle": "markazeahan1",
+      "url": "https://t.me/markazeahan1",
+      "web_url": "https://t.me/s/markazeahan1",
+      "coverage": "میلگرد و تیرآهن",
+      "latest_visible_date": "2026-11-05T09:23:20+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/markazeahan",
+      "note": ""
+    },
+    {
+      "owner": "مرکزآهن",
+      "handle": "markazeahan2",
+      "url": "https://t.me/markazeahan2",
+      "web_url": "https://t.me/s/markazeahan2",
+      "coverage": "قوطی، پروفیل و لوله",
+      "latest_visible_date": "2026-11-05T09:39:09+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/markazeahan",
+      "note": ""
+    },
+    {
+      "owner": "مرکزآهن",
+      "handle": "markazeahan3",
+      "url": "https://t.me/markazeahan3",
+      "web_url": "https://t.me/s/markazeahan3",
+      "coverage": "نبشی، ناودانی و تیرآهن",
+      "latest_visible_date": "2026-11-05T09:23:21+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/markazeahan",
+      "note": ""
+    },
+    {
+      "owner": "مرکزآهن",
+      "handle": "markazeahan4",
+      "url": "https://t.me/markazeahan4",
+      "web_url": "https://t.me/s/markazeahan4",
+      "coverage": "ورق سیاه، گالوانیزه و رنگی",
+      "latest_visible_date": "2026-11-05T09:37:25+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/markazeahan",
+      "note": ""
+    },
+    {
+      "owner": "مدیران آهن",
+      "handle": "modiranahan_z",
+      "url": "https://t.me/modiranahan_z",
+      "web_url": "https://t.me/s/modiranahan_z",
+      "coverage": "میلگرد؛ تیرآهن؛ ورق؛ نبشی؛ ناودانی؛ لوله و پروفیل",
+      "latest_visible_date": "2026-11-05T08:13:00+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/modiranahan_z",
+      "note": ""
+    },
+    {
+      "owner": "عصرآهن",
+      "handle": "asreahancom",
+      "url": "https://t.me/asreahancom",
+      "web_url": "https://t.me/s/asreahancom",
+      "coverage": "میلگرد؛ تیرآهن؛ نبشی؛ ناودانی؛ پروفیل",
+      "latest_visible_date": "2026-11-05T09:01:26+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://asreahan.com/contact-us",
+      "note": ""
+    },
+    {
+      "owner": "آهن آنلاین",
+      "handle": "ahan_online",
+      "url": "https://t.me/ahan_online",
+      "web_url": "https://t.me/s/ahan_online",
+      "coverage": "عمومی",
+      "latest_visible_date": "2026-05-09T11:37:43+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/ahan_online",
+      "note": "تازه‌ترین پیام برگشتی قدیمی بود؛ سایت را جایگزین کانال اصلی در هسته کنید."
+    },
+    {
+      "owner": "آهن آنلاین",
+      "handle": "AO_Thin_plate",
+      "url": "https://t.me/AO_Thin_plate",
+      "web_url": "https://t.me/s/AO_Thin_plate",
+      "coverage": "گالوانیزه؛ رنگی؛ روغنی؛ اسیدشویی",
+      "latest_visible_date": "2026-11-01T05:22:35+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/ahan_online",
+      "note": ""
+    },
+    {
+      "owner": "آهن آنلاین",
+      "handle": "Ao_pipe_box",
+      "url": "https://t.me/Ao_pipe_box",
+      "web_url": "https://t.me/s/Ao_pipe_box",
+      "coverage": "لوله؛ اتصالات؛ پروفیل",
+      "latest_visible_date": "2026-02-25T08:38:37+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/ahan_online",
+      "note": ""
+    },
+    {
+      "owner": "فولادسل",
+      "handle": "Fooladsell",
+      "url": "https://t.me/Fooladsell",
+      "web_url": "https://t.me/s/Fooladsell",
+      "coverage": "میلگرد؛ تیرآهن؛ ورق؛ پروفیل؛ لوله",
+      "latest_visible_date": "2026-09-16T08:46:05+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/Fooladsell",
+      "note": ""
+    },
+    {
+      "owner": "فولاد کویر",
+      "handle": "kavirsteel",
+      "url": "https://t.me/kavirsteel",
+      "web_url": "https://t.me/s/kavirsteel",
+      "coverage": "میلگرد ساده و صنعتی؛ ساختمانی؛ کلاف",
+      "latest_visible_date": "2026-09-26T12:11:34+00:00",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "provenance_url": "https://t.me/s/kavirsteel",
+      "note": ""
+    },
+    {
+      "owner": "آهنگر — لینک مقاله",
+      "handle": "asroon",
+      "url": "https://t.me/asroon",
+      "web_url": "https://t.me/s/asroon",
+      "coverage": "مقاطع ساختمانی طبق مقاله",
+      "latest_visible_date": "پیش‌نمایش عمومی ندارد",
+      "status": "HTTP 200 ولی پیش‌نمایش عمومی پیام مشاهده نشد؛ فعال فرض نشود",
+      "provenance_url": "https://ahangar.com/mag/social-channels/",
+      "note": "صرف وجود لینک در مقاله، فعال بودن کانال فعلی را ثابت نمی‌کند."
+    },
+    {
+      "owner": "گروه صنعتی شکفته",
+      "handle": "shekoftegroup",
+      "url": "https://t.me/shekoftegroup",
+      "web_url": "https://t.me/s/shekoftegroup",
+      "coverage": "نبشی؛ ناودانی؛ سپری",
+      "latest_visible_date": "پیش‌نمایش عمومی ندارد",
+      "status": "HTTP 200 ولی پیش‌نمایش عمومی پیام مشاهده نشد؛ فعال فرض نشود",
+      "provenance_url": "https://www.shekofte.com/لیست-قیمت",
+      "note": "لینک از سایت رسمی است؛ نمای عمومی پیام استخراج‌پذیر نداد."
+    },
+    {
+      "handle": "mashhadfoolad1",
+      "owner": "مشهد فولاد توس",
+      "url": "https://t.me/s/mashhadfoolad1",
+      "coverage": "مقاطع فولادی مشهد",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "latest_visible_date": "2026-11-05T08:31:59+00:00"
+    },
+    {
+      "handle": "ahanresan",
+      "owner": "آهن‌رسان",
+      "url": "https://t.me/s/ahanresan",
+      "coverage": "مقاطع فولادی مشهد",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "latest_visible_date": "2026-01-06T08:51:16+00:00"
+    },
+    {
+      "handle": "ahanemashhad",
+      "owner": "آهن‌آلات مهران — ویژه مشهد",
+      "url": "https://t.me/s/ahanemashhad",
+      "coverage": "مقاطع فولادی مشهد",
+      "status": "پیش‌نمایش عمومی مشاهده شد؛ تاریخ فوق زمان انتشار است نه تأیید نرخ روز",
+      "latest_visible_date": "2026-11-05T06:31:10+00:00"
+    },
+    {
+      "handle": "tikahan",
+      "owner": "تیک آهن — رسمی بودن کانال تأیید نشد",
+      "url": "https://t.me/s/tikahan",
+      "coverage": "مقاطع فولادی مشهد",
+      "status": "HTTP 200 ولی پیش‌نمایش عمومی پیام مشاهده نشد؛ فعال فرض نشود",
+      "latest_visible_date": "پیش‌نمایش عمومی ندارد"
+    },
+    {
+      "handle": "ahanalatehoseini",
+      "owner": "بنیان فولاد قوام حسینی",
+      "url": "https://t.me/s/ahanalatehoseini",
+      "coverage": "مقاطع فولادی مشهد",
+      "status": "HTTP 200 ولی پیش‌نمایش عمومی پیام مشاهده نشد؛ فعال فرض نشود",
+      "latest_visible_date": "پیش‌نمایش عمومی ندارد"
+    },
+    {
+      "owner": "نوین پارس",
+      "handle": "novinparsgroup",
+      "url": "https://t.me/s/novinparsgroup",
+      "coverage": "مقاطع فولادی",
+      "status": "لینک در معرفی رسمی/متقابل؛ نتیجه دریافت مستقیم در ممیزی0.3.0 ثبت می‌شود",
+      "latest_visible_date": "تازگی مستقل تأیید نشده",
+      "provenance_url": "https://novinpars.com/"
+    },
+    {
+      "owner": "هایپر آهن",
+      "handle": "hayperahan",
+      "url": "https://t.me/s/hayperahan",
+      "coverage": "مقاطع فولادی",
+      "status": "لینک در معرفی رسمی/متقابل؛ نتیجه دریافت مستقیم در ممیزی0.3.0 ثبت می‌شود",
+      "latest_visible_date": "تازگی مستقل تأیید نشده",
+      "provenance_url": "https://eitaa.com/hayperahan"
+    },
+    {
+      "owner": "رادمان آهن",
+      "handle": "radmanahan",
+      "url": "https://t.me/s/radmanahan",
+      "coverage": "مقاطع فولادی",
+      "status": "لینک در معرفی رسمی/متقابل؛ نتیجه دریافت مستقیم در ممیزی0.3.0 ثبت می‌شود",
+      "latest_visible_date": "تازگی مستقل تأیید نشده",
+      "provenance_url": "https://radmanahan.ir/contact-us/"
+    },
+    {
+      "owner": "آهن‌آلات حیدری",
+      "handle": "FIAHAN",
+      "url": "https://t.me/s/FIAHAN",
+      "coverage": "مقاطع فولادی",
+      "status": "لینک در معرفی رسمی/متقابل؛ نتیجه دریافت مستقیم در ممیزی0.3.0 ثبت می‌شود",
+      "latest_visible_date": "تازگی مستقل تأیید نشده",
+      "provenance_url": "https://eitaa.com/fiahan1"
+    },
+    {
+      "owner": "آهن صد",
+      "handle": "atifoolad",
+      "url": "https://t.me/s/atifoolad",
+      "coverage": "مقاطع فولادی",
+      "status": "لینک در معرفی رسمی/متقابل؛ نتیجه دریافت مستقیم در ممیزی0.3.0 ثبت می‌شود",
+      "latest_visible_date": "تازگی مستقل تأیید نشده",
+      "provenance_url": "https://ahan100.com/blog/rebar-price-telegram-channel/"
+    }
+  ],
+  "other_channels": [
+    {
+      "owner": "آهن آنلاین",
+      "platform": "بله",
+      "url": "https://ble.ir/ahanonlineofficial",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "status": "معرفی‌شده در کانال؛ محتوا و تازگی مستقل بررسی نشد",
+      "provenance_url": "https://t.me/s/ahan_online",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "مدیران آهن",
+      "platform": "بله",
+      "url": "https://ble.ir/modiranahan",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "status": "لینک در پیام روز گزارش؛ محتوا مستقل بررسی نشد",
+      "provenance_url": "https://t.me/s/modiranahan_z",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "مدیران آهن",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/modiranahan",
+      "coverage": "میلگرد؛ تیرآهن/هاش؛ ورق؛ نبشی؛ ناودانی؛ لوله؛ قوطی/پروفیل",
+      "status": "پیش‌نمایش عمومی با پست۱۴آبان۱۴۰۵ مشاهده شد؛ مبنای kg قیمت‌ها صریح نیست و عددی نشده است",
+      "provenance_url": "https://t.me/s/modiranahan_z",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "گروه شکفته",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/shekoftehsigmashhad",
+      "coverage": "نبشی؛ ناودانی؛ سپری",
+      "status": "معرفی رسمی؛ محتوای فعلی مستقل بررسی نشد",
+      "provenance_url": "https://www.shekofte.com/لیست-قیمت",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "گروه شکفته",
+      "platform": "واتساپ",
+      "url": "https://www.whatsapp.com/channel/0029Vay85UeElah1MIGrFV2u",
+      "coverage": "نبشی؛ ناودانی؛ سپری",
+      "status": "معرفی رسمی؛ محتوای فعلی مستقل بررسی نشد",
+      "provenance_url": "https://www.shekofte.com/لیست-قیمت",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "پیوان",
+      "platform": "بله",
+      "url": "https://ble.ir/pivanco",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://pivan.co/metal-landing/",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینفو",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/@ahaninfoadmin",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://www.ahaninfo.ir/products/ورق-گالوانیزه",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینفو",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/Galvanizeahaninfo",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://www.ahaninfo.ir/products/ورق-گالوانیزه",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن صد",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/ahan100marketing",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahan100.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن صد",
+      "platform": "بله",
+      "url": "https://ble.ir/ahan100admin",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahan100.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/989139595788",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/989139595788",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "بله",
+      "url": "https://ble.ir/989139595788",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/989139595847",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/989139595847",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "بله",
+      "url": "https://ble.ir/989139595847",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/989139595073",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/989139595073",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "بله",
+      "url": "https://ble.ir/989139595073",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/989139595076",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/989139595076",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "بله",
+      "url": "https://ble.ir/989139595076",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "ارتباط فروش",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن اینجا",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/ahaninja1",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahaninja.com/",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن صد",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/Ahan100",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahan100.com/blog/rebar-price-telegram-channel/",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن صد",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/ahan100",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahan100.com/blog/rebar-price-telegram-channel/",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن صد",
+      "platform": "بله",
+      "url": "https://ble.ir/ahan100",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "لینک در صفحه مجموعه دیده شد؛ دریافت مستقیم مقصد در این محیط عمدتاً timeout داشت",
+      "provenance_url": "https://ahan100.com/blog/rebar-price-telegram-channel/",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "نوین پارس",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/novinparsgroup/",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "معرفی رسمی در سایت؛ لیست پست روبیکا مستقلاً بررسی نشده",
+      "provenance_url": "https://novinpars.com/",
+      "city": "مشهد",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "نوین پارس",
+      "platform": "بله",
+      "url": "https://ble.ir/s/novinparsgroup",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "پیش‌نمایش عمومی با پست۱۴آبان۱۴۰۵ مشاهده شد؛ ارز/واحد قیمت نیازمندتأیید",
+      "provenance_url": "https://novinpars.com/",
+      "city": "مشهد",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "رادمان آهن",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/radmanahan",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "شناسه در صفحه تماس رسمی؛ محتوای مقصد مستقیم در محیط دریافت نشد",
+      "provenance_url": "https://radmanahan.ir/contact-us/",
+      "city": "مشهد",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "رادمان آهن",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/radmanahan",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "شناسه در صفحه تماس رسمی؛ محتوای مقصد مستقیم در محیط دریافت نشد",
+      "provenance_url": "https://radmanahan.ir/contact-us/",
+      "city": "مشهد",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "هایپر آهن",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/hayperahan",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "پیش‌نمایش عمومی و نشانی طرحچی۲۵؛ پست نمونه۱۴۰۴قدیمی است",
+      "provenance_url": "https://eitaa.com/hayperahan",
+      "city": "مشهد",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "هایپر آهن",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/hayperahan",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "صفحه معرفی مشاهده شد؛ پاسخ مرورگر لیست پست نداشت",
+      "provenance_url": "https://eitaa.com/hayperahan",
+      "city": "مشهد",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "تیک آهن",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/tikahan",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "نام کانال در صفحه ورق سایت معرفی شده؛ محتوای مقصد احراز نشد",
+      "provenance_url": "https://tikahan.com/قیمت-ورق/",
+      "city": "مشهد",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن‌آلات حیدری",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/fiahan1",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "معرفی متقابل در پیام عمومی؛ واحد/زمان هر ردیف باید بررسی شود",
+      "provenance_url": "https://t.me/s/FIAHAN",
+      "city": "تهران",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن‌آلات حیدری",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/fiahan_com",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "معرفی در کانال مجموعه؛ مقصد در محیط مستقیم timeout",
+      "provenance_url": "https://t.me/s/FIAHAN",
+      "city": "تهران",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن‌آلات حیدری",
+      "platform": "بله",
+      "url": "https://ble.ir/fiahan",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "پروفایل عمومی دارای نشانی شادآباد و لینک پیش‌نمایش مشاهده شد",
+      "provenance_url": "https://t.me/s/FIAHAN",
+      "city": "تهران",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "سامانه آهن",
+      "platform": "ایتا",
+      "url": "https://eitaa.com/samaneahan_com",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "ناشر پیشنهاد چند فروشنده؛ یک فروشنده مستقل مشهد محسوب نمی‌شود",
+      "provenance_url": "https://eitaa.com/samaneahan_com",
+      "city": "نامشخص",
+      "kind": "واسطه",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "سامانه آهن",
+      "platform": "بله",
+      "url": "https://ble.ir/join/Y2IyNTRkN2",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "سرنخ نمایه جستجو؛ در پیش‌نمایش فعلی ایتا دیده نشد؛ مقصد و مالکیت مستقل تأیید نشده است",
+      "provenance_url": "https://eitaa.com/samaneahan_com",
+      "city": "نامشخص",
+      "kind": "پیوند عضویت",
+      "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "آهن روز",
+      "platform": "بله",
+      "url": "https://ble.ir/ahaneroz",
+      "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
+      "status": "سرنخ جستجو؛ دریافت مستقیم timeout؛ هویت دفتر و تازگی احراز نشد",
+      "provenance_url": "https://ble.ir/ahaneroz",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "observed_at": "2026-11-05"
+    }
+  ],
+  "product_pages": [
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد ذوب آهن اصفهان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/esfahan-zobahan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار راد همدان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/rad-hamedan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار سرمد ابرکوه",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/sarmad-abarkooh-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار زاگرس",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/zagros-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار سیرجان حدید جنوب",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/sirjan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار آریان فولاد",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/arian-foolad-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار نیشابور",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/neishaboor-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار سیادن ابهر",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/siadan-abhar-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار ظفر بناب",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/zafar-bonab-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار آذر امین",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/azar-amin-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد شاهین بناب",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/shahin-bonab-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار هشترود",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/hashtrood-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار پرشین فولاد",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/persian-foolad-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار تیکمه داش",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/tikme-dash-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار درپاد تبریز",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/dorpad-tabriz-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار نورد سمنان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/semnan-navard-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار جهان فولاد سیرجان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/jahan-foolad-sirjan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار کیان فولاد ابهر",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/kian-foolad-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار آناهیتا گیلان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/anahita-gilan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار میانه",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/miane-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار فولاد پارس سیستان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/foolad-pars-sistan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد پردیس آذربایجان | قیمت میلگرد سلفچگان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/pardis-salafchegan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار امیرکبیر خزر",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/amir-kabir-khazar-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار صائب",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/saeb-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار خلیج فارس",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/khalij-fars-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار هیربد زرندیه",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/hirbod-zarandieh-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار بافق یزد",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/bafgh-yazd-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار حسن رود",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/hassan-rood-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار خرمدشت تاکستان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/khorramdasht-takestan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار پارس آرمان شفق",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/pars-arman-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار گلستان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/golestan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار سپهر ایرانیان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/sepehr-iranian-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار قزوین",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/qazvin-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار فایکو",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/faico-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار عتیق آذر سهند (تاکستان)",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/atigh-azar-sahand-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار جهان فولاد غرب",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/jahan-foolad-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار نورد کرمان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/navard-kerman-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار قائم رازی",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/ghaem-razi-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار ارگ تبریز",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/arg-tabriz-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار روهینا جنوب دزفول",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/rouhina-jonoob-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار شاهرود",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/shahrood-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار احرامیان یزد",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/ehramian-yazd-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار کویر کاشان",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/kavir-kashan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار گروه ملی صنعتی فولاد ایران",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/national-group-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار آریا فولاد تاکستان (آریا تاک)",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/aria-foolad-takestan-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار اردبیل",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/ardebil-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار البرز غرب",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/alborz-gharb-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "میلگرد آجدار به تفکیک برند",
+      "title": "قیمت میلگرد آجدار نورد نوین ابهر",
+      "url": "https://ahanmelal.com/rebar/ribbed-rebar-price/novin-abhar-rebar",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه",
+      "url": "https://ahanmelal.com/steel-sheet/steel-black-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق روغنی",
+      "url": "https://ahanmelal.com/steel-sheet/steel-oil-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق گالوانیزه",
+      "url": "https://ahanmelal.com/steel-sheet/galvanized-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق اسیدشویی",
+      "url": "https://ahanmelal.com/steel-sheet/acid-wash-steel-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق عرشه فولادی",
+      "url": "https://ahanmelal.com/steel-sheet/steel-deck-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق آجدار",
+      "url": "https://ahanmelal.com/steel-sheet/steel-corrugated-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق رنگی",
+      "url": "https://ahanmelal.com/steel-sheet/steel-color-coated-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق آلومینیوم",
+      "url": "https://ahanmelal.com/steel-sheet/aluminum-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق استنلس استیل",
+      "url": "https://ahanmelal.com/steel-sheet/stainless-steel-sheet-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق ST-52",
+      "url": "https://ahanmelal.com/steel-sheet/st-52",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت تسمه فولادی",
+      "url": "https://ahanmelal.com/steel-sheet/steel-belts-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه فولاد مبارکه اصفهان",
+      "url": "https://ahanmelal.com/steel-sheet/steel-black-sheet-price/mobarakeh-black-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه st52 فولاد مبارکه اصفهان",
+      "url": "https://ahanmelal.com/steel-sheet/st-52/mobarakeh-st52-black-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه فولاد سبا",
+      "url": "https://ahanmelal.com/steel-sheet/steel-black-sheet-price/foolad-saba-black-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق رنگی فولاد مبارکه اصفهان",
+      "url": "https://ahanmelal.com/steel-sheet/steel-color-coated-sheet-price/mobarakeh-colored-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق روغنی فولاد مبارکه اصفهان",
+      "url": "https://ahanmelal.com/steel-sheet/steel-oil-sheet-price/mobarakeh-oiled-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه اکسین",
+      "url": "https://ahanmelal.com/steel-sheet/steel-black-sheet-price/oxin-black-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه کاویان اهواز",
+      "url": "https://ahanmelal.com/steel-sheet/steel-black-sheet-price/kavian-steel-black-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه st52 اکسین",
+      "url": "https://ahanmelal.com/steel-sheet/st-52/st52-oxin-black-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه گیلان",
+      "url": "https://ahanmelal.com/steel-sheet/steel-black-sheet-price/gilan-black-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق گالوانیزه کاشان",
+      "url": "https://ahanmelal.com/steel-sheet/galvanized-sheet-price/kashan-galvanized-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق گالوانیزه تاراز چهارمحال",
+      "url": "https://ahanmelal.com/steel-sheet/galvanized-sheet-price/taraz-galvanized-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق گالوانیزه خودرو شهرکرد",
+      "url": "https://ahanmelal.com/steel-sheet/galvanized-sheet-price/khodro-galvanized-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق گالوانیزه هفت الماس",
+      "url": "https://ahanmelal.com/steel-sheet/galvanized-sheet-price/haft-almas-galvanized-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق رنگی هفت الماس",
+      "url": "https://ahanmelal.com/steel-sheet/steel-color-coated-sheet-price/haft-almas-colored-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق اسیدشویی فولاد مبارکه اصفهان",
+      "url": "https://ahanmelal.com/steel-sheet/acid-wash-steel-sheet-price/mobarakeh-acid-washed-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت عرشه فولادی کاشان",
+      "url": "https://ahanmelal.com/steel-sheet/steel-deck-sheet-price/kashan-steel-deck-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت عرشه فولادی خودرو شهرکرد",
+      "url": "https://ahanmelal.com/steel-sheet/steel-deck-sheet-price/khodro-steel-deck-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت عرشه فولادی تاراز چهارمحال",
+      "url": "https://ahanmelal.com/steel-sheet/steel-deck-sheet-price/taraz-steel-deck-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت عرشه فولادی هفت الماس",
+      "url": "https://ahanmelal.com/steel-sheet/steel-deck-sheet-price/haft-almas-steel-deck-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق شیت آجدار پرسی",
+      "url": "https://ahanmelal.com/steel-sheet/steel-corrugated-sheet-price/pressed-ribbed-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق آجدار فولاد مبارکه",
+      "url": "https://ahanmelal.com/steel-sheet/steel-corrugated-sheet-price/mobarakeh-ribbed-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق آجدار گیلان",
+      "url": "https://ahanmelal.com/steel-sheet/steel-corrugated-sheet-price/gilan-ribbed-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق استنلس استیل 304",
+      "url": "https://ahanmelal.com/steel-sheet/stainless-steel-sheet-price/304-steel-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق آلومینیوم پارس",
+      "url": "https://ahanmelal.com/steel-sheet/aluminum-sheet-price/pars-aluminium-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق استنلس استیل 316",
+      "url": "https://ahanmelal.com/steel-sheet/stainless-steel-sheet-price/316-steel-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت تسمه فولادی کوهپایه",
+      "url": "https://ahanmelal.com/steel-sheet/steel-belts-price/koohpayeh-belts",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق سیاه آریا ذوب",
+      "url": "https://ahanmelal.com/steel-sheet/steel-black-sheet-price/ariyazob-hot-rolled-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت ورق گالوانیزه فولاد مبارکه",
+      "url": "https://ahanmelal.com/steel-sheet/galvanized-sheet-price/mobarakeh-galvanized-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ورق / تسمه / زیرنوع و برند",
+      "title": "قیمت عرشه فولادی مبارکه",
+      "url": "https://ahanmelal.com/steel-sheet/steel-deck-sheet-price/mobarakeh-steel-deck-sheet",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-sheet",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی در بازار اصفهان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/esfahan-market-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی آریان فولاد",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/arian-foolad-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی سپهر ایرانیان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/sepehr-iranian-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی ناب تبریز",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/nab-tabriz-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی فولاد جاوید بناب",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/foolad-javid-bonab-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی نستا",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/nasta-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی منظومه",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/manzoomeh-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی شکفته",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/shekofteh-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی ظهوریان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/zohoorian-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی اسپیرال (کوهپایه)",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/koohpayeh-spiral-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی نصر آذربایجان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/nasr-azarbayejan-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "نبشی به تفکیک برند",
+      "title": "قیمت نبشی ماهان ذوب",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price/mahan-zob-angle",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ناودانی به تفکیک برند",
+      "title": "قیمت ناودانی در بازار اصفهان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price/esfahan-market-stud",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ناودانی به تفکیک برند",
+      "title": "قیمت ناودانی سپهر ایرانیان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price/sepehr-iranian-stud",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ناودانی به تفکیک برند",
+      "title": "قیمت ناودانی نصر آذربایجان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price/nasr-azarbayejan-stud",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ناودانی به تفکیک برند",
+      "title": "قیمت ناودانی کوهپایه (اسپیرال)",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price/koohpayeh-spiral-stud",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ناودانی به تفکیک برند",
+      "title": "قیمت ناودانی پروفیل صنعت ماهان",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price/sanat-mahan-profil-stud",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ناودانی به تفکیک برند",
+      "title": "قیمت ناودانی فولاد نستا",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price/nasta-foolad-stud",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "ناودانی به تفکیک برند",
+      "title": "قیمت ناودانی شکفته",
+      "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price/shekofteh-stud",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن ذوب آهن",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/zobahan-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن جهان فولاد غرب",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/jahan-foolad-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن ظفر بناب",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/zafar-bonab-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن پروفیل صنعت ماهان",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/sanat-mahan-profil-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن ناب تبریز",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/foolad-nab-tabriz-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن فولاد البرز ایرانیان (فایکو)",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/faico-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن فولاد یزد (احرامیان)",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/ehramian-yazd-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن کوثر اهواز",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/kosar-ahwaz-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن آریان فولاد",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/arian-foolad-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "تیرآهن به تفکیک برند",
+      "title": "قیمت تیرآهن شاهین بناب",
+      "url": "https://ahanmelal.com/beam/ipe-beam-price/shahin-bonab-beam",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/beam/ipe-beam-price",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله مبلی",
+      "url": "https://ahanmelal.com/metal-pipe/stainless-steel-furniture-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله جدار چاه",
+      "url": "https://ahanmelal.com/metal-pipe/well-casing-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله مانیسمان",
+      "url": "https://ahanmelal.com/metal-pipe/manisman-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله گالوانیزه",
+      "url": "https://ahanmelal.com/metal-pipe/galvanized-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله گازی",
+      "url": "https://ahanmelal.com/metal-pipe/steel-gas-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله اسپیرال",
+      "url": "https://ahanmelal.com/metal-pipe/steel-spiral-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله صنعتی",
+      "url": "https://ahanmelal.com/metal-pipe/industrial-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله داربستی",
+      "url": "https://ahanmelal.com/metal-pipe/scaffolding-pipe-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله گالوانیزه قزوین",
+      "url": "https://ahanmelal.com/metal-pipe/galvanized-pipe-price/qazvin-galvanized-pipe",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله گازی روکار سپاهان",
+      "url": "https://ahanmelal.com/metal-pipe/steel-gas-pipe-price/sepahan-facing-gas-pipe",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله گازی توکار سپاهان",
+      "url": "https://ahanmelal.com/metal-pipe/steel-gas-pipe-price/sepahan-builtin-gas-pipe",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله صنعتی سپاهان",
+      "url": "https://ahanmelal.com/metal-pipe/industrial-pipe-price/sepahan-industrial-pipe",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله گاز کچو اصفهان",
+      "url": "https://ahanmelal.com/metal-pipe/steel-gas-pipe-price/esfahan-kachoo-gas-pipe",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله مانیسمان چین رده 80",
+      "url": "https://ahanmelal.com/metal-pipe/manisman-pipe-price/chinese-manisman-pipe-80",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله مانیسمان چین رده 40",
+      "url": "https://ahanmelal.com/metal-pipe/manisman-pipe-price/chinese-manisman-pipe-40",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله تست آب",
+      "url": "https://ahanmelal.com/metal-pipe/industrial-pipe-price/sepahan-water-test-pipe",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "لوله / زیرنوع و برند",
+      "title": "قیمت لوله مانیسمان چین رده 20",
+      "url": "https://ahanmelal.com/metal-pipe/manisman-pipe-price/chinese-manisman-pipe-20",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/metal-pipe",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی مبلی",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/furniture-square-tube-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی گالوانیزه",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/galvanized-square-tube-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی ستونی",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/column-box-square-tube-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت پروفیل زد",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/z-purlin-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت پروفیل سی",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/c-purlin-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت پروفیل آبرو",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/flashing-profile-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت پروفیل درب و پنجره",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/door-widow-profile-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی صنعتی",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/industrial-square-tube-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت پروفیل طرح دار",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/patterned-profile-price",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی تولید با ورق فولاد مبارکه",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/industrial-square-tube-price/square-tube-mobarakeh-sheets",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی تولید با ورق فولاد اهواز و گیلان",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/industrial-square-tube-price/square-tube-ahvaz-gilan-sheets",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی ۲.۵ و ۳",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/industrial-square-tube-price/2.5-3-square-tube",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی صدرا پروفیل کاوه (فولاد موحد)",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/industrial-square-tube-price/sadra-profile-square-tube",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    },
+    {
+      "group": "قوطی و پروفیل / زیرنوع و برند",
+      "title": "قیمت قوطی ستونی کالوپ",
+      "url": "https://ahanmelal.com/steel-profile-square-tube/column-box-square-tube-price/kalup-box-column-steel",
+      "source": "آهن ملل",
+      "discovered_from": "https://ahanmelal.com/steel-profile-square-tube",
+      "verification": "لینک از صفحه مادر واکشی‌شده؛ محتوای تک‌تک زیرصفحه‌ها مستقلاً آزمون نشده",
+      "checked_date": "2026-11-05"
+    }
+  ],
+  "rebar_brands": [
+    {
+      "brand": "میلگرد ذوب آهن اصفهان",
+      "province": "اصفهان",
+      "area": "اصفهان؛ ذوب آهن",
+      "geography_basis": "نام و جدول منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/esfahan-zobahan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد راد همدان",
+      "province": "همدان",
+      "area": "استان همدان",
+      "geography_basis": "نام منبع و معرفی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/rad-hamedan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد سرمد ابرکوه",
+      "province": "یزد",
+      "area": "ابرکوه",
+      "geography_basis": "معرفی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/sarmad-abarkooh-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد زاگرس",
+      "province": "چهارمحال و بختیاری",
+      "area": "شهرک صنعتی سفیددشت",
+      "geography_basis": "معرفی مستقل کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/zagros-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد سیرجان حدید جنوب",
+      "province": "کرمان",
+      "area": "سیرجان",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/sirjan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد آریان فولاد",
+      "province": "قزوین",
+      "area": "بوئین زهرا",
+      "geography_basis": "معرفی مستقل کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/arian-foolad-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد نیشابور",
+      "province": "خراسان رضوی",
+      "area": "نیشابور",
+      "geography_basis": "نام منبع / فولاد خراسان",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/neishaboor-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد سیادن ابهر",
+      "province": "زنجان",
+      "area": "ابهر",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/siadan-abhar-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد ظفر بناب",
+      "province": "آذربایجان شرقی",
+      "area": "بناب",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/zafar-bonab-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد آذر امین",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/azar-amin-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد شاهین بناب",
+      "province": "آذربایجان شرقی",
+      "area": "بناب",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/shahin-bonab-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد هشترود",
+      "province": "آذربایجان شرقی",
+      "area": "هشترود",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/hashtrood-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد پرشین فولاد",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/persian-foolad-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد تیکمه داش",
+      "province": "آذربایجان شرقی",
+      "area": "تیکمه داش",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/tikme-dash-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد درپاد تبریز",
+      "province": "آذربایجان شرقی",
+      "area": "تبریز",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/dorpad-tabriz-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد نورد سمنان",
+      "province": "سمنان",
+      "area": "سمنان",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/semnan-navard-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد جهان فولاد سیرجان",
+      "province": "کرمان",
+      "area": "سیرجان",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/jahan-foolad-sirjan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد کیان فولاد ابهر",
+      "province": "زنجان",
+      "area": "ابهر",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/kian-foolad-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد آناهیتا گیلان",
+      "province": "گیلان",
+      "area": "رشت",
+      "geography_basis": "معرفی کارخانه‌های شمال",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/anahita-gilan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد میانه",
+      "province": "آذربایجان شرقی",
+      "area": "میانه",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/miane-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد فولاد پارس سیستان",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/foolad-pars-sistan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد پردیس آذربایجان | میلگرد سلفچگان",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/pardis-salafchegan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد امیرکبیر خزر",
+      "province": "گیلان",
+      "area": "رشت",
+      "geography_basis": "معرفی کارخانه‌های شمال",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/amir-kabir-khazar-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد صائب",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/saeb-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد خلیج فارس",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/khalij-fars-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد هیربد زرندیه",
+      "province": "مرکزی",
+      "area": "زرندیه",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/hirbod-zarandieh-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد بافق یزد",
+      "province": "یزد",
+      "area": "بافق",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/bafgh-yazd-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد حسن رود",
+      "province": "گیلان",
+      "area": "محور رشت–انزلی / حسن رود",
+      "geography_basis": "معرفی کارخانه‌های شمال",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/hassan-rood-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد خرمدشت تاکستان",
+      "province": "قزوین",
+      "area": "تاکستان",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/khorramdasht-takestan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد پارس آرمان شفق",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/pars-arman-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد گلستان",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/golestan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد سپهر ایرانیان",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/sepehr-iranian-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد قزوین",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/qazvin-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد فایکو",
+      "province": "مازندران",
+      "area": "نزدیک ساری",
+      "geography_basis": "معرفی مستقل کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/faico-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد عتیق آذر سهند (تاکستان)",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/atigh-azar-sahand-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد جهان فولاد غرب",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/jahan-foolad-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد نورد کرمان",
+      "province": "کرمان",
+      "area": "کرمان",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/navard-kerman-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد قائم رازی",
+      "province": "اصفهان",
+      "area": "شهرضا",
+      "geography_basis": "معرفی مستقل کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/ghaem-razi-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد ارگ تبریز",
+      "province": "آذربایجان شرقی",
+      "area": "تبریز",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/arg-tabriz-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد روهینا جنوب دزفول",
+      "province": "خوزستان",
+      "area": "دزفول",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/rouhina-jonoob-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد شاهرود",
+      "province": "سمنان",
+      "area": "شاهرود",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/shahrood-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد احرامیان یزد",
+      "province": "یزد",
+      "area": "یزد",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/ehramian-yazd-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد کویر کاشان",
+      "province": "اصفهان",
+      "area": "کاشان / محدوده آران و بیدگل",
+      "geography_basis": "معرفی کارخانه؛ نشانی بارگیری از سفارش کنترل شود",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/kavir-kashan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد گروه ملی صنعتی فولاد ایران",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/national-group-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد آریا فولاد تاکستان (آریا تاک)",
+      "province": "قزوین",
+      "area": "تاکستان",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/aria-foolad-takestan-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد اردبیل",
+      "province": "اردبیل",
+      "area": "اردبیل",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/ardebil-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد البرز غرب",
+      "province": "تایید نشده",
+      "area": "از نام/دامنه حدس زده نشده",
+      "geography_basis": "نیازمند تایید محل فیزیکی کارخانه",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/alborz-gharb-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    },
+    {
+      "brand": "میلگرد نورد نوین ابهر",
+      "province": "زنجان",
+      "area": "ابهر",
+      "geography_basis": "نام منبع",
+      "price_url": "https://ahanmelal.com/rebar/ribbed-rebar-price/novin-abhar-rebar",
+      "note": "این صفحه نرخ فروشنده است، نه لزوماً نرخ مستقیم کارخانه"
+    }
+  ],
+  "taxonomy": [
+    {
+      "group": "میلگرد ساختمانی",
+      "types": "ساده؛ آجدار A2/A3/A4؛ شاخه؛ کلاف؛ خاموت؛ بستر",
+      "fields": "آنالیز؛ قطر؛ طول؛ وزن واقعی؛ کارخانه؛ محل تحویل",
+      "unit": "کیلوگرم / شاخه طبق منبع",
+      "evidence_url": "https://ahanmelal.com/rebar/ribbed-rebar-price"
+    },
+    {
+      "group": "میلگرد صنعتی",
+      "types": "ترانس؛ آلیاژی؛ CK45؛ MO40؛ سمانته؛ فنر؛ ابزاری",
+      "fields": "گرید؛ استاندارد؛ قطر؛ حالت عملیات حرارتی؛ سازنده",
+      "unit": "اغلب کیلوگرم؛ واحد منبع ملاک است",
+      "evidence_url": "https://hamiransteel.com/alloy-steel/heat-treatable/mo40"
+    },
+    {
+      "group": "تیرآهن",
+      "types": "IPE؛ INP در صورت عرضه؛ هاش HEA/HEB؛ لانه‌زنبوری؛ سبک/سنگین",
+      "fields": "استاندارد؛ سایز؛ طول؛ وزن؛ برند؛ محل تحویل",
+      "unit": "شاخه یا کیلوگرم",
+      "evidence_url": "https://ahanmelal.com/beam/ipe-beam-price"
+    },
+    {
+      "group": "ورق گرم",
+      "types": "سیاه ST37؛ ST52؛ رول؛ شیت فابریک؛ برشی؛ آجدار",
+      "fields": "گرید؛ ضخامت؛ عرض؛ طول؛ حالت؛ کارخانه",
+      "unit": "کیلوگرم / شیت طبق منبع",
+      "evidence_url": "https://ahanmelal.com/steel-sheet"
+    },
+    {
+      "group": "ورق سرد و پوشش‌دار",
+      "types": "روغنی؛ اسیدشویی؛ گالوانیزه؛ رنگی؛ قلع‌اندود؛ عرشه؛ کرکره",
+      "fields": "گرید؛ ضخامت؛ عرض؛ پوشش؛ رنگ؛ مبنای وزن/متراژ",
+      "unit": "کیلوگرم / متر / مترمربع طبق منبع",
+      "evidence_url": "https://haftalmas.com/"
+    },
+    {
+      "group": "ورق صنعتی و آلیاژی",
+      "types": "A516؛ A283؛ A36؛ CK45؛ ضدسایش برند/گرید مشخص",
+      "fields": "گرید و گواهی؛ ضخامت؛ ابعاد؛ عملیات حرارتی؛ برند",
+      "unit": "کیلوگرم یا قطعه طبق منبع",
+      "evidence_url": "https://www.fooladiranian.com/productlist/ورق-a516/"
+    },
+    {
+      "group": "استنلس استیل",
+      "types": "ورق، میلگرد، لوله؛ 304/304L؛ 316/316L؛ 321؛ 430 و گرید عرضه‌شده",
+      "fields": "گرید؛ سطح؛ ابعاد؛ مبدأ؛ سازنده؛ گواهی",
+      "unit": "کیلوگرم یا شاخه طبق منبع",
+      "evidence_url": "https://www.tejarataliaj.com/قیمت-استیل/"
+    },
+    {
+      "group": "نبشی",
+      "types": "بال مساوی/نامساوی؛ فابریک/پرسی در صورت عرضه؛ سبک/سنگین؛ لقمه",
+      "fields": "دو بال؛ ضخامت؛ طول؛ وزن؛ کارخانه؛ نوع تولید",
+      "unit": "کیلوگرم / شاخه",
+      "evidence_url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price"
+    },
+    {
+      "group": "ناودانی و سپری",
+      "types": "ناودانی ایرانی؛ UPN/UPE طبق مشخصات؛ سبک؛ هم‌وزن اروپا؛ سپری",
+      "fields": "استاندارد؛ ارتفاع؛ ضخامت؛ طول؛ وزن؛ کارخانه",
+      "unit": "کیلوگرم / شاخه",
+      "evidence_url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price"
+    },
+    {
+      "group": "قوطی و پروفیل",
+      "types": "صنعتی؛ ساختمانی؛ ستونی؛ مبلی؛ گالوانیزه؛ Z/C؛ آبرو؛ درب و پنجره",
+      "fields": "ابعاد؛ ضخامت؛ طول؛ کارخانه پروفیل؛ برند ورق مصرفی",
+      "unit": "کیلوگرم / شاخه",
+      "evidence_url": "https://ahanmelal.com/steel-profile-square-tube"
+    },
+    {
+      "group": "لوله",
+      "types": "صنعتی؛ داربستی؛ گازی؛ گالوانیزه؛ مبلی؛ مانیسمان؛ اسپیرال؛ جدار چاه",
+      "fields": "قطر؛ ضخامت/رده؛ طول؛ درز؛ استاندارد؛ برند",
+      "unit": "کیلوگرم / شاخه / متر",
+      "evidence_url": "https://ahanmelal.com/metal-pipe"
+    },
+    {
+      "group": "مفتولی",
+      "types": "سیم؛ توری؛ مش؛ رابیتس؛ خرپا؛ زیگزاگ؛ سیم خاردار",
+      "fields": "قطر؛ چشمه؛ ابعاد؛ وزن؛ طول/مساحت؛ گالوانیزه بودن",
+      "unit": "کیلوگرم / برگ / رول طبق منبع",
+      "evidence_url": "https://ahanmelal.com/steel-wire-products"
+    },
+    {
+      "group": "مواد اولیه",
+      "types": "شمش 3SP/5SP؛ بیلت؛ بلوم؛ اسلب؛ آهن اسفنجی؛ فروآلیاژ",
+      "fields": "آنالیز؛ ابعاد؛ مبدأ؛ زمان و شرایط تحویل",
+      "unit": "کیلوگرم / تن طبق اطلاعیه",
+      "evidence_url": "https://ahanmelal.com/steel-basic-materials"
+    },
+    {
+      "group": "قراضه و دست دوم",
+      "types": "سوپر ویژه؛ ویژه؛ درجه 1/2؛ سبک؛ پرسی؛ سفاله؛ ورق روغنی؛ چدن",
+      "fields": "درجه؛ آلودگی؛ خرده/عمده؛ خرید/فروش؛ محل تحویل",
+      "unit": "کیلوگرم؛ جدا از مقطع نو",
+      "evidence_url": "https://iranzayeat.com/"
+    }
+  ]
+}

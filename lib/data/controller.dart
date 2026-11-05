@@ -1,0 +1,215 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import '../domain/market.dart';
+import 'sources.dart';
+import 'store.dart';
+import 'app_logger.dart';
+
+class MarketController extends ChangeNotifier {
+  final MarketStore store;
+  final SourceClient client;
+  final MarketFilter filter = MarketFilter();
+  List<Quote> quotes = [];
+  Map<String, Map<String, Object?>> states = {};
+  Map<String, dynamic> registry = {};
+  List<String> cities = [];
+  Set<String> enabled = {
+    for (final e in endpoints)
+      if (e.defaultEnabled) e.id
+  };
+  bool busy = false, ready = false, autoRefresh = true, disposed = false;
+  bool foreground = true;
+  int finished = 0, historyRevision = 0;
+  void historyChanged() {
+    historyRevision++;
+    _notify();
+  }
+
+  String? startupError;
+  Timer? _timer;
+  MarketController(this.store, {SourceClient? client})
+      : client = client ?? SourceClient();
+  Future<void> init() async {
+    registry = jsonDecode(await rootBundle.loadString('assets/registry.json'));
+    final cityData =
+        jsonDecode(await rootBundle.loadString('assets/cities.json')) as List;
+    cities = cityData.map((x) => x['name'] as String).toSet().toList()..sort();
+    cities.remove('مشهد');
+    cities.insert(0, 'مشهد');
+    client.cityNames = cities;
+    final setting = await store.setting('enabled');
+    if (setting != null) {
+      enabled = (jsonDecode(setting) as List)
+          .cast<String>()
+          .where((id) => endpoints.any((e) => e.id == id))
+          .toSet();
+    }
+    if (await store.setting('sourcesVersion') != '2') {
+      enabled.addAll(
+          ['telegram-mashhad', 'telegram-ahanresan', 'telegram-ahanemashhad']);
+      await store.setSetting('enabled', jsonEncode(enabled.toList()));
+      await store.setSetting('sourcesVersion', '2');
+    }
+    autoRefresh = await store.setting('autoRefresh') != 'false';
+    await reload();
+    ready = true;
+    unawaited(AppLogger.instance.record('lifecycle', 'market_ready',
+        {'cachedRows': quotes.length, 'enabled': enabled.length}));
+    _notify();
+    _timer = Timer.periodic(const Duration(minutes: 15), (_) {
+      if (autoRefresh && foreground) {
+        refresh();
+      }
+    });
+    final last = await store.setting('lastRefresh');
+    if (autoRefresh &&
+        (last == null ||
+            DateTime.now()
+                    .difference(DateTime.tryParse(last) ?? DateTime(2000))
+                    .inMinutes >=
+                15)) {
+      unawaited(refresh());
+    }
+  }
+
+  void _notify() {
+    if (!disposed) notifyListeners();
+  }
+
+  void changed() {
+    unawaited(AppLogger.instance.record('filter', 'changed', {
+      'category': filter.category,
+      'city': filter.city,
+      'size': filter.size,
+      'thickness': filter.thickness,
+      'queryLength': filter.query.length
+    }));
+    _notify();
+  }
+
+  List<Quote> _filtered = [];
+  String _filterKey = '';
+  bool filtering = false;
+  String get _currentFilterKey =>
+      '${identityHashCode(quotes)}:${filter.cacheKey}:${DateTime.now().millisecondsSinceEpoch ~/ 60000}';
+  List<Quote> get filtered {
+    final key = _currentFilterKey;
+    if (key == _filterKey) return _filtered;
+    if (quotes.length <= 200) {
+      _filtered = filter.apply(quotes, DateTime.now());
+      _filterKey = key;
+    } else if (!filtering) {
+      filtering = true;
+      unawaited(_updateFiltered());
+    }
+    return _filtered;
+  }
+
+  Future<void> _updateFiltered() async {
+    await Future<void>.delayed(Duration.zero);
+    _notify();
+    try {
+      while (!disposed) {
+        final key = _currentFilterKey;
+        final watch = Stopwatch()..start();
+        final result = await compute(_filterInBackground,
+            {'quotes': quotes, 'filter': filter, 'now': DateTime.now()});
+        if (disposed) return;
+        if (key != _currentFilterKey) continue;
+        _filtered = result;
+        _filterKey = key;
+        await AppLogger.instance.record('filter', 'completed', {
+          'rows': quotes.length,
+          'matches': result.length,
+          'elapsedMs': watch.elapsedMilliseconds
+        });
+        break;
+      }
+    } catch (e, stack) {
+      AppLogger.instance.capture(e, stack, section: 'filter');
+    } finally {
+      filtering = false;
+      _notify();
+    }
+  }
+
+  Future<void> reload() async {
+    quotes = await store.latest();
+    states = await store.syncStates();
+    _notify();
+  }
+
+  Future<void> setEnabled(String id, bool value) async {
+    if (value) {
+      enabled.add(id);
+    } else {
+      enabled.remove(id);
+    }
+    await store.setSetting('enabled', jsonEncode(enabled.toList()));
+    _notify();
+  }
+
+  Future<void> setAuto(bool value) async {
+    autoRefresh = value;
+    await store.setSetting('autoRefresh', '$value');
+    _notify();
+  }
+
+  Future<void> refresh() async {
+    if (busy || disposed) return;
+    busy = true;
+    unawaited(AppLogger.instance
+        .record('network', 'refresh_started', {'sources': enabled.length}));
+    finished = 0;
+    _notify();
+    final queue = endpoints.where((e) => enabled.contains(e.id)).toList();
+    var index = 0;
+    Future<void> worker() async {
+      while (index < queue.length && !disposed) {
+        final e = queue[index++];
+        try {
+          final data = await client.fetch(e);
+          await store.saveSnapshot(e.id, data);
+          historyRevision++;
+        } catch (error, stack) {
+          AppLogger.instance.capture(error, stack, section: 'source');
+          await store.failure(
+              e.id,
+              error is FormatException
+                  ? error.message
+                  : 'خطا در اتصال/مهلت دریافت؛ داده قبلی حفظ شد.');
+        }
+        finished++;
+        states = await store.syncStates();
+        _notify();
+        // Low concurrency, no login/CAPTCHA bypass or aggressive retries.
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+      }
+    }
+
+    try {
+      await Future.wait([worker(), worker()]);
+      await store.setSetting(
+          'lastRefresh', DateTime.now().toUtc().toIso8601String());
+    } finally {
+      busy = false;
+      await reload();
+      unawaited(AppLogger.instance.record('network', 'refresh_complete',
+          {'completed': finished, 'cachedRows': quotes.length}));
+    }
+  }
+
+  @override
+  void dispose() {
+    disposed = true;
+    _timer?.cancel();
+    client.close();
+    super.dispose();
+  }
+}
+
+List<Quote> _filterInBackground(Map<String, Object> input) =>
+    (input['filter'] as MarketFilter)
+        .apply(input['quotes'] as List<Quote>, input['now'] as DateTime);

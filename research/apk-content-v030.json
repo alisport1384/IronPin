@@ -1,0 +1,26 @@
+[
+  {
+    "apk": "IronPin-0.3.0-arm64-v8a.apk",
+    "bytes": 8381188,
+    "sha256": "e12ac2a3aad3fa36f9e10ee94ee3899e12446defcd9366a88e2e990687b30779",
+    "abi": "arm64-v8a",
+    "telegramRegistry": 32,
+    "otherLinks": 39,
+    "exactRegistryMatch": true,
+    "newUnitPricesAndAreaInAot": true,
+    "newSourcesInAot": true,
+    "nativeLogBridge": true
+  },
+  {
+    "apk": "IronPin-0.3.0-armeabi-v7a.apk",
+    "bytes": 7991620,
+    "sha256": "4167436a45346de6112379744b2f88598ebd601478b37d4afcf8f4c15b44788f",
+    "abi": "armeabi-v7a",
+    "telegramRegistry": 32,
+    "otherLinks": 39,
+    "exactRegistryMatch": true,
+    "newUnitPricesAndAreaInAot": true,
+    "newSourcesInAot": true,
+    "nativeLogBridge": true
+  }
+]

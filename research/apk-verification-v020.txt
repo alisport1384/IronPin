@@ -1,0 +1,38 @@
+=== /home/user/deliverables/IronPin-0.2.0/IronPin-0.2.0-arm64-v8a.apk ===
+package: name='ir.ironpin.ironpin' versionCode='2002' versionName='0.2.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'35'
+native-code: 'arm64-v8a'
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+Signer #1 certificate SHA-256 digest: 360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4
+Signer #1 certificate SHA-1 digest: 4b9c76f8e4832a537f0c320e5d79b1ecae69590e
+Signer #1 certificate MD5 digest: 80aff7352e31362ab1f79cebe6e75771
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+=== /home/user/deliverables/IronPin-0.2.0/IronPin-0.2.0-armeabi-v7a.apk ===
+package: name='ir.ironpin.ironpin' versionCode='1002' versionName='0.2.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'35'
+native-code: 'armeabi-v7a'
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+Signer #1 certificate SHA-256 digest: 360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4
+Signer #1 certificate SHA-1 digest: 4b9c76f8e4832a537f0c320e5d79b1ecae69590e
+Signer #1 certificate MD5 digest: 80aff7352e31362ab1f79cebe6e75771
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048

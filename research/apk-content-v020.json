@@ -1,0 +1,22 @@
+[
+  {
+    "apk": "IronPin-0.2.0-arm64-v8a.apk",
+    "registryChannels": 27,
+    "cityEntries": 1324,
+    "nativeLogBridge": true,
+    "newSchemaInAot": true,
+    "mainChannelAdapterInAot": true,
+    "loggerInAot": true,
+    "newSpecificationsInAot": true
+  },
+  {
+    "apk": "IronPin-0.2.0-armeabi-v7a.apk",
+    "registryChannels": 27,
+    "cityEntries": 1324,
+    "nativeLogBridge": true,
+    "newSchemaInAot": true,
+    "mainChannelAdapterInAot": true,
+    "loggerInAot": true,
+    "newSpecificationsInAot": true
+  }
+]

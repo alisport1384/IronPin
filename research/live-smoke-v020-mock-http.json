@@ -1,0 +1,86 @@
+[
+  {
+    "endpoint": "melal-rebar",
+    "url": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+    "attemptedAt": "2026-11-05T10:03:32.865701Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "melal-sheet",
+    "url": "https://ahanmelal.com/steel-sheet",
+    "attemptedAt": "2026-11-05T10:03:32.883531Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "melal-beam",
+    "url": "https://ahanmelal.com/beam/ipe-beam-price",
+    "attemptedAt": "2026-11-05T10:03:32.884328Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "melal-angle",
+    "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+    "attemptedAt": "2026-11-05T10:03:32.884910Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "melal-channel",
+    "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+    "attemptedAt": "2026-11-05T10:03:32.885286Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "melal-profile",
+    "url": "https://ahanmelal.com/steel-profile-square-tube",
+    "attemptedAt": "2026-11-05T10:03:32.885649Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "melal-pipe",
+    "url": "https://ahanmelal.com/metal-pipe",
+    "attemptedAt": "2026-11-05T10:03:32.886071Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "asre-esfahan",
+    "url": "https://asreahan.com/rebar/esfahan-steel",
+    "attemptedAt": "2026-11-05T10:03:32.886466Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "asre-khorasan",
+    "url": "https://asreahan.com/rebar/khorasan-steel",
+    "attemptedAt": "2026-11-05T10:03:32.886815Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "telegram-mashhad",
+    "url": "https://t.me/s/mashhadfoolad1",
+    "attemptedAt": "2026-11-05T10:03:32.887221Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "telegram-ahanresan",
+    "url": "https://t.me/s/ahanresan",
+    "attemptedAt": "2026-11-05T10:03:32.887592Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  },
+  {
+    "endpoint": "telegram-ahanemashhad",
+    "url": "https://t.me/s/ahanemashhad",
+    "attemptedAt": "2026-11-05T10:03:32.888024Z",
+    "status": "failed",
+    "error": "FormatException: HTTP 400؛ داده قبلی حفظ شد."
+  }
+]

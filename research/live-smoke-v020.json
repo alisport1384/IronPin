@@ -1,0 +1,263 @@
+[
+  {
+    "endpoint": "melal-rebar",
+    "url": "https://ahanmelal.com/rebar/ribbed-rebar-price",
+    "attemptedAt": "2026-11-05T10:04:35.434784Z",
+    "rows": 440,
+    "numericRows": 350,
+    "categories": [
+      "میلگرد"
+    ],
+    "sellerCities": [
+      "اصفهان"
+    ],
+    "sourceDates": [
+      "1405/8/12",
+      "امروز",
+      "1405/8/9",
+      "1405/8/13",
+      "1405/8/7",
+      "1405/6/17",
+      "1405/7/11",
+      "1405/7/18",
+      "1405/8/6",
+      "1405/4/23",
+      "1405/2/1",
+      "1405/1/8"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "melal-sheet",
+    "url": "https://ahanmelal.com/steel-sheet",
+    "attemptedAt": "2026-11-05T10:04:41.221579Z",
+    "rows": 335,
+    "numericRows": 279,
+    "categories": [
+      "ورق"
+    ],
+    "sellerCities": [
+      "اصفهان"
+    ],
+    "sourceDates": [
+      "امروز",
+      "1405/8/13",
+      "1405/8/11"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "melal-beam",
+    "url": "https://ahanmelal.com/beam/ipe-beam-price",
+    "attemptedAt": "2026-11-05T10:04:43.317366Z",
+    "rows": 82,
+    "numericRows": 65,
+    "categories": [
+      "تیرآهن"
+    ],
+    "sellerCities": [
+      "اصفهان"
+    ],
+    "sourceDates": [
+      "1405/7/19",
+      "امروز",
+      "1405/8/11",
+      "1405/7/11",
+      "1405/6/2",
+      "1404/12/27",
+      "1405/8/10"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "melal-angle",
+    "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-angle-price",
+    "attemptedAt": "2026-11-05T10:04:44.466413Z",
+    "rows": 196,
+    "numericRows": 144,
+    "categories": [
+      "نبشی"
+    ],
+    "sellerCities": [
+      "اصفهان"
+    ],
+    "sourceDates": [
+      "امروز",
+      "1405/8/10",
+      "1405/5/4",
+      "1405/7/2",
+      "1405/8/11",
+      "1405/8/9",
+      "1405/8/2",
+      "1405/8/13",
+      "1405/8/12",
+      "1405/8/6",
+      "1405/7/27",
+      "1405/7/14"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "melal-channel",
+    "url": "https://ahanmelal.com/steel-t-bars-studs-angles/steel-stud-price",
+    "attemptedAt": "2026-11-05T10:04:45.992258Z",
+    "rows": 93,
+    "numericRows": 76,
+    "categories": [
+      "ناودانی"
+    ],
+    "sellerCities": [
+      "اصفهان"
+    ],
+    "sourceDates": [
+      "امروز",
+      "1405/8/11",
+      "1405/5/26",
+      "1405/8/13",
+      "1405/7/29",
+      "1405/7/26",
+      "1405/8/6",
+      "1405/8/5"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "melal-profile",
+    "url": "https://ahanmelal.com/steel-profile-square-tube",
+    "attemptedAt": "2026-11-05T10:04:47.265915Z",
+    "rows": 296,
+    "numericRows": 294,
+    "categories": [
+      "پروفیل"
+    ],
+    "sellerCities": [
+      "اصفهان"
+    ],
+    "sourceDates": [
+      "امروز",
+      "1405/8/13"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "melal-pipe",
+    "url": "https://ahanmelal.com/metal-pipe",
+    "attemptedAt": "2026-11-05T10:04:49.041367Z",
+    "rows": 290,
+    "numericRows": 255,
+    "categories": [
+      "لوله"
+    ],
+    "sellerCities": [
+      "اصفهان"
+    ],
+    "sourceDates": [
+      "امروز"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "asre-esfahan",
+    "url": "https://asreahan.com/rebar/esfahan-steel",
+    "attemptedAt": "2026-11-05T10:04:50.906080Z",
+    "rows": 11,
+    "numericRows": 8,
+    "categories": [
+      "میلگرد"
+    ],
+    "sellerCities": [
+      "تبریز"
+    ],
+    "sourceDates": [
+      "2021-11-18T10:07:17.081Z",
+      "2021-11-18T10:07:17.078Z",
+      "2026-11-05T07:45:05.714Z",
+      "2026-11-05T07:45:05.718Z",
+      "2026-11-05T07:45:05.720Z",
+      "2026-11-05T07:45:05.722Z",
+      "2026-11-05T07:45:05.725Z",
+      "2026-11-05T07:45:05.727Z",
+      "2026-11-05T07:45:05.729Z",
+      "2026-11-03T08:31:08.394Z",
+      "2025-04-28T13:06:03.998Z"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "asre-khorasan",
+    "url": "https://asreahan.com/rebar/khorasan-steel",
+    "attemptedAt": "2026-11-05T10:04:52.708464Z",
+    "rows": 10,
+    "numericRows": 8,
+    "categories": [
+      "میلگرد"
+    ],
+    "sellerCities": [
+      "تبریز"
+    ],
+    "sourceDates": [
+      "2026-11-04T11:15:13.354Z",
+      "2026-11-04T11:15:13.361Z",
+      "2026-10-11T11:45:21.234Z",
+      "2026-11-04T11:15:13.369Z",
+      "2026-11-04T11:15:13.377Z",
+      "2026-09-26T09:00:23.325Z",
+      "2026-09-26T09:00:23.329Z",
+      "2026-10-12T13:15:20.195Z",
+      "2025-09-18T09:45:31.289Z",
+      "2025-09-20T09:42:54.174Z"
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "telegram-mashhad",
+    "url": "https://t.me/s/mashhadfoolad1",
+    "attemptedAt": "2026-11-05T10:04:53.862666Z",
+    "rows": 17,
+    "numericRows": 0,
+    "categories": [
+      "عمومی"
+    ],
+    "sellerCities": [
+      "مشهد"
+    ],
+    "sourceDates": [
+      ""
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "telegram-ahanresan",
+    "url": "https://t.me/s/ahanresan",
+    "attemptedAt": "2026-11-05T10:04:54.453760Z",
+    "rows": 9,
+    "numericRows": 0,
+    "categories": [
+      "عمومی"
+    ],
+    "sellerCities": [
+      "مشهد"
+    ],
+    "sourceDates": [
+      ""
+    ],
+    "status": "parsed"
+  },
+  {
+    "endpoint": "telegram-ahanemashhad",
+    "url": "https://t.me/s/ahanemashhad",
+    "attemptedAt": "2026-11-05T10:04:54.781044Z",
+    "rows": 9,
+    "numericRows": 0,
+    "categories": [
+      "عمومی"
+    ],
+    "sellerCities": [
+      "مشهد"
+    ],
+    "sourceDates": [
+      ""
+    ],
+    "status": "parsed"
+  }
+]

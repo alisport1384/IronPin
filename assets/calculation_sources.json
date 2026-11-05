@@ -1,0 +1,89 @@
+[
+  {
+    "title": "میلگرد، گرد و مفتول",
+    "formula": "kg/m = π × d_mm² / 4 × rho_kg_m3 / 1,000,000",
+    "note": "ضریب ۰٫۰۰۶۱۶۵ برای چگالی ۷۸۵۰ از هندسه به دست می‌آید؛ تقسیم قطر به توان دو بر ۱۶۲ تقریب بازاری است.",
+    "sources": [
+      "https://www.shahrahan.com/ironware-learning/17-ironware-weight-calculation",
+      "https://iromart.com/blog/eshtal-of-steel-rebar/"
+    ]
+  },
+  {
+    "title": "ورق تخت و تسمه",
+    "formula": "kg/m = width_mm × thickness_mm × rho / 1e6; kg = kg/m × L_m",
+    "note": "برای ورق، طول و عرض باید با واحد مشخص وارد شود؛ برای پوشش، جرم کل دو سطح بر مساحت افزوده می‌شود.",
+    "sources": [
+      "https://mahdefoolad.com/blog/galvanized-sheet-weight-table/",
+      "https://www.ahanassa.com/en/tools/weight-calculator"
+    ]
+  },
+  {
+    "title": "لوله",
+    "formula": "A_mm2 = π × t × (D_outer - t); kg/m = A × rho / 1e6",
+    "note": "قطر خارجی واقعی و ضخامت نیاز است؛ نمره اینچ اسمی، قطر خارجی نیست.",
+    "sources": [
+      "https://www.ahanassa.com/en/tools/weight-calculator",
+      "https://coremetsteel.com/news-insights/hollow-section-weight-chart/"
+    ]
+  },
+  {
+    "title": "قوطی مربع/مستطیل",
+    "formula": "A_mm2 = B×H - (B-2t)×(H-2t)",
+    "note": "فرمول گوشه تیز است؛ وزن مقطع واقعی با شعاع گوشه تفاوت دارد. جدول کارخانه/استاندارد اولویت دارد.",
+    "sources": [
+      "https://coremetsteel.com/news-insights/hollow-section-weight-chart/",
+      "https://icdn.tradew.com/file/202006/1574536/pdf/7927097.pdf"
+    ]
+  },
+  {
+    "title": "نبشی",
+    "formula": "A_mm2 = t × (a+b-t)",
+    "note": "تقریب با حذف سطح مشترک دو بال، بدون شعاع ریشه.",
+    "sources": [
+      "https://www.shahrahan.com/ironware-learning/17-ironware-weight-calculation",
+      "https://www.ahanassa.com/en/tools/weight-calculator"
+    ]
+  },
+  {
+    "title": "تیرآهن، هاش، ناودانی و سپری",
+    "formula": "I/H/U approximation: A = 2b×tf + (h-2tf)×tw; T: A = b×tf+(h-tf)×tw",
+    "note": "این مدل هندسی ساده است؛ به‌ویژه ناودانی با بال شیبدار را دقیق نمایش نمی‌دهد. حالت وزن معتبر هر متر، جایگاه اصلی استفاده از کاتالوگ است. IPE200 استاندارد ۲۲٫۴ kg/m در کاتالوگ نمونه دارد.",
+    "sources": [
+      "https://sections.arcelormittal.com/repository2/Sections/Sections_MB_ArcelorMittal_FR_EN_DE.pdf",
+      "https://www.vestasaze.com/محاسبه-آنلاین-وزن-فلزات/"
+    ]
+  },
+  {
+    "title": "چهارپهلو و شش‌پر",
+    "formula": "Rectangle A = B×H; regular hexagon A = sqrt(3)/2 × s_across_flats²",
+    "note": "روابط هندسی مستقیم؛ مقدار s فاصله دو وجه موازی است.",
+    "sources": [
+      "https://www.vestasaze.com/محاسبه-آنلاین-وزن-فلزات/"
+    ]
+  },
+  {
+    "title": "مش جوشی",
+    "formula": "M = rho×π/4/1e6 × (nx×L×dx² + ny×W×dy²)",
+    "note": "از جمع جرم سیم‌های واقعی دو جهت به دست می‌آید. تعداد صحیح سیم‌ها ورودی صریح است؛ از چشمه اسمی بدون هندسه لبه تعداد فرض نمی‌شود.",
+    "sources": [
+      "https://www.shahrahan.com/ironware-learning/17-ironware-weight-calculation"
+    ]
+  },
+  {
+    "title": "ورق فرم‌دار و عرشه",
+    "formula": "kg/useful_m2 = (developed_width/useful_width) × (t_mm×rho/1000 + coating_gsm/1000)",
+    "note": "فرمول از بقای جرم ورق بازشده و عرض مفید به دست می‌آید؛ سطح تصویرشده جای عرض بازشده برای محاسبه جرم نیست. اورلب طولی و پرت جداست.",
+    "sources": [
+      "https://bayeriranian.com/وزن-ورق-گالوانیزه-عرشه-فولادی/",
+      "https://mahdefoolad.com/blog/galvanized-sheet-weight-table/"
+    ]
+  },
+  {
+    "title": "رابیتس، توری فرم‌دار، قطعه و ضایعات",
+    "formula": "M = count × declared_mass_per_piece; bulk M = measured_mass",
+    "note": "برای رابیتس و توری‌های بافته/فرم‌دار، تعداد ستون یا سطح پوشش به‌تنهایی کافی نیست؛ وزن اعلامی سازنده یا باسکول ورودی است.",
+    "sources": [
+      "https://bikochar.com/blog/weight-wire-lath/"
+    ]
+  }
+]

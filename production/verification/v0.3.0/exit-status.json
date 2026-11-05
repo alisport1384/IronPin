@@ -1,0 +1,10 @@
+{
+  "analyze": 0,
+  "offlineTests": 0,
+  "liveSmoke": 0,
+  "aot": 0,
+  "apkBuild": 0,
+  "channelAuditProcess": 0,
+  "deviceTest": "not performed",
+  "githubPush": "not performed"
+}

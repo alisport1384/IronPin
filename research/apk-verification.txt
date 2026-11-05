@@ -1,0 +1,46 @@
+=== /home/user/deliverables/IronPin/IronPin-0.1.0-arm64-v8a.apk ===
+package: name='ir.ironpin.ironpin' versionCode='2001' versionName='0.1.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'35'
+application-label:'آیرون‌پین'
+native-code: 'arm64-v8a'
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+Signer #1 certificate SHA-256 digest: 360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4
+Signer #1 certificate SHA-1 digest: 4b9c76f8e4832a537f0c320e5d79b1ecae69590e
+Signer #1 certificate MD5 digest: 80aff7352e31362ab1f79cebe6e75771
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+Signer #1 public key SHA-256 digest: 5ba513860a25df8bc33a0410481424e94c78dc773fc76f6babd20670ae87c30f
+Signer #1 public key SHA-1 digest: 7e1724ae0df6f943605c0e805bdf3cc9eea7aa7b
+Signer #1 public key MD5 digest: cbda4d2468f9741c0c69299e48c5aee2
+=== /home/user/deliverables/IronPin/IronPin-0.1.0-armeabi-v7a.apk ===
+package: name='ir.ironpin.ironpin' versionCode='1001' versionName='0.1.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'35'
+application-label:'آیرون‌پین'
+native-code: 'armeabi-v7a'
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+Signer #1 certificate SHA-256 digest: 360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4
+Signer #1 certificate SHA-1 digest: 4b9c76f8e4832a537f0c320e5d79b1ecae69590e
+Signer #1 certificate MD5 digest: 80aff7352e31362ab1f79cebe6e75771
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+Signer #1 public key SHA-256 digest: 5ba513860a25df8bc33a0410481424e94c78dc773fc76f6babd20670ae87c30f
+Signer #1 public key SHA-1 digest: 7e1724ae0df6f943605c0e805bdf3cc9eea7aa7b
+Signer #1 public key MD5 digest: cbda4d2468f9741c0c69299e48c5aee2
