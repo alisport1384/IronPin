@@ -1,0 +1,78 @@
+[
+  {
+    "file": "IronPin-0.6.0-armeabi-v7a.apk",
+    "abi": "armeabi-v7a",
+    "bytes": 8136386,
+    "sha256": "633cf0669ad9794e3d814c24f7ebfed39ff3480f0df3c057eed8704b8eda5e13",
+    "package": "ir.ironpin.ironpin",
+    "versionName": "0.6.0",
+    "versionCode": 1007,
+    "minSdk": 21,
+    "targetSdk": 35,
+    "certificateSha256": "360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4",
+    "signatureV1": true,
+    "signatureV2": true,
+    "registryMatchesSource": true,
+    "nativeAbis": [
+      "armeabi-v7a"
+    ],
+    "elfMachine": 40,
+    "aotMarkers": {
+      "0.6.0": true,
+      "محلی v2": true,
+      "جزئیات بیشتر": true,
+      "allRegisteredSourcesEnabledVersion": true,
+      "telegram-ghanbari": true,
+      "khabazzade-sheet": true,
+      "ProductQuery": true,
+      "PublicTables": true,
+      "retire": true,
+      "IronPin-backup": true,
+      "importBackup": true,
+      "exportBackup": true,
+      "محاسبات همان کالا": true,
+      "رنج‌گیری ۴۸ ساعت": true,
+      "تنظیمات کاربری بکاپ، از جمله روشن/خاموش بودن منابع، جایگزین شوند.": true
+    },
+    "removedManualSheetMarkerAbsent": true,
+    "deviceInstallationTested": false
+  },
+  {
+    "file": "IronPin-0.6.0-arm64-v8a.apk",
+    "abi": "arm64-v8a",
+    "bytes": 8514388,
+    "sha256": "f4f49fc3d8ab3e97c362b1b46ad426ffc49ce69cb8926d31c2f17d8bb892c11e",
+    "package": "ir.ironpin.ironpin",
+    "versionName": "0.6.0",
+    "versionCode": 2007,
+    "minSdk": 21,
+    "targetSdk": 35,
+    "certificateSha256": "360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4",
+    "signatureV1": true,
+    "signatureV2": true,
+    "registryMatchesSource": true,
+    "nativeAbis": [
+      "arm64-v8a"
+    ],
+    "elfMachine": 183,
+    "aotMarkers": {
+      "0.6.0": true,
+      "محلی v2": true,
+      "جزئیات بیشتر": true,
+      "allRegisteredSourcesEnabledVersion": true,
+      "telegram-ghanbari": true,
+      "khabazzade-sheet": true,
+      "ProductQuery": true,
+      "PublicTables": true,
+      "retire": true,
+      "IronPin-backup": true,
+      "importBackup": true,
+      "exportBackup": true,
+      "محاسبات همان کالا": true,
+      "رنج‌گیری ۴۸ ساعت": true,
+      "تنظیمات کاربری بکاپ، از جمله روشن/خاموش بودن منابع، جایگزین شوند.": true
+    },
+    "removedManualSheetMarkerAbsent": true,
+    "deviceInstallationTested": false
+  }
+]

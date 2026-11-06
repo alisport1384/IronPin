@@ -38,7 +38,7 @@ void main() {
     c.dispose();
     await c.store.close();
   });
-  testWidgets('RTL app has all four working tabs and truthful empty state',
+  testWidgets('RTL app has all five working tabs and truthful empty state',
       (t) async {
     t.view.physicalSize = const Size(390, 844);
     t.view.devicePixelRatio = 1;
@@ -50,6 +50,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('قیمت‌ها'), findsOneWidget);
     expect(find.text('نمودار'), findsOneWidget);
+    expect(find.text('رنج‌گیری'), findsOneWidget);
     expect(find.text('محاسبات'), findsOneWidget);
     expect(find.text('اطلاعات'), findsOneWidget);
     expect(find.text('هنوز قیمتی دریافت نشده'), findsOneWidget);
@@ -81,7 +82,7 @@ void main() {
     await t.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 150)));
     await t.pumpAndSettle();
-    expect(find.text('میلگرد 12 ذوب آهن اصفهان'), findsWidgets);
+    expect(find.text('میلگرد ۱۲ ذوب آهن اصفهان'), findsWidgets);
     expect(t.takeException(), isNull);
     await t.tap(find.byTooltip('فیلتر قیمت و شهر'));
     await t.pumpAndSettle();
@@ -140,7 +141,7 @@ void main() {
     expect(find.byType(ListTile).evaluate().length, lessThan(30));
     await t.enterText(find.byType(TextField), '10');
     await t.pumpAndSettle();
-    expect(find.textContaining('ورق 10 میل'), findsWidgets);
+    expect(find.textContaining('ورق ۱۰ میل'), findsWidgets);
     expect(t.takeException(), isNull);
   });
   testWidgets('simple calculator hides density and preserves input across tabs',
@@ -308,7 +309,7 @@ void main() {
       return y > 0 && y + r.size.height < 760;
     }).length;
     expect(rows, greaterThanOrEqualTo(6));
-    await t.tap(find.text('ورق سیاه 1 میل'));
+    await t.tap(find.text('ورق سیاه ۱ میل'));
     await t.pumpAndSettle();
     expect(find.text('فروشنده آزمایشی • دفتر مشهد'), findsOneWidget);
     expect(find.text('شاهد مستقل ردیف'), findsNothing);
@@ -359,7 +360,7 @@ void main() {
     await t.enterText(find.byType(TextField).first, 'ورق ۳');
     await t.pumpAndSettle();
     expect(c.filtered.length, 1);
-    expect(find.text('ورق سیاه 3 میل'), findsOneWidget);
+    expect(find.text('ورق سیاه ۳ میل'), findsOneWidget);
     expect(find.text('ورق سیاه 30 میل'), findsNothing);
     expect(find.text('ورق • ضخامت 3 میلی‌متر'), findsOneWidget);
     expect(t.takeException(), isNull);

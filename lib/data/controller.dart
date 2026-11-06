@@ -61,16 +61,19 @@ class MarketController extends ChangeNotifier {
     for (final e in endpoints)
       if (e.defaultEnabled) e.id
   };
-  bool busy = false, ready = false, autoRefresh = true, disposed = false;
+  bool busy = false, ready = false, autoRefresh = false, disposed = false;
   bool foreground = true;
   int finished = 0, historyRevision = 0;
   void historyChanged() {
     historyRevision++;
+    historyEpoch++;
     _notify();
   }
 
   String? startupError;
-  Timer? _timer;
+  bool transferring = false;
+  final Map<String, int> endpointRevisions = {};
+  int historyEpoch = 0;
   MarketController(this.store, {SourceClient? client})
       : client = client ?? SourceClient();
   Future<void> init() async {
@@ -124,26 +127,13 @@ class MarketController extends ChangeNotifier {
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
       await store.setSetting('allRegisteredSourcesEnabledVersion', '1');
     }
-    autoRefresh = await store.setting('autoRefresh') != 'false';
+    autoRefresh = false;
+    await store.setSetting('autoRefresh', 'false');
     await reload();
     ready = true;
     unawaited(AppLogger.instance.record('lifecycle', 'market_ready',
         {'cachedRows': quotes.length, 'enabled': enabled.length}));
     _notify();
-    _timer = Timer.periodic(const Duration(minutes: 15), (_) {
-      if (autoRefresh && foreground) {
-        refresh();
-      }
-    });
-    final last = await store.setting('lastRefresh');
-    if (autoRefresh &&
-        (last == null ||
-            DateTime.now()
-                    .difference(DateTime.tryParse(last) ?? DateTime(2000))
-                    .inMinutes >=
-                15)) {
-      unawaited(refresh());
-    }
   }
 
   void _notify() {
@@ -213,6 +203,17 @@ class MarketController extends ChangeNotifier {
     _notify();
   }
 
+  void transferState(bool value) {
+    transferring = value;
+    _notify();
+  }
+
+  Future<void> imported() async {
+    discoveredSources.clear();
+    await init();
+    historyChanged();
+  }
+
   Future<void> setEnabled(String id, bool value) async {
     if (value) {
       enabled.add(id);
@@ -224,14 +225,16 @@ class MarketController extends ChangeNotifier {
   }
 
   Future<void> setAuto(bool value) async {
-    autoRefresh = value;
-    await store.setSetting('autoRefresh', '$value');
+    // Legacy method retained; background/network auto-refresh is disabled.
+    autoRefresh = false;
+    await store.setSetting('autoRefresh', 'false');
     _notify();
   }
 
   Future<void> refresh() async {
-    if (busy || disposed) return;
+    if (busy || transferring || disposed) return;
     busy = true;
+    historyRevision++;
     unawaited(AppLogger.instance
         .record('network', 'refresh_started', {'sources': enabled.length}));
     finished = 0;
@@ -248,6 +251,7 @@ class MarketController extends ChangeNotifier {
               replaceMissing: client.complete[e.id] ?? true);
           await rememberSources(client.discoveries[e.id] ?? []);
           historyRevision++;
+          endpointRevisions.update(e.id, (n) => n + 1, ifAbsent: () => 1);
           // Publish successful sources immediately; all-ON must not wait for
           // the slowest source before showing the first received prices.
           await reload();
@@ -282,7 +286,7 @@ class MarketController extends ChangeNotifier {
   @override
   void dispose() {
     disposed = true;
-    _timer?.cancel();
+
     client.close();
     super.dispose();
   }

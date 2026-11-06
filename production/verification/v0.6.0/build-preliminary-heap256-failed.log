@@ -1,0 +1,47 @@
+
+Running Gradle task 'assembleRelease'...                        
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 6120 bytes (99.6% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Failed to execute org.gradle.process.internal.health.memory.DefaultMemoryManager$MemoryCheck@2567f6d1.
+java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.nio.HeapByteBuffer.<init>(HeapByteBuffer.java:64)
+	at java.base/java.nio.ByteBuffer.allocate(ByteBuffer.java:363)
+	at java.base/sun.nio.cs.StreamDecoder.<init>(StreamDecoder.java:250)
+	at java.base/sun.nio.cs.StreamDecoder.<init>(StreamDecoder.java:238)
+	at java.base/sun.nio.cs.StreamDecoder.forInputStreamReader(StreamDecoder.java:89)
+	at java.base/java.io.InputStreamReader.<init>(InputStreamReader.java:115)
+	at com.google.common.io.ByteSource$AsCharSource.openStream(ByteSource.java:474)
+	at com.google.common.io.CharSource.readLines(CharSource.java:375)
+	at com.google.common.io.Files.readLines(Files.java:558)
+	at org.gradle.process.internal.health.memory.MemInfoOsMemoryInfo.getOsSnapshot(MemInfoOsMemoryInfo.java:46)
+	at org.gradle.process.internal.health.memory.DefaultOsMemoryInfo.getOsSnapshot(DefaultOsMemoryInfo.java:62)
+	at org.gradle.process.internal.health.memory.DefaultMemoryManager$MemoryCheck.run(DefaultMemoryManager.java:146)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+	at java.base/java.util.concurrent.FutureTask.runAndReset(FutureTask.java:305)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:305)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Problem in daemon expiration check
+java.lang.OutOfMemoryError: Java heap space
+Failed to execute org.gradle.process.internal.health.memory.DefaultMemoryManager$MemoryCheck@2567f6d1.
+java.lang.OutOfMemoryError: Java heap space
+ERROR: R8: java.lang.OutOfMemoryError: Java heap space
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:minifyReleaseWithR8'.
+> A failure occurred while executing com.android.build.gradle.internal.tasks.R8Task$R8Runnable
+   > Compilation failed to complete
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2m 25s
+Running Gradle task 'assembleRelease'...                          146.3s
+Gradle task assembleRelease failed with exit code 1

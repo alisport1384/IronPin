@@ -1,3 +1,4 @@
+import 'money.dart';
 import 'dart:convert';
 import 'product_text.dart';
 import 'package:shamsi_date/shamsi_date.dart';
@@ -80,7 +81,8 @@ String dateLabel(DateTime? dt, {bool time = true}) {
   if (dt == null) return 'نامشخص';
   final ir = dt.toUtc().add(const Duration(hours: 3, minutes: 30));
   final j = Jalali.fromDateTime(ir);
-  return '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}${time ? '  ${ir.hour.toString().padLeft(2, '0')}:${ir.minute.toString().padLeft(2, '0')}' : ''}';
+  return faDigits(
+      '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}${time ? '  ${ir.hour.toString().padLeft(2, '0')}:${ir.minute.toString().padLeft(2, '0')}' : ''}');
 }
 
 String unitLabel(String u) =>
@@ -312,6 +314,7 @@ class Quote {
     return result;
   }
 
+  double? tomanFor(String basis) => toman(priceFor(basis), currency);
   double? priceFor(String basis) =>
       _unitPrices[basis == 'original' ? unit : basis];
   String conversionBasis(String target) => target == unit
@@ -324,7 +327,7 @@ class Quote {
         ].join('؛ ');
 
   String comparisonGroup(String basis) =>
-      '$category | $material | ${brand.isEmpty ? 'برند نامشخص:$title' : brand} | ${specificationLabel.isEmpty ? 'مشخصات نامشخص:$id' : specificationLabel} | ${details['حالت'] ?? ''} | ${lengthM ?? ''} | ${basis == 'kg' ? 'kg' : unit} | $currency | $tax | $terms';
+      '$category | $material | ${brand.isEmpty ? 'برند نامشخص:$title' : brand} | ${specificationLabel.isEmpty ? 'مشخصات نامشخص:$id' : specificationLabel} | ${details['حالت'] ?? ''} | ${lengthM ?? ''} | ${basis == 'kg' ? 'kg' : unit} | ${toman(amount, currency) == null ? currency : 'تومان'} | $tax | $terms';
   String get signature => jsonEncode([
         amount,
         unit,
@@ -441,8 +444,10 @@ class MarketFilter {
       number(a) != null && number(b) != null
           ? number(a) == number(b)
           : latin(a) == latin(b);
+  bool _hasRawAmount(Quote q) =>
+      q.amount != null && q.amount!.isFinite && q.amount! > 0;
   bool matches(Quote q, DateTime now) {
-    final price = q.priceFor(basis);
+    final price = q.tomanFor(basis);
     return (category.isEmpty || q.category == category) &&
         (material.isEmpty || q.material == material) &&
         (city.isEmpty ||
@@ -463,7 +468,10 @@ class MarketFilter {
                 text: q.productSearchText)) &&
         (!onlyFresh || q.isFresh(now)) &&
         (!recentWeek || q.isWithinWeek(now)) &&
-        (includeUnpriced || price != null || q.hasTextAmount) &&
+        (includeUnpriced ||
+            price != null ||
+            q.hasTextAmount ||
+            _hasRawAmount(q)) &&
         (minPrice == null || (price != null && price >= minPrice!)) &&
         (maxPrice == null || (price != null && price <= maxPrice!));
   }
@@ -515,7 +523,7 @@ class MarketFilter {
             .compareTo(b.sellerCity == 'مشهد' ? 0 : 1);
         if (p != 0) return p;
       }
-      final pa = a.priceFor(basis), pb = b.priceFor(basis);
+      final pa = a.tomanFor(basis), pb = b.tomanFor(basis);
       if (pa == null && pb == null) return a.title.compareTo(b.title);
       if (pa == null) return 1;
       if (pb == null) return -1;

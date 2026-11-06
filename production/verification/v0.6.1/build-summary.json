@@ -1,0 +1,14 @@
+[
+  {
+    "abi": "armeabi-v7a",
+    "elapsedSeconds": 111.3,
+    "minimumAvailableMiB": 173.9,
+    "exitCode": 0
+  },
+  {
+    "abi": "arm64-v8a",
+    "elapsedSeconds": 90.92,
+    "minimumAvailableMiB": 190.8,
+    "exitCode": 0
+  }
+]

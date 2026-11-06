@@ -20,7 +20,7 @@ class AppLogger {
         throw const FileSystemException('Missing log directory');
       }
       await _directory!.create(recursive: true);
-      await record('lifecycle', 'logger_ready', {'version': '0.5.1'});
+      await record('lifecycle', 'logger_ready', {'version': '0.6.1'});
     } catch (e) {
       lastError = '$e';
     }
@@ -45,7 +45,7 @@ class AppLogger {
         } while (await file.exists() && await file.length() > 1024 * 1024);
         if (!await file.exists()) {
           await file.writeAsString(
-              '# IronPin — local diagnostics\n\nUTC timestamps; version 0.5.1. No raw responses or secrets.\n');
+              '# IronPin — local diagnostics\n\nUTC timestamps; version 0.6.1. No raw responses or secrets.\n');
         }
         await file.writeAsString(block, mode: FileMode.append, flush: false);
         lastError = null;

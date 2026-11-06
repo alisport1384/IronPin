@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../domain/calculator.dart';
 import '../domain/market.dart';
 import 'common.dart';
+import '../domain/money.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage({super.key});
@@ -17,14 +18,14 @@ class _CalculatorPageState extends State<CalculatorPage> {
   bool advanced = false;
   String shape = 'round', inputUnit = 'm', priceUnit = 'kg', metal = 'steel';
   final values = <String, TextEditingController>{};
-  final density = TextEditingController(text: '7850'),
-      quantity = TextEditingController(text: '1'),
-      length = TextEditingController(text: '12'),
+  final density = TextEditingController(text: '۷۸۵۰'),
+      quantity = TextEditingController(text: '۱'),
+      length = TextEditingController(text: '۱۲'),
       price = TextEditingController(),
-      tax = TextEditingController(text: '0'),
-      shipping = TextEditingController(text: '0'),
-      services = TextEditingController(text: '0'),
-      waste = TextEditingController(text: '0');
+      tax = TextEditingController(text: '۰'),
+      shipping = TextEditingController(text: '۰'),
+      services = TextEditingController(text: '۰'),
+      waste = TextEditingController(text: '۰');
   WeightResult? result;
   double? total;
   String? error;
@@ -41,9 +42,9 @@ class _CalculatorPageState extends State<CalculatorPage> {
     }
     values.clear();
     for (final f in spec.fields) {
-      values[f.key] = TextEditingController(text: '${f.initial}');
+      values[f.key] = TextEditingController(text: fmt(f.initial, decimals: 6));
     }
-    if (!advanced && shape == 'plate') values['b']!.text = '1';
+    if (!advanced && shape == 'plate') values['b']!.text = '۱';
     if (!advanced && shape == 'catalog') values['kgm']!.clear();
     result = null;
     total = null;
@@ -162,8 +163,8 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   advanced = v;
                   shape = 'round';
                   inputUnit = v ? 'm' : 'piece';
-                  quantity.text = '1';
-                  length.text = '12';
+                  quantity.text = '۱';
+                  length.text = '۱۲';
                   priceUnit = 'kg';
                   resetFields();
                 })),
@@ -183,12 +184,12 @@ class _CalculatorPageState extends State<CalculatorPage> {
               },
               (v) => setState(() {
                     shape = v;
-                    quantity.text = '1';
+                    quantity.text = '۱';
                     length.text = v == 'plate'
-                        ? '2'
+                        ? '۲'
                         : v == 'round' || v == 'catalog'
-                            ? '12'
-                            : '6';
+                            ? '۱۲'
+                            : '۶';
                     resetFields();
                   })),
           const SizedBox(height: 16),
@@ -201,14 +202,14 @@ class _CalculatorPageState extends State<CalculatorPage> {
           for (final f in spec.fields.where((f) => f.key != 'coat'))
             numeric(
                 shape == 'plate' && f.key == 'b'
-                    ? 'عرض ورق به متر — مثلاً 1'
+                    ? 'عرض ورق به متر — مثلاً ۱'
                     : shape == 'catalog' && f.key == 'kgm'
                         ? 'وزن یک شاخه طبق فروشنده (کیلوگرم)'
                         : f.label,
                 values[f.key]!),
           numeric(
               shape == 'plate'
-                  ? 'طول ورق به متر — مثلاً 2'
+                  ? 'طول ورق به متر — مثلاً ۲'
                   : 'طول یک شاخه به متر — طول واقعی',
               length),
           numeric(
@@ -264,7 +265,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
               },
               (v) => setState(() {
                     metal = v;
-                    if (v == 'steel') density.text = '7850';
+                    if (v == 'steel') density.text = '۷۸۵۰';
                     result = null;
                     total = null;
                   })),
@@ -358,7 +359,10 @@ class _CalculatorPageState extends State<CalculatorPage> {
                           style: const TextStyle(
                               color: Color(0xff62e0ce),
                               fontWeight: FontWeight.bold,
-                              fontSize: 24))
+                              fontSize: 24)),
+                      Text(moneyWords(total!),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12))
                     ]
                   ])),
           infoBox('وزن نظری، نه وزن قطعی بار',

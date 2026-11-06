@@ -5,6 +5,7 @@ import '../data/sources.dart';
 import '../domain/market.dart';
 import 'common.dart';
 import 'prices_page.dart';
+import 'backup_panel.dart';
 
 class InfoPage extends StatefulWidget {
   final MarketController c;
@@ -109,11 +110,11 @@ class _InfoPageState extends State<InfoPage> {
           style: TextStyle(color: muted, fontSize: 12)),
       ExpansionTile(
           dense: true,
-          title: const Text('دریافت خودکار، داده و نگهداری',
+          title: const Text('دریافت دستی، داده و نگهداری',
               style: TextStyle(fontSize: 12)),
           children: [
             infoBox('بدون سرور دائمی',
-                'قیمت هنگام بازکردن، نوسازی دستی و هر ۱۵ دقیقه در زمان فعال‌بودن اپ دریافت می‌شود. دریافت پس‌زمینه/اپ بسته تضمین نمی‌شود. تاریخچه فقط روی همین دستگاه و از شروع دریافت ساخته می‌شود.'),
+                'قیمت فقط با زدن دکمه نوسازی در بالای برنامه از اینترنت دریافت می‌شود؛ بازکردن اپ، بازگشت به آن، گذشت زمان و کشیدن صفحه هیچ دریافت خودکاری ندارند. تاریخچه فقط روی همین دستگاه و از شروع دریافت ساخته می‌شود.'),
             infoBox('ذخیره محلی و تصمیم ماهانه',
                 'داده‌های قبلی با نوسازی یا قطع اینترنت حذف نمی‌شوند. ابتدای هر ماه شمسی، هنگام استفاده از اپ درباره حفظ یا پاک‌سازی تاریخچه ماه‌های قبل سؤال می‌شود. قیمت جاری و تنظیمات باقی می‌مانند. حذف برنامه یا پاک‌کردن داده برنامه توسط Android می‌تواند این اطلاعات را حذف کند.'),
           ]),
@@ -138,12 +139,7 @@ class _InfoPageState extends State<InfoPage> {
                     ? 'در حال خروجی…'
                     : 'ذخیره فایل‌های .md در پوشه دلخواه')),
           ]),
-      SwitchListTile(
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          title: const Text('نوسازی خودکار در زمان استفاده'),
-          value: c.autoRefresh,
-          onChanged: c.setAuto),
+      BackupPanel(c: c),
       const SizedBox(height: 10),
       TextField(
           decoration: const InputDecoration(

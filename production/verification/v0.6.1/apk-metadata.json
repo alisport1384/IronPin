@@ -1,0 +1,82 @@
+[
+  {
+    "file": "IronPin-0.6.1-armeabi-v7a.apk",
+    "abi": "armeabi-v7a",
+    "bytes": 8136542,
+    "sha256": "813c0b811aa03de9e55ab94c948c7e0fc2bd931718e9bff8001bf1dcb7226a4a",
+    "package": "ir.ironpin.ironpin",
+    "versionName": "0.6.1",
+    "versionCode": 1008,
+    "minSdk": 21,
+    "targetSdk": 35,
+    "certificateSha256": "360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4",
+    "signatureV1": true,
+    "signatureV2": true,
+    "registryMatchesSource": true,
+    "nativeAbis": [
+      "armeabi-v7a"
+    ],
+    "elfMachine": 40,
+    "aotMarkers": {
+      "0.6.1": true,
+      "محلی v2": true,
+      "جزئیات بیشتر": true,
+      "allRegisteredSourcesEnabledVersion": true,
+      "telegram-ghanbari": true,
+      "khabazzade-sheet": true,
+      "ProductQuery": true,
+      "PublicTables": true,
+      "retire": true,
+      "IronPin-backup": true,
+      "importBackup": true,
+      "exportBackup": true,
+      "محاسبات همان کالا": true,
+      "رنج‌گیری ۴۸ ساعت": true,
+      "نمایش ۴۰ کالای بعدی": true,
+      "برای این کالا فعلاً رنج معتبر نداریم": true,
+      "تنظیمات کاربری بکاپ، از جمله روشن/خاموش بودن منابع، جایگزین شوند.": true
+    },
+    "removedManualSheetMarkerAbsent": true,
+    "deviceInstallationTested": false
+  },
+  {
+    "file": "IronPin-0.6.1-arm64-v8a.apk",
+    "abi": "arm64-v8a",
+    "bytes": 8518437,
+    "sha256": "6b6f38e8147ab85ccc1f811dc802e8d7ed4cb2a4f43ffb6c7b88a261b12637fe",
+    "package": "ir.ironpin.ironpin",
+    "versionName": "0.6.1",
+    "versionCode": 2008,
+    "minSdk": 21,
+    "targetSdk": 35,
+    "certificateSha256": "360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4",
+    "signatureV1": true,
+    "signatureV2": true,
+    "registryMatchesSource": true,
+    "nativeAbis": [
+      "arm64-v8a"
+    ],
+    "elfMachine": 183,
+    "aotMarkers": {
+      "0.6.1": true,
+      "محلی v2": true,
+      "جزئیات بیشتر": true,
+      "allRegisteredSourcesEnabledVersion": true,
+      "telegram-ghanbari": true,
+      "khabazzade-sheet": true,
+      "ProductQuery": true,
+      "PublicTables": true,
+      "retire": true,
+      "IronPin-backup": true,
+      "importBackup": true,
+      "exportBackup": true,
+      "محاسبات همان کالا": true,
+      "رنج‌گیری ۴۸ ساعت": true,
+      "نمایش ۴۰ کالای بعدی": true,
+      "برای این کالا فعلاً رنج معتبر نداریم": true,
+      "تنظیمات کاربری بکاپ، از جمله روشن/خاموش بودن منابع، جایگزین شوند.": true
+    },
+    "removedManualSheetMarkerAbsent": true,
+    "deviceInstallationTested": false
+  }
+]

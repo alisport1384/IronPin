@@ -12,6 +12,7 @@ import 'ui/prices_page.dart';
 import 'ui/chart_page.dart';
 import 'ui/calculator_page.dart';
 import 'ui/info_page.dart';
+import 'ui/range_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -147,7 +148,7 @@ class MarketHome extends StatefulWidget {
 class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
   int tab = 0;
   String? chartId;
-  final List<Widget?> _pages = List.filled(4, null);
+  final List<Widget?> _pages = List.filled(5, null);
   bool _retentionOpen = false;
   String? _observedMonth;
   Future<void> _checkRetention() async {
@@ -209,18 +210,6 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
     unawaited(
         AppLogger.instance.record('lifecycle', 'state', {'state': state.name}));
     if (state == AppLifecycleState.resumed) unawaited(_checkRetention());
-    if (state == AppLifecycleState.resumed && widget.c.autoRefresh) {
-      unawaited(_resume());
-    }
-  }
-
-  Future<void> _resume() async {
-    final raw = await widget.c.store.setting('lastRefresh');
-    if (raw == null ||
-        DateTime.now()
-                .difference(DateTime.tryParse(raw) ?? DateTime(2000))
-                .inMinutes >=
-            15) await widget.c.refresh();
   }
 
   @override
@@ -243,7 +232,8 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
                     tab = 1;
                   })),
           1 => ChartPage(c: c, selectedId: chartId),
-          2 => const CalculatorPage(),
+          2 => RangePage(c: c),
+          3 => const CalculatorPage(),
           _ => InfoPage(c: c),
         };
         return Scaffold(
@@ -271,7 +261,7 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
               actions: [
                 IconButton(
                     tooltip: 'نوسازی قیمت‌ها',
-                    onPressed: c.busy ? null : c.refresh,
+                    onPressed: c.busy || c.transferring ? null : c.refresh,
                     icon: c.busy
                         ? const SizedBox(
                             height: 21,
@@ -327,6 +317,8 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
                     label: 'قیمت‌ها'),
                 NavigationDestination(
                     icon: Icon(Icons.show_chart), label: 'نمودار'),
+                NavigationDestination(
+                    icon: Icon(Icons.price_change_outlined), label: 'رنج‌گیری'),
                 NavigationDestination(
                     icon: Icon(Icons.calculate_outlined),
                     selectedIcon: Icon(Icons.calculate),

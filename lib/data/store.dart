@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'app_logger.dart';
+import '../domain/price_range.dart';
 import 'package:path/path.dart' as path;
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:sqflite/sqflite.dart';
@@ -15,12 +16,14 @@ class MarketStore {
     final p = dbPath ?? path.join(await getDatabasesPath(), 'ironpin.db');
     final db = await f.openDatabase(p,
         options: OpenDatabaseOptions(
-            version: 2,
+            version: 3,
             onCreate: (db, version) async {
               await db.execute(
                   'CREATE TABLE latest (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)');
               await db.execute(
-                  'CREATE TABLE history (seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL, captured_at TEXT NOT NULL, signature TEXT NOT NULL, payload TEXT NOT NULL)');
+                  'CREATE TABLE history (seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL, captured_at TEXT NOT NULL, signature TEXT NOT NULL, payload TEXT NOT NULL, market_at TEXT)');
+              await db.execute(
+                  'CREATE INDEX IF NOT EXISTS history_market_time ON history(market_at)');
               await db.execute(
                   'CREATE INDEX history_id_time ON history(id,captured_at)');
               await db
@@ -35,6 +38,34 @@ class MarketStore {
                 await db.execute(
                     'CREATE INDEX IF NOT EXISTS history_id_seq ON history(id,seq)');
               }
+              if (oldVersion < 3) {
+                final columns = await db.rawQuery('PRAGMA table_info(history)');
+                if (!columns.any((r) => r['name'] == 'market_at')) {
+                  await db
+                      .execute('ALTER TABLE history ADD COLUMN market_at TEXT');
+                }
+                var after = 0;
+                while (true) {
+                  final rows = await db.query('history',
+                      columns: ['seq', 'payload'],
+                      where: 'seq>?',
+                      whereArgs: [after],
+                      orderBy: 'seq',
+                      limit: 300);
+                  if (rows.isEmpty) break;
+                  final dates = await compute(_historyDates, rows);
+                  final batch = db.batch();
+                  for (final r in dates) {
+                    batch.update('history',
+                        {'market_at': r['date'], 'signature': r['signature']},
+                        where: 'seq=?', whereArgs: [r['seq']]);
+                  }
+                  await batch.commit(noResult: true);
+                  after = rows.last['seq'] as int;
+                }
+                await db.execute(
+                    'CREATE INDEX IF NOT EXISTS history_market_time ON history(market_at)');
+              }
             }));
     return MarketStore(db);
   }
@@ -44,13 +75,14 @@ class MarketStore {
       (await db.query('latest', where: 'active=1'))
           .map((r) => r['payload'] as String)
           .toList());
-  Future<List<Quote>> history(String id, {DateTime? since}) async {
+  Future<List<Quote>> history(String id, {DateTime? since, int? limit}) async {
     final rows = await db.query('history',
         where: since == null ? 'id=?' : 'id=? AND captured_at>=?',
         whereArgs: since == null ? [id] : [id, since.toUtc().toIso8601String()],
-        orderBy: 'captured_at ASC, seq ASC');
-    final result = await compute(
-        _decodeQuotes, rows.map((r) => r['payload'] as String).toList());
+        orderBy: 'captured_at DESC, seq DESC',
+        limit: limit);
+    final result = await compute(_decodeQuotes,
+        rows.reversed.map((r) => r['payload'] as String).toList());
     await AppLogger.instance
         .record('chart', 'history_read', {'points': result.length});
     return result;
@@ -75,7 +107,7 @@ class MarketStore {
           where: 'endpoint=?',
           whereArgs: [endpoint]);
       final previous = await tx.rawQuery(
-          'SELECT l.id,(SELECT h.signature FROM history h WHERE h.id=l.id ORDER BY h.seq DESC LIMIT 1) AS signature FROM latest l WHERE l.endpoint=?',
+          'SELECT l.id,(SELECT h.signature FROM history h WHERE h.id=l.id ORDER BY h.captured_at DESC,h.seq DESC LIMIT 1) AS signature FROM latest l WHERE l.endpoint=?',
           [endpoint]);
       final plan = await compute(_snapshotPlan,
           {'quotes': quotes, 'current': current, 'previous': previous});
@@ -102,7 +134,8 @@ class MarketStore {
               'id': item['id'],
               'captured_at': item['time'],
               'signature': item['signature'],
-              'payload': item['payload']
+              'payload': item['payload'],
+              'market_at': item['market_at']
             });
           }
         }
@@ -122,6 +155,35 @@ class MarketStore {
     });
     await AppLogger.instance.record('storage', 'snapshot_saved',
         {'endpoint': endpoint, 'rows': quotes.length});
+  }
+
+  Future<RangeReport> rangeReport(DateTime now) async {
+    final watch = Stopwatch()..start();
+    final rows = await db.rawQuery(
+        'SELECT payload FROM history WHERE market_at>=? AND market_at<=? '
+        // Include every retained product, even inactive/old/undated rows, for
+        // selection only. Statistical eligibility remains strictly 48 hours.
+        'UNION ALL SELECT payload FROM latest '
+        // Backups may retain history with no corresponding latest entry. One
+        // representative per missing offer makes that catalogue selectable too.
+        'UNION ALL SELECT h.payload FROM history h JOIN '
+        '(SELECT MAX(seq) AS seq FROM history '
+        'WHERE id NOT IN (SELECT id FROM latest) GROUP BY id) orphan '
+        'ON h.seq=orphan.seq',
+        [
+          now.toUtc().subtract(const Duration(hours: 48)).toIso8601String(),
+          now.toUtc().toIso8601String()
+        ]);
+    final report = await compute(_rangesInBackground, {
+      'payloads': rows.map((r) => r['payload'] as String).toList(),
+      'now': now
+    });
+    await AppLogger.instance.record('range', 'computed', {
+      'rows': rows.length,
+      'groups': report.ranges.length,
+      'elapsedMs': watch.elapsedMilliseconds
+    });
+    return report;
   }
 
   Future<void> failure(String endpoint, String message) async {
@@ -238,7 +300,12 @@ List<Map<String, Object?>> _snapshotPlan(Map<String, Object> input) {
         'id': q.id,
         'payload': jsonEncode(q.toJson()),
         'signature': signature,
-        'changed': previous[q.id] != signature,
+        // Current payload, not insertion order of imported old history, is the
+        // baseline for detecting an actual change. Empty history starts a point.
+        'changed': previous[q.id] == null ||
+            old == null ||
+            Quote.fromJson(jsonDecode(old)).signature != signature,
+        'market_at': q.marketAt?.toUtc().toIso8601String(),
         'time': q.fetchedAt.toUtc().toIso8601String()
       };
     })
@@ -247,3 +314,20 @@ List<Map<String, Object?>> _snapshotPlan(Map<String, Object> input) {
 
 final _publicPostPattern = RegExp(r'^([^:]+:[A-Za-z0-9_]+/\d+)(?::|$)');
 String? _publicPostPrefix(String id) => _publicPostPattern.firstMatch(id)?[1];
+
+List<Map<String, Object?>> _historyDates(List<Map<String, Object?>> rows) => [
+      for (final row in rows)
+        {
+          'seq': row['seq'],
+          'signature':
+              Quote.fromJson(jsonDecode(row['payload'] as String)).signature,
+          'date': Quote.fromJson(jsonDecode(row['payload'] as String))
+              .marketAt
+              ?.toUtc()
+              .toIso8601String()
+        }
+    ];
+RangeReport _rangesInBackground(Map<String, Object> input) => calculateRanges(
+    (input['payloads'] as List<String>)
+        .map((s) => Quote.fromJson(jsonDecode(s))),
+    input['now'] as DateTime);

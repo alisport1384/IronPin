@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'dart:async';
 import '../data/app_logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import '../domain/money.dart';
 import '../data/controller.dart';
 import '../domain/market.dart';
 import 'common.dart';
@@ -20,7 +22,10 @@ class _ChartPageState extends State<ChartPage> {
   int days = 30;
   Future<List<Quote>>? future;
   String lastSignature = '';
-  int loadedRevision = -1;
+  String loadedKey = '';
+  int historyLimit = 1000;
+  String historyKey(String endpoint) =>
+      '${widget.c.historyEpoch}:${widget.c.endpointRevisions[endpoint] ?? 0}';
   @override
   void initState() {
     super.initState();
@@ -37,10 +42,16 @@ class _ChartPageState extends State<ChartPage> {
   }
 
   void load(String id) {
+    if (selected != id) historyLimit = 1000;
     selected = id;
-    loadedRevision = widget.c.historyRevision;
+    final quote = widget.c.quotes.where((q) => q.id == id).firstOrNull;
+    loadedKey = historyKey(quote?.endpoint ?? '');
     unawaited(AppLogger.instance.record('chart', 'series_selected'));
-    future = widget.c.store.history(id);
+    future = widget.c.store.history(id,
+        since: days == 0
+            ? null
+            : DateTime.now().toUtc().subtract(Duration(days: days)),
+        limit: historyLimit);
     lastSignature =
         widget.c.quotes.where((q) => q.id == id).firstOrNull?.signature ?? '';
   }
@@ -48,7 +59,7 @@ class _ChartPageState extends State<ChartPage> {
   @override
   Widget build(BuildContext context) {
     final options = widget.c.filtered
-        .where((q) => q.priceFor(widget.c.filter.basis) != null)
+        .where((q) => q.tomanFor(widget.c.filter.basis) != null)
         .toList();
     if (options.isEmpty) {
       return Column(children: [
@@ -71,7 +82,7 @@ class _ChartPageState extends State<ChartPage> {
     final current = options.firstWhere((q) => q.id == selected);
     if (future == null ||
         lastSignature != current.signature ||
-        loadedRevision != widget.c.historyRevision) {
+        loadedKey != historyKey(current.endpoint)) {
       load(current.id);
     }
     return ListView(padding: const EdgeInsets.all(18), children: [
@@ -89,7 +100,7 @@ class _ChartPageState extends State<ChartPage> {
       const SizedBox(height: 20),
       OutlinedButton.icon(
           icon: const Icon(Icons.search),
-          label: Text('${current.title} • ${current.seller}',
+          label: Text(faDigits('${current.title} • ${current.seller}'),
               maxLines: 2, overflow: TextOverflow.ellipsis),
           onPressed: () async {
             final q = await showSearch<Quote?>(
@@ -106,7 +117,11 @@ class _ChartPageState extends State<ChartPage> {
             '90': '۹۰ روز',
             '0': 'همه تاریخچه دستگاه'
           },
-          (v) => setState(() => days = int.parse(v))),
+          (v) => setState(() {
+                days = int.parse(v);
+                historyLimit = 1000;
+                load(current.id);
+              })),
       FutureBuilder<List<Quote>>(
           future: future,
           builder: (context, snap) {
@@ -122,7 +137,7 @@ class _ChartPageState extends State<ChartPage> {
             }
             final f = widget.c.filter;
             final series = snap.data!.where((q) {
-              final p = q.priceFor(f.basis);
+              final p = q.tomanFor(f.basis);
               return p != null &&
                   (days == 0 ||
                       DateTime.now().toUtc().difference(q.fetchedAt).inDays <=
@@ -135,8 +150,22 @@ class _ChartPageState extends State<ChartPage> {
             return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                      'نمایش ${fmt(snap.data!.length)} ثبت خوانده‌شده؛ ابتدا حداکثر ${fmt(historyLimit)} ثبت آخر بارگذاری می‌شود.',
+                      style: const TextStyle(fontSize: 11, color: muted)),
+                  if (snap.data!.length >= historyLimit)
+                    OutlinedButton(
+                        onPressed: () => setState(() {
+                              historyLimit += 1000;
+                              load(current.id);
+                            }),
+                        child: const Text('خواندن ۱۰۰۰ ثبت قدیمی‌تر')),
                   infoBox('تاریخچه محلی و واقعی',
                       'نقطه‌ها از دریافت‌های همین دستگاه ساخته می‌شوند، نه آرشیو تاریخی بازار. محور افقی زمان ثبت در اپ است؛ تاریخ اعلام منبع کنار هر نقطه آمده. ثبت تکراری بدون تغییر، نقطه جدید نمی‌سازد.'),
+                  if (series.length > 1000)
+                    const Text(
+                        'نمودار با حفظ کمینه/بیشینه خلاصه می‌شود؛ همه ثبت‌های خوانده‌شده در سری و آمار باقی می‌مانند.',
+                        style: TextStyle(fontSize: 10, color: muted)),
                   if (series.isEmpty)
                     emptyState('نقطه‌ای در این بازه نیست',
                         'بازه یا محدودیت قیمت را تغییر دهید.')
@@ -148,7 +177,7 @@ class _ChartPageState extends State<ChartPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                      '${fmt(series.last.priceFor(f.basis))} ${current.currency}',
+                                      '${fmt(series.last.tomanFor(f.basis), decimals: 2)} تومان',
                                       style: const TextStyle(
                                           fontSize: 28,
                                           color: teal,
@@ -165,7 +194,7 @@ class _ChartPageState extends State<ChartPage> {
                                           painter: PriceChartPainter(
                                               series
                                                   .map((q) =>
-                                                      q.priceFor(f.basis)!)
+                                                      q.tomanFor(f.basis)!)
                                                   .toList(),
                                               series
                                                   .map((q) => q.fetchedAt
@@ -198,7 +227,8 @@ class _ChartPageState extends State<ChartPage> {
                   for (final q in series.reversed.take(100))
                     ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('${fmt(q.priceFor(f.basis))} ${q.currency}',
+                        title: Text(
+                            '${fmt(q.tomanFor(f.basis), decimals: 2)} تومان',
                             style:
                                 const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(
@@ -245,9 +275,11 @@ class PriceChartPainter extends CustomPainter {
         ..layout(maxWidth: 52);
       tp.paint(canvas, Offset(left - tp.width - 6, y - 6));
     }
+    final indices = chartSampleIndices(values);
     final line = Path()..moveTo(point(0).dx, point(0).dy);
-    for (var i = 1; i < values.length; i++) {
-      line.lineTo(point(i).dx, point(i - 1).dy);
+    for (var j = 1; j < indices.length; j++) {
+      final i = indices[j], previous = indices[j - 1];
+      line.lineTo(point(i).dx, point(previous).dy);
       line.lineTo(point(i).dx, point(i).dy);
     }
     canvas.drawPath(
@@ -256,13 +288,15 @@ class PriceChartPainter extends CustomPainter {
           ..color = teal
           ..strokeWidth = 2.5
           ..style = PaintingStyle.stroke);
-    for (var i = 0; i < values.length; i++) {
+    for (final i in indices) {
       canvas.drawCircle(point(i), 3.5, Paint()..color = teal);
     }
   }
 
   @override
-  bool shouldRepaint(PriceChartPainter oldDelegate) => true;
+  bool shouldRepaint(PriceChartPainter oldDelegate) =>
+      !listEquals(values, oldDelegate.values) ||
+      !listEquals(times, oldDelegate.times);
 }
 
 class QuoteSearch extends SearchDelegate<Quote?> {
@@ -294,10 +328,37 @@ class QuoteSearch extends SearchDelegate<Quote?> {
           }
           final q = items[i - 1];
           return ListTile(
-              title: Text(q.title),
-              subtitle:
-                  Text('${q.specificationLabel} • ${q.seller} • ${q.loading}'),
+              title: Text(faDigits(q.title)),
+              subtitle: Text(faDigits(
+                  '${q.specificationLabel} • ${q.seller} • ${q.loading}')),
               onTap: () => close(context, q));
         });
   }
+}
+
+// At most 1000 real sample points, with chronological min/max in every bucket.
+// No synthetic prices, averaging or changes to the underlying series.
+List<int> chartSampleIndices(List<double> values, {int maxPoints = 1000}) {
+  if (values.length <= maxPoints) return List.generate(values.length, (i) => i);
+  final buckets = (maxPoints - 2) ~/ 2;
+  if (buckets < 1) throw ArgumentError('maxPoints must be at least 4');
+  final indices = <int>[0];
+  for (var b = 0; b < buckets; b++) {
+    final start = 1 + (values.length - 2) * b ~/ buckets;
+    final end = 1 + (values.length - 2) * (b + 1) ~/ buckets;
+    var minIndex = start, maxIndex = start;
+    for (var i = start + 1; i < end; i++) {
+      if (values[i] < values[minIndex]) minIndex = i;
+      if (values[i] > values[maxIndex]) maxIndex = i;
+    }
+    if (minIndex == maxIndex) {
+      indices.add(minIndex);
+    } else if (minIndex < maxIndex) {
+      indices.addAll([minIndex, maxIndex]);
+    } else {
+      indices.addAll([maxIndex, minIndex]);
+    }
+  }
+  indices.add(values.length - 1);
+  return indices;
 }

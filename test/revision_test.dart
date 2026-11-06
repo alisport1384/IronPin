@@ -102,7 +102,7 @@ void main() {
       expect(await store.historyCount(), 1);
       expect(MarketStore.retentionMonth(now), '1405-08');
       expect(dateLabel(MarketStore.retentionCutoff(now), time: false),
-          '1405/08/01');
+          '۱۴۰۵/۰۸/۰۱');
     });
     test('explicit cleanup deletes only older history, never latest/settings',
         () async {
@@ -154,7 +154,7 @@ void main() {
       await store.close();
       store = await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
       expect((await store.latest()).single.thicknessLabel, '8');
-      expect(await store.db.getVersion(), 2);
+      expect(await store.db.getVersion(), 3);
       final c = MarketController(store);
       await c.init();
       expect(c.quotes.single.id, 'row-1');

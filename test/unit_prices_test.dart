@@ -175,7 +175,7 @@ void main() {
                 child: QuoteCard(q: q(), basis: 'original', onChart: () {})))));
     await t.pumpAndSettle();
     expect(find.byType(UnitPrices), findsNothing);
-    await t.tap(find.text('میلگرد 16'));
+    await t.tap(find.text('میلگرد ۱۶'));
     await t.pumpAndSettle();
     expect(find.byType(UnitPrices), findsOneWidget);
     expect(find.text('هر متر • تبدیل'), findsOneWidget);

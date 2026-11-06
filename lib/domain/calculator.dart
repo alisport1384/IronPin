@@ -336,6 +336,10 @@ class SteelCalculator {
     if (amount <= 0) {
       throw const FormatException('تبدیل به واحد قیمت انتخابی ممکن نیست.');
     }
-    return amount * price * (1 + taxPercent / 100) + shipping + services;
+    final total = amount * price * (1 + taxPercent / 100) + shipping + services;
+    if (!total.isFinite) {
+      throw const FormatException('مبلغ خارج از محدوده محاسبه است.');
+    }
+    return total;
   }
 }

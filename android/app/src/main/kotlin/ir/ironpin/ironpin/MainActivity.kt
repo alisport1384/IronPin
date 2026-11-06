@@ -12,6 +12,10 @@ import java.util.concurrent.Executors
 
 class MainActivity: FlutterActivity() {
     private val requestExport = 6012
+    private val requestBackupExport = 6013
+    private val requestBackupImport = 6014
+    private val maxBackupBytes = 512L * 1024 * 1024
+    private var backupPath: String? = null
     private val ioExecutor = Executors.newSingleThreadExecutor()
     private var pending: MethodChannel.Result? = null
     private var pendingPaths: List<String> = emptyList()
@@ -24,6 +28,31 @@ class MainActivity: FlutterActivity() {
                     val dir = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: filesDir, "IronPin/logs")
                     if (dir.exists() || dir.mkdirs()) result.success(dir.absolutePath)
                     else result.error("DIRECTORY", "Cannot create log directory", null)
+                }
+                "backupDirectory" -> {
+                    val dir=File(filesDir,"IronPin/backups")
+                    if (dir.exists() || dir.mkdirs()) result.success(dir.absolutePath)
+                    else result.error("DIRECTORY","Cannot create backup directory",null)
+                }
+                "exportBackup", "importBackup" -> {
+                    if (pending != null) { result.error("BUSY","Another picker is open",null); return@setMethodCallHandler }
+                    val exporting=call.method == "exportBackup"
+                    try {
+                        if (exporting) {
+                            val root=File(filesDir,"IronPin/backups").canonicalFile
+                            val file=File(call.argument<String>("path") ?: "").canonicalFile
+                            if (file.parentFile != root || file.extension != "jsonl" || !file.isFile || file.length()>maxBackupBytes) throw SecurityException("Invalid backup path")
+                            backupPath=file.path
+                        }
+                        pending=result
+                        val intent=Intent(if (exporting) Intent.ACTION_CREATE_DOCUMENT else Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type=if (exporting) "application/x-ndjson" else "*/*"
+                            if (exporting) putExtra(Intent.EXTRA_TITLE,call.argument<String>("name") ?: "IronPin.ironpin.jsonl")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        }
+                        startActivityForResult(intent,if (exporting) requestBackupExport else requestBackupImport)
+                    } catch (e: Exception) { pending=null; backupPath=null; result.error("PICKER",e.message,null) }
                 }
                 "exportLogs" -> {
                     if (pending != null) { result.error("BUSY", "Another export is open", null); return@setMethodCallHandler }
@@ -41,6 +70,42 @@ class MainActivity: FlutterActivity() {
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == requestBackupExport || requestCode == requestBackupImport) {
+            val result=pending ?: return
+            pending=null
+            val uri=data?.data
+            val path=backupPath; backupPath=null
+            if (resultCode != Activity.RESULT_OK || uri == null) { result.success(null); return }
+            ioExecutor.execute {
+                var incoming: File?=null
+                try {
+                    val answer: String
+                    if (requestCode == requestBackupExport) {
+                        val file=File(path ?: throw SecurityException("Missing backup path")).canonicalFile
+                        val root=File(filesDir,"IronPin/backups").canonicalFile
+                        if (file.parentFile != root || file.extension != "jsonl" || file.length()>maxBackupBytes) throw SecurityException("Invalid backup path")
+                        contentResolver.openOutputStream(uri,"wt")?.use { out -> file.inputStream().use { input ->
+                            val buffer=ByteArray(65536); var total=0L
+                            while (true) { val n=input.read(buffer); if (n<0) break; total+=n; if (total>maxBackupBytes) throw IllegalStateException("Backup too large"); out.write(buffer,0,n) }
+                        } } ?: throw IllegalStateException("Cannot write backup")
+                        answer=uri.toString()
+                    } else {
+                        val root=File(filesDir,"IronPin/backups"); if (!root.exists() && !root.mkdirs()) throw IllegalStateException("Cannot create backup directory")
+                        val file=File.createTempFile("incoming-",".jsonl",root); incoming=file
+                        contentResolver.openInputStream(uri)?.use { input -> file.outputStream().use { out ->
+                            val buffer=ByteArray(65536); var total=0L
+                            while (true) { val n=input.read(buffer); if (n<0) break; total+=n; if (total>maxBackupBytes) throw IllegalStateException("Backup too large"); out.write(buffer,0,n) }
+                        } } ?: throw IllegalStateException("Cannot read backup")
+                        answer=file.absolutePath
+                    }
+                    runOnUiThread { result.success(answer) }
+                } catch (e: Exception) {
+                    incoming?.delete()
+                    runOnUiThread { result.error("BACKUP",e.message,null) }
+                }
+            }
+            return
+        }
         if (requestCode != requestExport) return
         val result=pending ?: return
         pending=null

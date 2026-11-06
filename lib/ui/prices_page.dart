@@ -4,6 +4,7 @@ import '../data/app_logger.dart';
 import '../data/controller.dart';
 import '../domain/market.dart';
 import 'common.dart';
+import '../domain/money.dart';
 
 class PricesPage extends StatelessWidget {
   final MarketController c;
@@ -85,67 +86,75 @@ class PricesPage extends StatelessWidget {
                 child: Text(interpreted,
                     style: const TextStyle(fontSize: 10, color: teal)))),
       Expanded(
-          child: RefreshIndicator(
-              onRefresh: c.refresh,
-              child: list.isEmpty
-                  ? ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                          const SizedBox(height: 45),
-                          emptyState(
-                              c.filtering
-                                  ? 'در حال آماده‌سازی پیشنهادها'
-                                  : c.quotes.isEmpty
-                                      ? 'هنوز قیمتی دریافت نشده'
-                                      : 'نتیجه‌ای با این فیلتر نیست',
-                              c.quotes.isEmpty
-                                  ? 'نوسازی را بزنید؛ تحلیل منابع خودکار داخل اپ انجام می‌شود. وضعیت دریافت در اطلاعات است.'
-                                  : 'فیلتر شهر، بازه تاریخ یا مشخصات را بررسی کنید. داده بی‌تاریخ/قدیمی با برداشتن هفته اخیر قابل بررسی است؛ نبود نتیجه به معنی نبود فروشنده نیست.')
-                        ])
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
-                      itemCount: list.length,
-                      itemBuilder: (ctx, i) {
-                        final q = list[i];
-                        String day(Quote q) => q.marketAt == null
-                            ? 'تاریخ نامشخص'
-                            : dateLabel(q.marketAt, time: false);
-                        final showDate = c.filter.sort == 'latest' &&
-                            (i == 0 || day(q) != day(list[i - 1]));
-                        return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (showDate)
-                                Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 5),
-                                    child: Text(day(q),
-                                        style: const TextStyle(
-                                            fontSize: 10, color: muted))),
-                              QuoteCard(
-                                  key: ValueKey('${q.id}:$i'),
-                                  q: q,
-                                  basis: c.filter.basis,
-                                  onChart: () => onChart(q))
-                            ]);
-                      })))
+          child: list.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                      const SizedBox(height: 45),
+                      emptyState(
+                          c.filtering
+                              ? 'در حال آماده‌سازی پیشنهادها'
+                              : c.quotes.isEmpty
+                                  ? 'هنوز قیمتی دریافت نشده'
+                                  : 'نتیجه‌ای با این فیلتر نیست',
+                          c.quotes.isEmpty
+                              ? 'نوسازی را بزنید؛ تحلیل منابع خودکار داخل اپ انجام می‌شود. وضعیت دریافت در اطلاعات است.'
+                              : 'فیلتر شهر، بازه تاریخ یا مشخصات را بررسی کنید. داده بی‌تاریخ/قدیمی با برداشتن هفته اخیر قابل بررسی است؛ نبود نتیجه به معنی نبود فروشنده نیست.')
+                    ])
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
+                  itemCount: list.length,
+                  itemBuilder: (ctx, i) {
+                    final q = list[i];
+                    String day(Quote q) => q.marketAt == null
+                        ? 'تاریخ نامشخص'
+                        : dateLabel(q.marketAt, time: false);
+                    final showDate = c.filter.sort == 'latest' &&
+                        (i == 0 || day(q) != day(list[i - 1]));
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showDate)
+                            Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 5),
+                                child: Text(day(q),
+                                    style: const TextStyle(
+                                        fontSize: 10, color: muted))),
+                          QuoteCard(
+                              key: ValueKey('${q.id}:$i'),
+                              q: q,
+                              basis: c.filter.basis,
+                              onChart: () => onChart(q))
+                        ]);
+                  }))
     ]);
   }
 }
 
-String _offerAmount(Quote q, String basis) {
-  final value = q.priceFor(basis);
-  return value != null
-      ? fmt(value, decimals: 2)
-      : q.amount != null
-          ? fmt(q.amount, decimals: 2)
-          : q.details['مبلغ استخراج‌شده'] ?? 'نیازمند بررسی';
+double? _visibleRawAmount(Quote q) {
+  if (q.amount != null) return q.amount;
+  final raw = latin(q.details['مبلغ استخراج‌شده'] ?? '');
+  if (!RegExp(r'^(?:\d+(?:[.٫]\d+)?|\d{1,3}(?:[,٬]\d{3})+(?:[.٫]\d+)?)$')
+      .hasMatch(raw)) return null;
+  final n = number(raw);
+  return n != null && n.isFinite && n > 0 ? n : null;
 }
 
-String _offerUnit(Quote q, String basis) =>
-    q.priceFor(basis) == null && q.hasTextAmount
-        ? '${q.currency} • واحد: ${unitLabel(q.unit)}'
-        : '${q.currency} / ${unitLabel(basis == 'kg' ? 'kg' : q.unit)}';
+String _offerAmount(Quote q, String basis) {
+  final value = q.priceFor(basis) ?? _visibleRawAmount(q);
+  return value != null
+      ? fmt(toman(value, q.currency) ?? value, decimals: 2)
+      : faDigits(q.details['مبلغ استخراج‌شده'] ?? 'نیازمند بررسی');
+}
+
+String _offerUnit(Quote q, String basis) {
+  final currency =
+      toman(_visibleRawAmount(q), q.currency) == null ? q.currency : 'تومان';
+  return q.priceFor(basis) == null && q.hasTextAmount
+      ? '$currency • واحد: ${unitLabel(q.unit)}'
+      : '$currency / ${unitLabel(basis == 'original' ? q.unit : basis)}';
+}
 
 class QuoteCard extends StatelessWidget {
   final Quote q;
@@ -170,7 +179,7 @@ class QuoteCard extends StatelessWidget {
               }));
             }
           },
-          title: Text(q.title,
+          title: Text(faDigits(q.title),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -276,7 +285,7 @@ class UnitPrices extends StatelessWidget {
                             Text(
                                 q.priceFor(unit) == null
                                     ? 'نامشخص؛ داده کافی نیست'
-                                    : '${fmt(q.priceFor(unit), decimals: 2)} ${q.currency}',
+                                    : '${fmt(q.tomanFor(unit) ?? q.priceFor(unit), decimals: 2)} ${q.tomanFor(unit) == null ? q.currency : 'تومان'}',
                                 style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -285,6 +294,14 @@ class UnitPrices extends StatelessWidget {
                                         : ink)),
                           ])),
               ])),
+      if (q.tomanFor('original') != null)
+        Text(
+            '${moneyWords(q.tomanFor('original')!)}؛ نوشتار به نزدیک‌ترین تومان',
+            style: const TextStyle(fontSize: 11)),
+      if (q.currency == 'ریال')
+        Text(
+            'نرخ اصلی: ${fmt(q.amount, decimals: 2)} ریال؛ هر ۱۰ ریال = ۱ تومان',
+            style: const TextStyle(fontSize: 10, color: muted)),
       const SizedBox(height: 8),
       const Text(
           'فقط تبدیل با مشخصات منبع؛ بدون وزن تخمینی. مالیات و شرایط همان نرخ اصلی است.',
@@ -312,14 +329,14 @@ void showQuoteDetails(BuildContext context, Quote q, VoidCallback onChart) {
                   children: [
                     UnitPrices(q: q),
                     const SizedBox(height: 12),
-                    Text(q.title,
+                    Text(faDigits(q.title),
                         style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             height: 1.7)),
                     const SizedBox(height: 16),
                     Text(
-                        '${_offerAmount(q, 'original')} ${q.currency} / ${unitLabel(q.unit)}',
+                        '${_offerAmount(q, 'original')} ${_offerUnit(q, 'original')}',
                         style: const TextStyle(
                             fontSize: 24,
                             color: teal,
@@ -352,7 +369,7 @@ void showQuoteDetails(BuildContext context, Quote q, VoidCallback onChart) {
                                         style: const TextStyle(
                                             color: muted, fontSize: 12))),
                                 Expanded(
-                                    child: SelectableText(e.value,
+                                    child: SelectableText(faDigits(e.value),
                                         style: const TextStyle(
                                             fontSize: 12, height: 1.8)))
                               ])),
