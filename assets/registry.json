@@ -409,6 +409,39 @@
       "note": "نتیجه جستجو JSON/XML و هر 10 دقیقه را ذکر می‌کند؛ صفحه مستقیم 404 داد؛ سرویس و مستندات عملیاتی تایید نشد؛ اشتراک و endpoint توصیه قطعی نشده است.",
       "evidence_url": "https://persianapi.com/product/بازار-آهن-آلات/",
       "checked_date": "2026-11-05"
+    },
+    {
+      "id": "S38",
+      "name": "فرداد فولاد مشهد • جدول ورق سیاه",
+      "url": "https://fardadfoolad.ir/products/164/ورق-سیاه",
+      "type": "فروشنده / جدول عمومی",
+      "coverage": "ورق سیاه؛ ضخامت، عرض/طول، برند/گرید، واحد و مبلغ",
+      "priority": "مشهد؛ اتصال پیش‌فرض 0.5",
+      "note": "مرور عمومی در۱۵آبان۱۴۰۵ جدول تاریخ‌دار را خواند؛ سرستون مشاهده‌شده ارز نداشت. اتصال HTTP مستقیم sandbox timeout شد؛ قالب DOM واقعی دانلود نشد و fixture جدول بازسازی معنایی از متن مشاهده‌شده است. موفقیت شبکه گوشی ادعا نشده.",
+      "evidence_url": "https://fardadfoolad.ir/contact",
+      "checked_date": "2026-11-06"
+    },
+    {
+      "id": "S39",
+      "name": "مشهد فولاد توس • جدول ورق سیاه",
+      "url": "https://mashhadfoolad.com/قیمت-ورق-آهن-سیاه/",
+      "type": "فروشنده / جدول عمومی",
+      "coverage": "ورق سیاه کارخانه و انبار مشهد؛ نرخ تومان/کیلوگرم با مشخصات جدول",
+      "priority": "مشهد؛ اتصال پیش‌فرض 0.5",
+      "note": "مرور عمومی جدول عددی را خواند؛ تاریخ مستقل نرخ در قسمت مشاهده‌شده نبود و تاریخ مقاله/دریافت نرخ روز محسوب نمی‌شود. اتصال HTTP مستقیم sandbox timeout شد؛ مبدل بر پایه سرستون عمومی است، نه API خصوصی.",
+      "evidence_url": "https://mashhadfoolad.com/قیمت-ورق-آهن-سیاه/",
+      "checked_date": "2026-11-06"
+    },
+    {
+      "id": "S40",
+      "name": "آهن‌آلات خباززاده مشهد",
+      "url": "https://www.khabazzadeh.com/ahan-price/sheet/",
+      "type": "فروشنده / جدول عمومی",
+      "coverage": "ورق سیاه و برشکاری؛ جدول مبلغ/تاریخ مستقل ردیف",
+      "priority": "مشهد",
+      "note": "جدول در مرور14آبان1405 و تومان دارد؛ واحد نرخ تصریح نشده. HTTP مستقیم sandbox timeout شد. کانال تلگرام از صفحه تماس رسمی معرفی شده؛ دفتر مشهد صریح است.",
+      "evidence_url": "https://www.khabazzadeh.com/contact/",
+      "checked_date": "2026-11-06"
     }
   ],
   "telegram_channels": [
@@ -738,6 +771,42 @@
       "status": "لینک در معرفی رسمی/متقابل؛ نتیجه دریافت مستقیم در ممیزی0.3.0 ثبت می‌شود",
       "latest_visible_date": "تازگی مستقل تأیید نشده",
       "provenance_url": "https://ahan100.com/blog/rebar-price-telegram-channel/"
+    },
+    {
+      "owner": "قنبری • فرداد فولاد خراسان",
+      "handle": "bazargani_ghanbari",
+      "url": "https://t.me/bazargani_ghanbari",
+      "web_url": "https://t.me/s/bazargani_ghanbari",
+      "coverage": "ورق و مقاطع فولادی",
+      "latest_visible_date": "",
+      "status": "پیش‌نمایش عمومی و متن مشاهده شد؛ پیش‌فرض روشن۰.۵.۱",
+      "provenance_url": "https://balad.ir/p/بازرگانی-آهن-آلات-قنبری_building-materials-and-supplies-store-3aYaZ5aRfCZMJ5",
+      "note": "قیمت متنی ورق و مقاطع در پیش‌نمایش2026-11-04/05؛ شهر از تطبیق نقشه با نام/دامنه و معرفی کانال؛ نشان R به‌تنهایی ارز قطعی نیست.",
+      "observed_at": "2026-11-06"
+    },
+    {
+      "owner": "خباززاده مشهد",
+      "handle": "khabazzade_iron",
+      "url": "https://t.me/khabazzade_iron",
+      "web_url": "https://t.me/s/khabazzade_iron",
+      "coverage": "ورق و مقاطع فولادی",
+      "latest_visible_date": "",
+      "status": "پیش‌نمایش عمومی و متن مشاهده شد؛ پیش‌فرض روشن۰.۵.۱",
+      "provenance_url": "https://www.khabazzadeh.com/contact/",
+      "note": "پیوند رسمی سایت؛ ورق/میلگرد متنی2026-11-03/04؛ ارز و واحد ناقص حدس زده نمی‌شوند.",
+      "observed_at": "2026-11-06"
+    },
+    {
+      "owner": "آیرومارت",
+      "handle": "iromart",
+      "url": "https://t.me/iromart",
+      "web_url": "https://t.me/s/iromart",
+      "coverage": "ورق و مقاطع فولادی",
+      "latest_visible_date": "",
+      "status": "پیش‌نمایش عمومی و متن مشاهده شد؛ پیش‌فرض روشن۰.۵.۱",
+      "provenance_url": "https://iromart.com/sheet/",
+      "note": "پیوند رسمی محصول؛ متن نرخ ورق استیل1403/07/09 در پیش‌نمایش مشاهده شد؛ قدیمی است، نه نرخ هفته اخیر.",
+      "observed_at": "2026-11-06"
     }
   ],
   "other_channels": [
@@ -1142,7 +1211,7 @@
       "platform": "ایتا",
       "url": "https://eitaa.com/samaneahan_com",
       "coverage": "آهن‌آلات؛ مقاطع فولادی؛ واحد/تاریخ هر نرخ نیازمندتأیید",
-      "status": "ناشر پیشنهاد چند فروشنده؛ یک فروشنده مستقل مشهد محسوب نمی‌شود",
+      "status": "ناشر پیشنهاد چند فروشنده؛ یک فروشنده مستقل مشهد محسوب نمی‌شود؛ اتصال عمومی خودکار۰.۵.۱روشن است، HTTP مستقیم این محیط timeout شد.",
       "provenance_url": "https://eitaa.com/samaneahan_com",
       "city": "نامشخص",
       "kind": "واسطه",
@@ -1169,6 +1238,28 @@
       "city": "نامشخص",
       "kind": "کانال",
       "observed_at": "2026-11-05"
+    },
+    {
+      "owner": "ورق و آهن‌آلات خباززاده",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/khabazzade_iron",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "coverage": "مقاطع فولادی؛ برشکاری ورق",
+      "provenance_url": "https://rubika.ir/khabazzade_iron",
+      "observed_at": "2026-11-06",
+      "status": "نمونه کاربر؛ معرفی عمومی کانال مشاهده شد، پیام/قیمت عمومی در پاسخ نبود"
+    },
+    {
+      "owner": "فولاد گستر تهمتن خاورمیانه",
+      "platform": "روبیکا",
+      "url": "https://rubika.ir/TahamtanIron",
+      "city": "نامشخص",
+      "kind": "کانال",
+      "coverage": "تیرآهن و میلگرد",
+      "provenance_url": "https://rubika.ir/TahamtanIron",
+      "observed_at": "2026-11-06",
+      "status": "نمونه کاربر؛ معرفی کانال با نشانی طرحچی۹؛ بدون پیام قیمت در پاسخ عمومی؛ شهر دفتر مستقل تأیید نشده"
     }
   ],
   "product_pages": [
@@ -2990,5 +3081,6 @@
       "unit": "کیلوگرم؛ جدا از مقطع نو",
       "evidence_url": "https://iranzayeat.com/"
     }
-  ]
+  ],
+  "last_revision_date": "2026-11-06"
 }

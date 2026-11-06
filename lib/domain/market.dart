@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'product_text.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 
 String latin(String value) {
@@ -18,24 +19,59 @@ String latin(String value) {
 double? number(String s) => double.tryParse(
     latin(s).replaceAll(RegExp('[,٬ ]'), '').replaceAll('٫', '.'));
 DateTime? sourceDate(String raw) {
-  final s = latin(raw);
-  final m = RegExp(r'(1[34]\d{2})/(\d{1,2})/(\d{1,2})').firstMatch(s);
+  var s = latin(raw);
+  if (s.isEmpty) return null;
+  const months = [
+    'فروردین',
+    'اردیبهشت',
+    'خرداد',
+    'تیر',
+    'مرداد',
+    'شهریور',
+    'مهر',
+    'آبان',
+    'آذر',
+    'دی',
+    'بهمن',
+    'اسفند'
+  ];
+  final named = RegExp(
+          r'(\d{1,2})\s+(' + months.join('|') + r')\s+(?:ماه\s+)?(1[34]\d{2})')
+      .firstMatch(s);
+  if (named != null) {
+    s = s.replaceRange(named.start, named.end,
+        '${named[3]}/${months.indexOf(named[2]!) + 1}/${named[1]}');
+  }
+  final m = RegExp(r'(1[34]\d{2})[/.-](\d{1,2})[/.-](\d{1,2})').firstMatch(s);
   if (m != null) {
     try {
       final j = Jalali(int.parse(m[1]!), int.parse(m[2]!), int.parse(m[3]!));
       final g = j.toGregorian();
       final t = RegExp(r'(\d{1,2}):(\d{2})(?::(\d{2}))?').firstMatch(s);
-      return DateTime.utc(
-              g.year,
-              g.month,
-              g.day,
-              t == null ? 0 : int.parse(t[1]!),
-              t == null ? 0 : int.parse(t[2]!),
-              t?[3] == null ? 0 : int.parse(t![3]!))
+      final h = t == null ? 0 : int.parse(t[1]!),
+          min = t == null ? 0 : int.parse(t[2]!),
+          sec = t?[3] == null ? 0 : int.parse(t![3]!);
+      if (h > 23 || min > 59 || sec > 59) return null;
+      return DateTime.utc(g.year, g.month, g.day, h, min, sec)
           .subtract(const Duration(hours: 3, minutes: 30));
     } catch (_) {
       return null;
     }
+  }
+  final isoDay = RegExp(r'^(20\d{2})-(\d{2})-(\d{2})').firstMatch(s);
+  if (isoDay != null) {
+    final y = int.parse(isoDay[1]!),
+        m = int.parse(isoDay[2]!),
+        d = int.parse(isoDay[3]!);
+    final check = DateTime.utc(y, m, d);
+    if (check.year != y || check.month != m || check.day != d) return null;
+  }
+  if (RegExp(r'^20\d{2}-\d{2}-\d{2}$').hasMatch(s)) {
+    final d = DateTime.tryParse(s);
+    return d == null
+        ? null
+        : DateTime.utc(d.year, d.month, d.day)
+            .subtract(const Duration(hours: 3, minutes: 30));
   }
   return DateTime.tryParse(s)?.toUtc();
 }
@@ -109,6 +145,26 @@ class Quote {
           .map((e) => latin(e.value))
           .firstOrNull ??
       '';
+  late final String productSearchText = ProductText.normalize([
+    title,
+    category,
+    material,
+    brand,
+    seller,
+    sellerCity,
+    loading,
+    loadingCity,
+    terms,
+    tax,
+    sizeLabel,
+    thicknessLabel,
+    dimensionsLabel,
+    gradeLabel,
+    ...details.entries
+        .where((e) => RegExp('عرض|ابعاد|سایز|ضخامت|طول|حالت|گرید|استاندارد')
+            .hasMatch(e.key))
+        .map((e) => '${e.key} ${e.value}')
+  ].join(' '));
   // Legacy payloads are interpreted without changing their stable source IDs.
   late final String sizeLabel = size ??
       (_field((k) => k.contains('سایز') || k == 'size').isNotEmpty
@@ -116,12 +172,11 @@ class Quote {
           : RegExp(r'(?:میلگرد|تیرآهن|ناودانی|نبشی)(?:\s+سایز)?\s*(\d+(?:\.\d+)?)')
                   .firstMatch(latin(title))?[1] ??
               '');
-  late final String thicknessLabel = thickness ??
-      (_field((k) => k.contains('ضخامت')).isNotEmpty
+  late final String thicknessLabel = (thickness?.isNotEmpty ?? false)
+      ? thickness!
+      : (_field((k) => k.contains('ضخامت')).isNotEmpty
           ? _field((k) => k.contains('ضخامت'))
-          : RegExp(r'(?:ورق|ضخامت)\s*(\d+(?:\.\d+)?)\s*(?:میل|mm)')
-                  .firstMatch(latin(title))?[1] ??
-              '');
+          : ProductText.spec(title, categoryHint: category).thickness);
   late final String dimensionsLabel = dimensions ??
       (_field((k) => k.contains('ابعاد')).isNotEmpty
           ? _field((k) => k.contains('ابعاد'))
@@ -173,6 +228,31 @@ class Quote {
       this.grade,
       this.details = const {}});
   late final DateTime? announcedAt = sourceDate(sourceDateRaw);
+  late final DateTime? publishedAt =
+      sourceDate(details['زمان انتشار پیام'] ?? '');
+  late final DateTime? marketAt = _marketDate();
+  DateTime? _marketDate() {
+    if (details['تاریخ نامعتبر'] == 'بله') return null;
+    final rate = announcedAt, post = publishedAt;
+    if (rate == null) return post;
+    // A day-only rate date can use publication time ONLY on that same Iranian day.
+    if (post != null &&
+        (details['دقت تاریخ نرخ'] == 'روز' ||
+            !RegExp(r'\d{1,2}:\d{2}').hasMatch(sourceDateRaw)) &&
+        dateLabel(rate, time: false) == dateLabel(post, time: false)) {
+      return post;
+    }
+    return rate;
+  }
+
+  bool isWithinWeek(DateTime now) {
+    final date = marketAt;
+    return date != null &&
+        !date.isAfter(now.toUtc().add(const Duration(minutes: 5))) &&
+        !date.isBefore(now.toUtc().subtract(const Duration(days: 7)));
+  }
+
+  bool get hasTextAmount => details.containsKey('مبلغ استخراج‌شده');
   bool isFresh(DateTime now) =>
       announcedAt != null &&
       now.toUtc().difference(announcedAt!).inHours <= 30 &&
@@ -322,6 +402,27 @@ class Quote {
 }
 
 class MarketFilter {
+  List<String> queryCities = const [
+    'مشهد',
+    'تهران',
+    'اصفهان',
+    'تبریز',
+    'نیشابور'
+  ];
+  String _parsedQuery = '';
+  List<String>? _parsedCities;
+  ProductQuery? _intent;
+  ProductQuery get intent {
+    if (_intent == null ||
+        _parsedQuery != query ||
+        !identical(_parsedCities, queryCities)) {
+      _parsedQuery = query;
+      _parsedCities = queryCities;
+      _intent = ProductQuery.parse(query, cities: queryCities);
+    }
+    return _intent!;
+  }
+
   String category = '',
       material = '',
       city = '',
@@ -333,6 +434,7 @@ class MarketFilter {
       grade = '',
       basis = 'original',
       sort = 'asc';
+  bool recentWeek = false;
   double? minPrice, maxPrice;
   bool mashhadFirst = true, onlyFresh = false, includeUnpriced = false;
   bool _sameMeasure(String a, String b) =>
@@ -350,9 +452,18 @@ class MarketFilter {
         (thickness.isEmpty || _sameMeasure(q.thicknessLabel, thickness)) &&
         (grade.isEmpty ||
             latin(q.gradeLabel).toUpperCase() == latin(grade).toUpperCase()) &&
-        (query.isEmpty || q.searchText.contains(latin(query).toLowerCase())) &&
+        (query.isEmpty ||
+            intent.matches(
+                category: q.category,
+                thickness: q.thicknessLabel,
+                size: q.sizeLabel,
+                dimensions: q.dimensionsLabel,
+                grade: q.gradeLabel,
+                sellerCity: q.sellerCity,
+                text: q.productSearchText)) &&
         (!onlyFresh || q.isFresh(now)) &&
-        (includeUnpriced || price != null) &&
+        (!recentWeek || q.isWithinWeek(now)) &&
+        (includeUnpriced || price != null || q.hasTextAmount) &&
         (minPrice == null || (price != null && price >= minPrice!)) &&
         (maxPrice == null || (price != null && price <= maxPrice!));
   }
@@ -371,6 +482,7 @@ class MarketFilter {
         mashhadFirst,
         onlyFresh,
         includeUnpriced,
+        recentWeek,
         size,
         thickness,
         grade
@@ -381,6 +493,19 @@ class MarketFilter {
     }
     final list = quotes.where((q) => matches(q, now)).toList();
     list.sort((a, b) {
+      if (sort == 'latest') {
+        final da = a.marketAt, db = b.marketAt;
+        if (da == null && db != null) return 1;
+        if (db == null && da != null) return -1;
+        final byDate = da == null ? 0 : db!.compareTo(da);
+        if (byDate != 0) return byDate;
+        if (mashhadFirst) {
+          final city = (a.sellerCity == 'مشهد' ? 0 : 1)
+              .compareTo(b.sellerCity == 'مشهد' ? 0 : 1);
+          if (city != 0) return city;
+        }
+        return a.id.compareTo(b.id);
+      }
       // Never compare a branch amount directly with a kilogram amount.
       final group =
           a.comparisonGroup(basis).compareTo(b.comparisonGroup(basis));

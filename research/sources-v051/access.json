@@ -1,0 +1,35 @@
+[
+  {
+    "key": "ghanbari",
+    "url": "https://t.me/s/bazargani_ghanbari",
+    "status": 200,
+    "bytes": 119567,
+    "seconds": 0.58
+  },
+  {
+    "key": "khabazzade",
+    "url": "https://t.me/s/khabazzade_iron",
+    "status": 200,
+    "bytes": 118292,
+    "seconds": 0.58
+  },
+  {
+    "key": "iromart",
+    "url": "https://t.me/s/iromart",
+    "status": 200,
+    "bytes": 137194,
+    "seconds": 0.65
+  },
+  {
+    "key": "samaneahan",
+    "url": "https://eitaa.com/samaneahan_com",
+    "error": "HTTPSConnectionPool(host='eitaa.com', port=443): Read timed out. (read timeout=25)",
+    "seconds": 25.03
+  },
+  {
+    "key": "khabazzade-sheet",
+    "url": "https://www.khabazzadeh.com/ahan-price/sheet/",
+    "error": "HTTPSConnectionPool(host='www.khabazzadeh.com', port=443): Read timed out. (read timeout=25)",
+    "seconds": 25.25
+  }
+]

@@ -160,7 +160,7 @@ void main() {
             .toSet()
             .length,
         rows.length);
-    expect(sellers.where((x) => x['city'] == 'مشهد').length, 9);
+    expect(sellers.where((x) => x['city'] == 'مشهد').length, 11);
   });
   testWidgets(
       'main-feed conversion panel displays decimals with unknown units explicitly',
@@ -173,6 +173,9 @@ void main() {
         home: Scaffold(
             body: SingleChildScrollView(
                 child: QuoteCard(q: q(), basis: 'original', onChart: () {})))));
+    await t.pumpAndSettle();
+    expect(find.byType(UnitPrices), findsNothing);
+    await t.tap(find.text('میلگرد 16'));
     await t.pumpAndSettle();
     expect(find.byType(UnitPrices), findsOneWidget);
     expect(find.text('هر متر • تبدیل'), findsOneWidget);

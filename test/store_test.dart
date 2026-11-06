@@ -80,4 +80,35 @@ void main() {
     expect(
         (await store.history('a', since: DateTime.utc(2026, 11, 6))).length, 1);
   });
+  test(
+      'bounded channel pagination and manual imports preserve prior active rows',
+      () async {
+    await store.saveSnapshot('e', [q(100), q(200, id: 'b')]);
+    await store.saveSnapshot('e', [q(110)], replaceMissing: false);
+    expect((await store.latest()).length, 2);
+    expect((await store.latest()).firstWhere((r) => r.id == 'b').amount, 200);
+    expect((await store.syncStates())['e']!['message'], contains('پوشش محدود'));
+  });
+  test(
+      'v2 reparsing retires old v1 model ids only in reread posts; history and unread data survive',
+      () async {
+    Quote versioned(String id, double price, int version) => Quote.fromJson({
+          ...q(price, id: id).toJson(),
+          'details': {'تحلیل متن': 'محلی v$version'}
+        });
+    final legacy = versioned('e:channel/123:old-model', 16125000, 1);
+    final unread = versioned('e:channel/1230:unread', 130000, 1);
+    final otherV2 = versioned('e:channel/123:existing-v2-product', 140000, 2);
+    await store.saveSnapshot('e', [legacy, unread, otherV2]);
+    final corrected = versioned('e:channel/123:corrected-model', 125000, 2);
+    await store.saveSnapshot('e', [corrected], replaceMissing: false);
+    expect((await store.latest()).map((r) => r.id).toSet(),
+        {unread.id, otherV2.id, corrected.id});
+    expect((await store.history(legacy.id)).single.amount, 16125000);
+    expect(await store.historyCount(), 4);
+    expect(
+        (await store.db.query('latest', where: 'id=?', whereArgs: [legacy.id]))
+            .single['active'],
+        0);
+  });
 }

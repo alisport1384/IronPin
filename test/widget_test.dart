@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:ironpin/ui/info_page.dart';
+import 'package:ironpin/ui/prices_page.dart';
+import 'package:ironpin/domain/text_engine.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +29,10 @@ void main() {
     c = MarketController(store);
     c.cities = ['مشهد', 'تهران', 'اصفهان', 'تبریز'];
     c.autoRefresh = false;
+    // Historical rendering/lazy tests opt out of the new recent-week default.
+    c.filter
+      ..recentWeek = false
+      ..sort = 'asc';
   });
   tearDown(() async {
     c.dispose();
@@ -229,6 +235,133 @@ void main() {
     expect(find.text('رادمان آهن • ایتا'), findsOneWidget);
     expect(find.text('رادمان آهن • روبیکا'), findsNothing);
     expect(find.text('نوین پارس • بله'), findsNothing);
+    expect(t.takeException(), isNull);
+  });
+  test(
+      'controller starts with latest-first and recent-week while discovered sources stay opt-in',
+      () async {
+    final other = MarketController(c.store);
+    expect(other.filter.recentWeek, true);
+    expect(other.filter.sort, 'latest');
+    final total = other.availableEndpoints.length;
+    await other.addPublicSource('https://rubika.ir/TahamtanIron');
+    expect(other.availableEndpoints.length, total);
+    expect(other.enabled, contains('public-rubika-tahamtaniron'));
+    await other.addPublicSource('https://eitaa.com/user_added_steel');
+    expect(other.availableEndpoints.length, total + 1);
+    expect(await other.store.setting('discoveredSources'),
+        contains('user_added_steel'));
+    other.dispose();
+  });
+  testWidgets('unknown pricing basis is not relabelled as a kilogram price',
+      (t) async {
+    t.view.physicalSize = const Size(360, 800);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final q = TextPriceEngine.analyze(
+            text: '1405/8/15\nمیلگرد 16 : 125000 تومان',
+            endpoint: 'test',
+            seller: 'آهن',
+            sourceUrl: 'https://eitaa.com/steel',
+            fetchedAt: DateTime.now(),
+            postId: '1')
+        .single;
+    await t.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SingleChildScrollView(
+                child: QuoteCard(q: q, basis: 'kg', onChart: () {})))));
+    await t.pumpAndSettle();
+    expect(find.text('تومان • واحد: نامشخص'), findsOneWidget);
+    expect(find.text('تومان / کیلوگرم'), findsNothing);
+    expect(t.takeException(), isNull);
+  });
+  testWidgets(
+      'compact feed hides manual analyzer; tap expands specifications then arrow opens full evidence',
+      (t) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    c.quotes = List.generate(
+        16,
+        (i) => Quote(
+            id: 'dense-$i',
+            endpoint: 'e',
+            seller: 'فروشنده آزمایشی',
+            sellerCity: 'مشهد',
+            title: 'ورق سیاه ${i + 1} میل',
+            category: 'ورق',
+            unit: 'kg',
+            amount: 125000 + i.toDouble(),
+            sourceUrl: 'https://example.com',
+            fetchedAt: DateTime.now(),
+            details: {'شاهد ردیف': 'شاهد مستقل ردیف'}));
+    await t.pumpWidget(IronPinApp(controller: c));
+    await t.pumpAndSettle();
+    expect(find.text('تحلیل متن کانال'), findsNothing);
+    expect(find.text('فروشنده آزمایشی • دفتر مشهد'), findsNothing);
+    final rows = find.byType(QuoteCard).evaluate().where((e) {
+      final r = e.renderObject;
+      if (r is! RenderBox || !r.hasSize) return false;
+      final y = r.localToGlobal(Offset.zero).dy;
+      return y > 0 && y + r.size.height < 760;
+    }).length;
+    expect(rows, greaterThanOrEqualTo(6));
+    await t.tap(find.text('ورق سیاه 1 میل'));
+    await t.pumpAndSettle();
+    expect(find.text('فروشنده آزمایشی • دفتر مشهد'), findsOneWidget);
+    expect(find.text('شاهد مستقل ردیف'), findsNothing);
+    await t.scrollUntilVisible(find.text('جزئیات بیشتر'), 100,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('جزئیات بیشتر'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('شاهد مستقل ردیف'), 200,
+        scrollable: find
+            .descendant(
+                of: find.byType(DraggableScrollableSheet),
+                matching: find.byType(Scrollable))
+            .first);
+    expect(find.text('شاهد مستقل ردیف'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+  testWidgets(
+      'source rows are compact and reveal health/toggle only after opening',
+      (t) async {
+    await t.pumpWidget(MaterialApp(home: Scaffold(body: InfoPage(c: c))));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text(endpoints.first.name), 200,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.text('هنوز آزموده نشده'), findsNothing);
+    await t.tap(find.text(endpoints.first.name));
+    await t.pumpAndSettle();
+    expect(find.text('هنوز آزموده نشده'), findsOneWidget);
+    expect(find.text('دریافت از این منبع'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+  testWidgets('typed sheet 3 query uses semantic engine in the price feed',
+      (t) async {
+    c.quotes = [
+      for (final n in [3, 30, 13])
+        Quote(
+            id: 'sheet-$n',
+            endpoint: 'e',
+            seller: 'فروشنده',
+            title: 'ورق سیاه $n میل',
+            category: 'ورق',
+            unit: 'kg',
+            amount: 130003,
+            sourceUrl: 'https://example.com',
+            fetchedAt: DateTime.now())
+    ];
+    await t.pumpWidget(IronPinApp(controller: c));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField).first, 'ورق ۳');
+    await t.pumpAndSettle();
+    expect(c.filtered.length, 1);
+    expect(find.text('ورق سیاه 3 میل'), findsOneWidget);
+    expect(find.text('ورق سیاه 30 میل'), findsNothing);
+    expect(find.text('ورق • ضخامت 3 میلی‌متر'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 }

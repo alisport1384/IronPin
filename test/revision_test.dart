@@ -129,7 +129,7 @@ void main() {
     });
   });
   test(
-      'version-1 database upgrade preserves legacy payload and source preferences',
+      'version-1 database preserves payload; explicit all-ON migration runs once',
       () async {
     final dir = await Directory.systemTemp.createTemp('ironpin-upgrade-');
     final path = '${dir.path}/old.db';
@@ -159,7 +159,7 @@ void main() {
       await c.init();
       expect(c.quotes.single.id, 'row-1');
       expect(c.enabled.contains('melal-rebar'), isTrue);
-      expect(c.enabled.contains('melal-sheet'), isFalse);
+      expect(c.enabled.contains('melal-sheet'), isTrue);
       await c.setEnabled('telegram-mashhad', false);
       c.dispose();
       final second = MarketController(store);

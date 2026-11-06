@@ -1,0 +1,47 @@
+[
+  {
+    "name": "fardad",
+    "url": "https://fardadfoolad.ir/products/164/ورق-سیاه",
+    "error": "HTTPSConnectionPool(host='fardadfoolad.ir', port=443): Read timed out. (read timeout=25)"
+  },
+  {
+    "name": "mashhad-sheet",
+    "url": "https://mashhadfoolad.com/قیمت-ورق-آهن-سیاه/",
+    "error": "HTTPSConnectionPool(host='mashhadfoolad.com', port=443): Read timed out. (read timeout=25)"
+  },
+  {
+    "name": "novinpars",
+    "url": "https://t.me/s/novinparsgroup",
+    "status": 200,
+    "bytes": 140937
+  },
+  {
+    "name": "ahanemashhad",
+    "url": "https://t.me/s/ahanemashhad",
+    "status": 200,
+    "bytes": 118831
+  },
+  {
+    "name": "hayper",
+    "url": "https://t.me/s/hayperahan",
+    "status": 200,
+    "bytes": 155951
+  },
+  {
+    "name": "tikahan",
+    "url": "https://t.me/s/tikahan",
+    "status": 200,
+    "bytes": 11356
+  },
+  {
+    "name": "radman",
+    "url": "https://t.me/s/radmanahan",
+    "status": 200,
+    "bytes": 152395
+  },
+  {
+    "name": "contact",
+    "url": "https://fardadfoolad.ir/contact",
+    "error": "HTTPSConnectionPool(host='fardadfoolad.ir', port=443): Read timed out. (read timeout=25)"
+  }
+]

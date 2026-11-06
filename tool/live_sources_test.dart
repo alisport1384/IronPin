@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironpin/data/sources.dart';
+import 'package:ironpin/domain/market.dart';
 
 // Explicit opt-in only; excluded from normal offline test/ directory.
 void main() {
@@ -9,16 +10,10 @@ void main() {
     final client = SourceClient();
     final report = <Map<String, dynamic>>[];
     try {
-      for (final e in endpoints.where((e) =>
-          e.defaultEnabled ||
-          (const bool.fromEnvironment('IRONPIN_EXTRA_PUBLIC') &&
-              const [
-                'telegram-novinpars',
-                'telegram-hayperahan',
-                'telegram-radmanahan',
-                'telegram-fiahan',
-                'telegram-ahan100'
-              ].contains(e.id)))) {
+      const only = String.fromEnvironment('IRONPIN_ONLY_SOURCE');
+      final selected =
+          endpoints.where((e) => only.isEmpty || e.id == only).toList();
+      Future<void> check(SourceEndpoint e) async {
         final started = DateTime.now().toUtc();
         try {
           final rows = await client.fetch(e);
@@ -27,7 +22,44 @@ void main() {
             'url': e.url,
             'attemptedAt': started.toIso8601String(),
             'rows': rows.length,
+            'automaticAnalysisRows': rows
+                .where((q) => q.details['تحلیل خودکار'] == 'محلی v2')
+                .length,
+            'sheetRows': rows.where((q) => q.category == 'ورق').length,
+            'sheetCandidates': rows
+                .where((q) => q.category == 'ورق' && q.hasTextAmount)
+                .length,
+            'sheet3MashhadAllDates': (MarketFilter()..query = 'ورق3 مشهد')
+                .apply(rows, DateTime.now())
+                .length,
+            'sheet3MashhadRecentWeek': (MarketFilter()
+                  ..query = 'ورق3 مشهد'
+                  ..recentWeek = true)
+                .apply(rows, DateTime.now())
+                .length,
+            'sheetSamples': rows
+                .where((q) => q.category == 'ورق' && q.hasTextAmount)
+                .take(3)
+                .map((q) => q.toJson())
+                .toList(),
             'numericRows': rows.where((q) => q.amount != null).length,
+            'comparableRows':
+                rows.where((q) => q.priceFor('original') != null).length,
+            'textCandidates': rows.where((q) => q.hasTextAmount).length,
+            'recentWeekRows':
+                rows.where((q) => q.isWithinWeek(DateTime.now())).length,
+            'knownPublicationDates':
+                rows.where((q) => q.publishedAt != null).length,
+            'declaredRateDates':
+                rows.where((q) => q.announcedAt != null).length,
+            'publicPreviewComplete': client.complete[e.id],
+            'discoveredUrls':
+                (client.discoveries[e.id] ?? []).map((e) => e.url).toList(),
+            'textSamples': rows
+                .where((q) => q.hasTextAmount)
+                .take(3)
+                .map((q) => q.toJson())
+                .toList(),
             'convertibleMetreRows':
                 rows.where((q) => q.priceFor('m') != null).length,
             'convertibleDiscreteRows':
@@ -62,6 +94,13 @@ void main() {
           });
         }
       }
+
+      for (var i = 0; i < selected.length; i += 2) {
+        await Future.wait(selected.skip(i).take(2).map(check));
+      }
+      report.sort((a, b) => selected
+          .indexWhere((e) => e.id == a['endpoint'])
+          .compareTo(selected.indexWhere((e) => e.id == b['endpoint'])));
     } finally {
       client.close();
     }
@@ -71,5 +110,5 @@ void main() {
         .writeAsString(const JsonEncoder.withIndent('  ').convert(report));
     expect(report.any((r) => r['status'] == 'parsed'), isTrue,
         reason: 'All sources failed; see report');
-  }, timeout: const Timeout(Duration(minutes: 7)));
+  }, timeout: const Timeout(Duration(minutes: 20)));
 }

@@ -1,0 +1,51 @@
+{
+  "checkedOn": "2026-11-06",
+  "version": "0.5.1",
+  "newAdapters": 4,
+  "genuinelyNewUrls": 4,
+  "registeredEndpoints": 70,
+  "allRegisteredDefaultEnabled": true,
+  "unreviewedCandidatesAutoEnabled": false,
+  "sources": [
+    {
+      "id": "telegram-ghanbari",
+      "url": "https://t.me/s/bazargani_ghanbari",
+      "method": "direct HTTP200 + public preview",
+      "cityEvidence": "channel self-description corroborated with Balad listing matching name/domain/handle; not official-site backlink",
+      "currencyRIsAmbiguous": true,
+      "unit": null
+    },
+    {
+      "id": "telegram-khabazzade",
+      "url": "https://t.me/s/khabazzade_iron",
+      "method": "direct HTTP200 + official contact page backlink",
+      "officeEvidence": "https://www.khabazzadeh.com/contact/"
+    },
+    {
+      "id": "telegram-iromart",
+      "url": "https://t.me/s/iromart",
+      "method": "direct HTTP200 + official product page backlink",
+      "previewRateDate": "1403/07/09",
+      "officeCity": "unknown"
+    },
+    {
+      "id": "khabazzade-sheet",
+      "url": "https://www.khabazzadeh.com/ahan-price/sheet/",
+      "method": "public browser preview; direct HTTP timeout",
+      "rawDomAvailable": false,
+      "fixture": "semantic reconstruction",
+      "rowDateExamples": [
+        "1405/08/14",
+        "1405/06/31"
+      ],
+      "currency": "toman",
+      "unit": null
+    }
+  ],
+  "recheckedExistingAdapter": {
+    "id": "public-eitaa-samaneahan_com",
+    "url": "https://eitaa.com/samaneahan_com",
+    "defaultEnabled": true,
+    "directHttp": "timeout"
+  }
+}

@@ -56,7 +56,8 @@ class MarketStore {
     return result;
   }
 
-  Future<void> saveSnapshot(String endpoint, List<Quote> quotes) async {
+  Future<void> saveSnapshot(String endpoint, List<Quote> quotes,
+      {bool replaceMissing = true}) async {
     if (quotes.isEmpty) {
       throw ArgumentError('Empty snapshot is not a successful refresh.');
     }
@@ -65,8 +66,10 @@ class MarketStore {
     }
     await db.transaction((tx) async {
       // Missing rows disappear from current offers, but their real history stays intact.
-      await tx.update('latest', {'active': 0},
-          where: 'endpoint=?', whereArgs: [endpoint]);
+      if (replaceMissing) {
+        await tx.update('latest', {'active': 0},
+            where: 'endpoint=?', whereArgs: [endpoint]);
+      }
       final current = await tx.query('latest',
           columns: ['id', 'payload'],
           where: 'endpoint=?',
@@ -78,7 +81,10 @@ class MarketStore {
           {'quotes': quotes, 'current': current, 'previous': previous});
       final batch = tx.batch();
       for (final item in plan) {
-        if (item['keep'] == true) {
+        if (item['retire'] == true) {
+          batch.update('latest', {'active': 0},
+              where: 'id=?', whereArgs: [item['id']]);
+        } else if (item['keep'] == true) {
           batch.update('latest', {'active': 1},
               where: 'id=?', whereArgs: [item['id']]);
         } else {
@@ -109,7 +115,8 @@ class MarketStore {
             'endpoint': endpoint,
             'attempted_at': now,
             'success_at': now,
-            'message': '${quotes.length} ردیف دریافت شد'
+            'message':
+                '${quotes.length} ردیف دریافت شد${replaceMissing ? '' : '؛ پوشش محدود/ورودی دستی؛ موارد قبلی حفظ شدند'}'
           },
           conflictAlgorithm: ConflictAlgorithm.replace);
     });
@@ -195,22 +202,48 @@ List<Map<String, Object?>> _snapshotPlan(Map<String, Object> input) {
     for (final r in input['previous'] as List<Map<String, Object?>>)
       r['id']: r['signature']
   };
-  return quotes.map((q) {
-    final old = current[q.id];
-    final oldDate =
-        old == null ? null : Quote.fromJson(jsonDecode(old)).announcedAt;
-    if (oldDate != null &&
-        q.announcedAt != null &&
-        q.announcedAt!.isBefore(oldDate)) {
-      return <String, Object?>{'id': q.id, 'keep': true};
+  final receivedIds = quotes.map((q) => q.id).toSet();
+  final upgradedPosts = quotes
+      .where((q) => q.details['تحلیل متن'] == 'محلی v2')
+      .map((q) => _publicPostPrefix(q.id))
+      .whereType<String>()
+      .toSet();
+  final retired = <Map<String, Object?>>[];
+  if (upgradedPosts.isNotEmpty) {
+    for (final entry in current.entries) {
+      final id = entry.key as String;
+      if (receivedIds.contains(id) ||
+          !upgradedPosts.contains(_publicPostPrefix(id))) continue;
+      final old = Quote.fromJson(jsonDecode(entry.value));
+      // Only supersede v1 rows from a message actually reread by v2. Never
+      // delete their history or retire unread messages on bounded refreshes.
+      if (old.details['تحلیل متن'] == 'محلی v1') {
+        retired.add({'id': id, 'retire': true});
+      }
     }
-    final signature = q.signature;
-    return <String, Object?>{
-      'id': q.id,
-      'payload': jsonEncode(q.toJson()),
-      'signature': signature,
-      'changed': previous[q.id] != signature,
-      'time': q.fetchedAt.toUtc().toIso8601String()
-    };
-  }).toList();
+  }
+  return [
+    ...retired,
+    ...quotes.map((q) {
+      final old = current[q.id];
+      final oldDate =
+          old == null ? null : Quote.fromJson(jsonDecode(old)).announcedAt;
+      if (oldDate != null &&
+          q.announcedAt != null &&
+          q.announcedAt!.isBefore(oldDate)) {
+        return <String, Object?>{'id': q.id, 'keep': true};
+      }
+      final signature = q.signature;
+      return <String, Object?>{
+        'id': q.id,
+        'payload': jsonEncode(q.toJson()),
+        'signature': signature,
+        'changed': previous[q.id] != signature,
+        'time': q.fetchedAt.toUtc().toIso8601String()
+      };
+    })
+  ];
 }
+
+final _publicPostPattern = RegExp(r'^([^:]+:[A-Za-z0-9_]+/\d+)(?::|$)');
+String? _publicPostPrefix(String id) => _publicPostPattern.firstMatch(id)?[1];

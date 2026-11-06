@@ -1,0 +1,30 @@
+[
+  {
+    "url": "https://eitaa.com/modiranahan",
+    "error": "ReadTimeout"
+  },
+  {
+    "url": "https://eitaa.com/s/modiranahan",
+    "error": "ReadTimeout"
+  },
+  {
+    "url": "https://ble.ir/s/novinparsgroup",
+    "error": "ReadTimeout"
+  },
+  {
+    "url": "https://rubika.ir/khabazzade_iron",
+    "error": "ReadTimeout"
+  },
+  {
+    "url": "https://rubika.ir/TahamtanIron",
+    "error": "ReadTimeout"
+  },
+  {
+    "url": "https://rubika.ir/static/js/main.js",
+    "error": "ReadTimeout"
+  },
+  {
+    "url": "https://eitaa.com/hayperahan",
+    "error": "ReadTimeout"
+  }
+]

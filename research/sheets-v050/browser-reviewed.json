@@ -1,0 +1,50 @@
+{
+  "version": "0.5.0",
+  "checkedOn": "2026-11-06",
+  "method": "public web_search/fetch_page observations; not direct application HTTP",
+  "rawDomAvailableForDomesticTables": false,
+  "tableFixtureIsSemanticReconstruction": true,
+  "observations": [
+    {
+      "source": "https://fardadfoolad.ir/products/164/ورق-سیاه",
+      "date": "1405/08/15",
+      "thicknessMm": 3,
+      "unit": "kg",
+      "sampleAmount": 185000,
+      "currency": null,
+      "directHttp": "timeout",
+      "fixture": "test/fixtures/fardad_sheets_reconstructed.html"
+    },
+    {
+      "source": "https://mashhadfoolad.com/قیمت-ورق-آهن-سیاه/",
+      "date": null,
+      "thicknessMm": 3,
+      "unit": "kg",
+      "sampleAmount": 173540,
+      "currency": "toman",
+      "directHttp": "timeout",
+      "fixture": null
+    },
+    {
+      "source": "https://t.me/s/hayperahan",
+      "posts": [
+        "hayperahan/1357",
+        "hayperahan/1358"
+      ],
+      "publication": "2025-04-23",
+      "thickness3Rows": 3,
+      "currency": "rial",
+      "unit": null,
+      "actualChannelText": true,
+      "fixture": "test/fixtures/hayper_sheets_observed.html"
+    },
+    {
+      "source": "https://t.me/ahanresan_sheet",
+      "pageType": "contact, not a readable public channel"
+    },
+    {
+      "source": "https://rubika.ir/khabazzade_iron",
+      "pageType": "profile only; no public message text observed"
+    }
+  ]
+}

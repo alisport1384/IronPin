@@ -107,11 +107,12 @@ void main() {
             fetched),
         isEmpty);
   });
-  test('telegram message keeps evidence without assuming unit', () {
+  test('telegram extracts declared amount but never assumes its unit', () {
     final e = endpoints.firstWhere((e) => e.parser == 'telegram');
     final rows = SourceParser.parse(e, fixture('telegram'), fetched);
     expect(rows, isNotEmpty);
-    expect(rows.first.amount, null);
+    expect(rows.first.amount, 20181000);
+    expect(rows.first.priceFor('kg'), null);
     expect(rows.first.unit, 'unknown');
     expect(rows.first.details['متن پیام'], isNotEmpty);
   });

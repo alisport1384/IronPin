@@ -1,0 +1,17 @@
+{
+  "sources": 70,
+  "parsed": 40,
+  "failed": 30,
+  "timeouts": 27,
+  "noPublicMessages": 3,
+  "rows": 7228,
+  "automaticAnalysisRows": 7228,
+  "numericRows": 5004,
+  "comparableRows": 1551,
+  "textCandidates": 4788,
+  "recentWeekRows": 5853,
+  "sheetRows": 1436,
+  "sheetCandidates": 988,
+  "sheet3MashhadAllDates": 43,
+  "sheet3MashhadRecentWeek": 35
+}

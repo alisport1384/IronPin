@@ -12,67 +12,78 @@ class PricesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final list = c.filtered;
+    final intent = c.filter.intent;
+    final interpreted = [
+      if (intent.spec.category.isNotEmpty) intent.spec.category,
+      if (intent.spec.thickness.isNotEmpty)
+        'ضخامت ${intent.spec.thickness} میلی‌متر',
+      if (intent.spec.size.isNotEmpty) 'سایز ${intent.spec.size}',
+      if (intent.spec.grade.isNotEmpty) intent.spec.grade,
+      if (intent.city.isNotEmpty) 'دفتر ${intent.city}'
+    ].join(' • ');
     return Column(children: [
-      if (c.filtering) ...[
-        const LinearProgressIndicator(minHeight: 2),
-        const Text('در حال به‌روزرسانی پیشنهادها؛ نمایش موقت نتایج قبلی',
-            style: TextStyle(fontSize: 10, color: muted))
-      ],
+      if (c.filtering) const LinearProgressIndicator(minHeight: 2),
       Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
           child: Row(children: [
             Expanded(
                 child: TextField(
+                    style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
-                        hintText: 'جستجوی کالا، کارخانه یا فروشنده',
-                        prefixIcon: Icon(Icons.search)),
+                        isDense: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        hintText: 'مثلاً ورق ۳، میلگرد ۱۶ نیشابور',
+                        prefixIcon: Icon(Icons.search, size: 20)),
                     onChanged: (v) {
                       c.filter.query = v;
                       c.changed();
                     })),
-            const SizedBox(width: 10),
-            IconButton.filledTonal(
+            IconButton(
                 tooltip: 'فیلتر قیمت و شهر',
                 onPressed: () => showMarketFilters(context, c),
-                icon: const Icon(Icons.tune))
+                icon: const Icon(Icons.tune, size: 21))
           ])),
       Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(children: [
             Expanded(
-                child: Text('${fmt(list.length)} پیشنهاد',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold))),
-            TextButton.icon(
-                onPressed: () {
-                  c.filter.sort = c.filter.sort == 'asc' ? 'desc' : 'asc';
+                child: Text(
+                    '${fmt(list.length)} پیشنهاد${c.filter.recentWeek ? ' • هفته اخیر' : ''}',
+                    style: const TextStyle(fontSize: 10, color: muted),
+                    overflow: TextOverflow.ellipsis)),
+            PopupMenuButton<String>(
+                tooltip: 'ترتیب نمایش',
+                initialValue: c.filter.sort,
+                onSelected: (v) {
+                  c.filter.sort = v;
                   c.changed();
                 },
-                icon: Icon(c.filter.sort == 'asc' ? Icons.south : Icons.north,
-                    size: 16),
-                label: Text(
-                    c.filter.sort == 'asc' ? 'ارزان به گران' : 'گران به ارزان'))
+                itemBuilder: (_) => const [
+                      PopupMenuItem(
+                          value: 'latest', child: Text('جدیدترین اول')),
+                      PopupMenuItem(
+                          value: 'asc', child: Text('ارزان به گران؛ هم‌مبنا')),
+                      PopupMenuItem(
+                          value: 'desc', child: Text('گران به ارزان؛ هم‌مبنا'))
+                    ],
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    child: Text(
+                        c.filter.sort == 'latest'
+                            ? 'جدیدترین اول'
+                            : c.filter.sort == 'asc'
+                                ? 'ارزان به گران'
+                                : 'گران به ارزان',
+                        style: const TextStyle(fontSize: 11))))
           ])),
-      if (c.filter.mashhadFirst)
+      if (c.filter.query.isNotEmpty && interpreted.isNotEmpty)
         Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
             child: Align(
                 alignment: Alignment.centerRight,
-                child: tag('مشهد در ابتدای هر گروه قابل‌مقایسه'))),
-      Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-          child: Align(
-              alignment: Alignment.centerRight,
-              child: ActionChip(
-                  avatar: const Icon(Icons.forum_outlined, size: 17),
-                  label: const Text('اعلام کانال‌های فروشندگان مشهد'),
-                  onPressed: () {
-                    c.filter.city = 'مشهد';
-                    c.filter.cityKind = 'seller';
-                    c.filter.includeUnpriced = true;
-                    c.filter.onlyFresh = false;
-                    c.changed();
-                  }))),
+                child: Text(interpreted,
+                    style: const TextStyle(fontSize: 10, color: teal)))),
       Expanded(
           child: RefreshIndicator(
               onRefresh: c.refresh,
@@ -80,7 +91,7 @@ class PricesPage extends StatelessWidget {
                   ? ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
-                          const SizedBox(height: 55),
+                          const SizedBox(height: 45),
                           emptyState(
                               c.filtering
                                   ? 'در حال آماده‌سازی پیشنهادها'
@@ -88,38 +99,53 @@ class PricesPage extends StatelessWidget {
                                       ? 'هنوز قیمتی دریافت نشده'
                                       : 'نتیجه‌ای با این فیلتر نیست',
                               c.quotes.isEmpty
-                                  ? 'نوسازی را بزنید. اعداد فقط از منابع واقعی خوانده می‌شوند؛ در صورت خطا، وضعیت اتصال را در تب اطلاعات ببینید.'
-                                  : 'فیلتر شهر، بازه قیمت یا «فقط نرخ تازه» را تغییر دهید. نبود نتیجه به معنی نبود فروشنده در آن شهر نیست.')
+                                  ? 'نوسازی را بزنید؛ تحلیل منابع خودکار داخل اپ انجام می‌شود. وضعیت دریافت در اطلاعات است.'
+                                  : 'فیلتر شهر، بازه تاریخ یا مشخصات را بررسی کنید. داده بی‌تاریخ/قدیمی با برداشتن هفته اخیر قابل بررسی است؛ نبود نتیجه به معنی نبود فروشنده نیست.')
                         ])
                   : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
+                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
                       itemCount: list.length,
                       itemBuilder: (ctx, i) {
                         final q = list[i];
-                        final group = q.comparisonGroup(c.filter.basis);
-                        final showHead = i == 0 ||
-                            list[i - 1].comparisonGroup(c.filter.basis) !=
-                                group;
+                        String day(Quote q) => q.marketAt == null
+                            ? 'تاریخ نامشخص'
+                            : dateLabel(q.marketAt, time: false);
+                        final showDate = c.filter.sort == 'latest' &&
+                            (i == 0 || day(q) != day(list[i - 1]));
                         return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (showHead)
+                              if (showDate)
                                 Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                    child: Text(
-                                        '${q.category} • ${q.specificationLabel} • ${c.filter.basis == 'kg' ? '${q.currency} / کیلوگرم' : '${q.currency} / ${unitLabel(q.unit)}'} • ${q.tax} • ${q.terms == 'نامشخص' ? 'شرایط تسویه نامشخص' : q.terms}',
+                                        horizontal: 4, vertical: 5),
+                                    child: Text(day(q),
                                         style: const TextStyle(
-                                            fontSize: 11, color: muted))),
+                                            fontSize: 10, color: muted))),
                               QuoteCard(
+                                  key: ValueKey('${q.id}:$i'),
                                   q: q,
                                   basis: c.filter.basis,
                                   onChart: () => onChart(q))
                             ]);
-                      }))),
+                      })))
     ]);
   }
 }
+
+String _offerAmount(Quote q, String basis) {
+  final value = q.priceFor(basis);
+  return value != null
+      ? fmt(value, decimals: 2)
+      : q.amount != null
+          ? fmt(q.amount, decimals: 2)
+          : q.details['مبلغ استخراج‌شده'] ?? 'نیازمند بررسی';
+}
+
+String _offerUnit(Quote q, String basis) =>
+    q.priceFor(basis) == null && q.hasTextAmount
+        ? '${q.currency} • واحد: ${unitLabel(q.unit)}'
+        : '${q.currency} / ${unitLabel(basis == 'kg' ? 'kg' : q.unit)}';
 
 class QuoteCard extends StatelessWidget {
   final Quote q;
@@ -128,95 +154,94 @@ class QuoteCard extends StatelessWidget {
   const QuoteCard(
       {super.key, required this.q, required this.basis, required this.onChart});
   @override
-  Widget build(BuildContext context) {
-    final price = q.priceFor(basis);
-    final fresh = q.isFresh(DateTime.now());
-    return Card(
-        margin: const EdgeInsets.only(bottom: 11),
-        child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              unawaited(AppLogger.instance.record('offer', 'details_opened', {
+  Widget build(BuildContext context) => Card(
+      margin: const EdgeInsets.only(bottom: 4),
+      child: ExpansionTile(
+          dense: true,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          onExpansionChanged: (expanded) {
+            if (expanded) {
+              unawaited(AppLogger.instance.record(
+                  'offer', 'specifications_opened', {
                 'category': q.category,
                 'size': q.sizeLabel,
                 'thickness': q.thicknessLabel
               }));
-              showQuoteDetails(context, q, onChart);
-            },
-            child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Expanded(
-                            child: Text(q.title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    height: 1.7))),
-                        const SizedBox(width: 8),
-                        Icon(Icons.chevron_left, color: muted.withOpacity(.5))
-                      ]),
-                      const SizedBox(height: 10),
-                      Wrap(spacing: 6, runSpacing: 6, children: [
-                        tag(q.category),
-                        if (q.sizeLabel.isNotEmpty) tag('سایز ${q.sizeLabel}'),
-                        if (q.thicknessLabel.isNotEmpty)
-                          tag('${q.thicknessLabel} میلی‌متر'),
-                        if (q.gradeLabel.isNotEmpty) tag(q.gradeLabel),
-                        if (q.dimensionsLabel.isNotEmpty)
-                          tag(q.dimensionsLabel),
-                        tag(q.sellerCity,
-                            color: q.sellerCity == 'مشهد' ? teal : muted),
-                        tag(
-                            q.endpoint.startsWith('telegram-')
-                                ? 'پیام کانال؛ خارج مقایسه عددی'
-                                : fresh
-                                    ? 'نرخ تازه'
-                                    : 'قدیمی / تاریخ نامشخص',
-                            color: fresh ? teal : const Color(0xffb26f15))
-                      ]),
-                      const SizedBox(height: 16),
-                      Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                  Text(q.seller,
-                                      style: const TextStyle(
-                                          fontSize: 12, color: muted)),
-                                  Text('بارگیری: ${q.loading}',
-                                      style: const TextStyle(
-                                          fontSize: 11, color: muted))
-                                ])),
-                            Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                      price == null
-                                          ? 'نیازمند بررسی'
-                                          : fmt(price, decimals: 2),
-                                      style: TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                          color: price == null ? muted : teal)),
-                                  Text(
-                                      '${q.currency} / ${unitLabel(basis == 'kg' ? 'kg' : q.unit)}',
-                                      style: const TextStyle(
-                                          fontSize: 10, color: muted))
-                                ])
-                          ]),
-                      const SizedBox(height: 12),
-                      UnitPrices(q: q),
-                      const Divider(height: 24),
-                      Text('اعلام منبع: ${sourceDay(q)}',
-                          style: const TextStyle(fontSize: 10, color: muted)),
-                    ]))));
-  }
+            }
+          },
+          title: Text(q.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, height: 1.45)),
+          trailing: SizedBox(
+              width: 143,
+              child: Row(children: [
+                Expanded(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                      FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(_offerAmount(q, basis),
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: q.priceFor(basis) == null
+                                      ? muted
+                                      : teal))),
+                      FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(_offerUnit(q, basis),
+                              style:
+                                  const TextStyle(fontSize: 9, color: muted)))
+                    ])),
+                const SizedBox(width: 5),
+                const Icon(Icons.expand_more, size: 17, color: muted)
+              ])),
+          children: [
+            Align(
+                alignment: Alignment.centerRight,
+                child: Text('${q.seller} • دفتر ${q.sellerCity}',
+                    style: const TextStyle(fontSize: 11))),
+            const SizedBox(height: 6),
+            Wrap(spacing: 5, runSpacing: 4, children: [
+              if (q.specificationLabel.isNotEmpty) tag(q.specificationLabel),
+              tag(q.tax),
+              if (q.hasTextAmount && q.priceFor('original') == null)
+                tag('مبلغ استخراج‌شده؛ مبنای ناقص'),
+              if (q.details['ورودی دستی'] == 'بله') tag('ورودی دستی نسخه قبل')
+            ]),
+            const SizedBox(height: 6),
+            Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                    'نرخ: ${sourceDay(q)}${q.publishedAt != null ? ' • انتشار: ${dateLabel(q.publishedAt)}' : ''}',
+                    style: const TextStyle(fontSize: 10, color: muted))),
+            Align(
+                alignment: Alignment.centerRight,
+                child: Text('بارگیری: ${q.loading}',
+                    style: const TextStyle(fontSize: 10, color: muted))),
+            const SizedBox(height: 6),
+            UnitPrices(q: q),
+            Align(
+                alignment: Alignment.centerRight,
+                child: Text(q.status,
+                    style: const TextStyle(fontSize: 10, color: muted))),
+            Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                    onPressed: () {
+                      unawaited(AppLogger.instance.record(
+                          'offer', 'details_opened', {'category': q.category}));
+                      showQuoteDetails(context, q, onChart);
+                    },
+                    icon: const Icon(Icons.chevron_left, size: 18),
+                    label: const Text('جزئیات بیشتر',
+                        style: TextStyle(fontSize: 11))))
+          ]));
 }
 
 class UnitPrices extends StatelessWidget {
@@ -294,7 +319,7 @@ void showQuoteDetails(BuildContext context, Quote q, VoidCallback onChart) {
                             height: 1.7)),
                     const SizedBox(height: 16),
                     Text(
-                        '${fmt(q.amount, decimals: 2)} ${q.currency} / ${unitLabel(q.unit)}',
+                        '${_offerAmount(q, 'original')} ${q.currency} / ${unitLabel(q.unit)}',
                         style: const TextStyle(
                             fontSize: 24,
                             color: teal,
@@ -333,7 +358,9 @@ void showQuoteDetails(BuildContext context, Quote q, VoidCallback onChart) {
                               ])),
                     const SizedBox(height: 16),
                     FilledButton.icon(
-                        onPressed: () => openLink(context, q.sourceUrl),
+                        onPressed: q.sourceUrl.isEmpty
+                            ? null
+                            : () => openLink(context, q.sourceUrl),
                         icon: const Icon(Icons.open_in_new),
                         label: const Text('بازکردن منبع اصلی')),
                     OutlinedButton.icon(
@@ -502,10 +529,18 @@ Future<void> showMarketFilters(BuildContext context, MarketController c) async {
                       SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('اولویت با مشهد'),
-                          subtitle: const Text(
-                              'در هر گروه، ابتدا دفترهای مشهد؛ سپس ترتیب قیمت'),
+                          subtitle: Text(f.sort == 'latest'
+                              ? 'اول تاریخ جدیدتر؛ مشهد فقط در تاریخ برابر'
+                              : 'در هر گروه، ابتدا دفترهای مشهد؛ سپس ترتیب قیمت'),
                           value: f.mashhadFirst,
                           onChanged: (v) => update(() => f.mashhadFirst = v)),
+                      SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('فقط هفته اخیر'),
+                          subtitle: const Text(
+                              '۷×۲۴ساعت گذشته؛ تاریخ نرخ مقدم بر انتشار؛ بی‌تاریخ/آینده خارج این نماست'),
+                          value: f.recentWeek,
+                          onChanged: (v) => update(() => f.recentWeek = v)),
                       SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('فقط نرخ تازه'),

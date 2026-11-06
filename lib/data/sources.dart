@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'app_logger.dart';
+import 'public_messages.dart';
+import 'public_tables.dart';
+import '../domain/text_engine.dart';
 import 'package:html/parser.dart' as html;
 import 'package:http/http.dart' as http;
 import '../domain/market.dart';
@@ -58,99 +61,181 @@ const endpoints = [
   SourceEndpoint('telegram-ahanresan', 'آهن‌رسان مشهد • اعلام کانال',
       'https://t.me/s/ahanresan', 'عمومی', 'telegram', 'مشهد'),
   SourceEndpoint('telegram-bonyan', 'بنیان فولاد قوام حسینی • مشهد',
-      'https://t.me/s/ahanalatehoseini', 'عمومی', 'telegram', 'مشهد',
-      defaultEnabled: false),
+      'https://t.me/s/ahanalatehoseini', 'عمومی', 'telegram', 'مشهد'),
   SourceEndpoint('telegram-ahanemashhad', 'آهن ویژه مشهد • توس ۷',
       'https://t.me/s/ahanemashhad', 'عمومی', 'telegram', 'مشهد'),
   SourceEndpoint('telegram-melal', 'تلگرام آهن ملل', 'https://t.me/s/ahanmelal',
-      'عمومی', 'telegram', 'اصفهان',
-      defaultEnabled: false),
+      'عمومی', 'telegram', 'اصفهان'),
   SourceEndpoint('telegram-mkz', 'تلگرام مرکزآهن • کانال اصلی',
-      'https://t.me/s/markazeahan', 'عمومی', 'telegram', 'اصفهان',
-      defaultEnabled: false),
+      'https://t.me/s/markazeahan', 'عمومی', 'telegram', 'اصفهان'),
   SourceEndpoint('telegram-mkz1', 'تلگرام مرکزآهن • میلگرد',
-      'https://t.me/s/markazeahan1', 'میلگرد', 'telegram', 'اصفهان',
-      defaultEnabled: false),
+      'https://t.me/s/markazeahan1', 'میلگرد', 'telegram', 'اصفهان'),
   SourceEndpoint('telegram-mkz2', 'تلگرام مرکزآهن • لوله/پروفیل',
-      'https://t.me/s/markazeahan2', 'پروفیل', 'telegram', 'اصفهان',
-      defaultEnabled: false),
+      'https://t.me/s/markazeahan2', 'پروفیل', 'telegram', 'اصفهان'),
   SourceEndpoint('telegram-mkz3', 'تلگرام مرکزآهن • مقاطع',
-      'https://t.me/s/markazeahan3', 'نبشی', 'telegram', 'اصفهان',
-      defaultEnabled: false),
+      'https://t.me/s/markazeahan3', 'نبشی', 'telegram', 'اصفهان'),
   SourceEndpoint('telegram-mkz4', 'تلگرام مرکزآهن • ورق',
-      'https://t.me/s/markazeahan4', 'ورق', 'telegram', 'اصفهان',
-      defaultEnabled: false),
+      'https://t.me/s/markazeahan4', 'ورق', 'telegram', 'اصفهان'),
   SourceEndpoint('telegram-asre', 'تلگرام عصرآهن', 'https://t.me/s/asreahancom',
-      'عمومی', 'telegram', 'تبریز',
-      defaultEnabled: false),
+      'عمومی', 'telegram', 'تبریز'),
   SourceEndpoint('telegram-ahanprice', 'تلگرام آهن پرایس • ahanprice',
-      'https://t.me/s/ahanprice', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/ahanprice', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-milgerdprice', 'تلگرام آهن پرایس • MilgerdPrice',
-      'https://t.me/s/MilgerdPrice', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/MilgerdPrice', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-tirahanprice', 'تلگرام آهن پرایس • Tirahanprice',
-      'https://t.me/s/Tirahanprice', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/Tirahanprice', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-varaghprice', 'تلگرام آهن پرایس • VaraghPrice',
-      'https://t.me/s/VaraghPrice', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/VaraghPrice', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-l-uprice', 'تلگرام آهن پرایس • L_Uprice',
-      'https://t.me/s/L_Uprice', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/L_Uprice', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-profileprice', 'تلگرام آهن پرایس • ProfilePrice',
-      'https://t.me/s/ProfilePrice', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/ProfilePrice', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-looleprice', 'تلگرام آهن پرایس • LoolePrice',
-      'https://t.me/s/LoolePrice', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/LoolePrice', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-modiranahan-z', 'تلگرام مدیران آهن • modiranahan_z',
-      'https://t.me/s/modiranahan_z', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/modiranahan_z', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-ahan-online', 'تلگرام آهن آنلاین • ahan_online',
-      'https://t.me/s/ahan_online', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/ahan_online', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-ao-thin-plate', 'تلگرام آهن آنلاین • AO_Thin_plate',
-      'https://t.me/s/AO_Thin_plate', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/AO_Thin_plate', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-ao-pipe-box', 'تلگرام آهن آنلاین • Ao_pipe_box',
-      'https://t.me/s/Ao_pipe_box', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/Ao_pipe_box', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-fooladsell', 'تلگرام فولادسل • Fooladsell',
-      'https://t.me/s/Fooladsell', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/Fooladsell', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-kavirsteel', 'تلگرام فولاد کویر • kavirsteel',
-      'https://t.me/s/kavirsteel', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/kavirsteel', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint('telegram-asroon', 'تلگرام آهنگر — لینک مقاله • asroon',
-      'https://t.me/s/asroon', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/asroon', 'عمومی', 'telegram', 'نامشخص'),
   SourceEndpoint(
       'telegram-shekoftegroup',
       'تلگرام گروه صنعتی شکفته • shekoftegroup',
       'https://t.me/s/shekoftegroup',
       'عمومی',
       'telegram',
-      'نامشخص',
-      defaultEnabled: false),
+      'نامشخص'),
   SourceEndpoint('telegram-novinpars', 'نوین پارس مشهد • تلگرام',
-      'https://t.me/s/novinparsgroup', 'عمومی', 'telegram', 'مشهد',
-      defaultEnabled: false),
+      'https://t.me/s/novinparsgroup', 'عمومی', 'telegram', 'مشهد'),
   SourceEndpoint('telegram-hayperahan', 'هایپر آهن مشهد • تلگرام',
-      'https://t.me/s/hayperahan', 'عمومی', 'telegram', 'مشهد',
-      defaultEnabled: false),
+      'https://t.me/s/hayperahan', 'عمومی', 'telegram', 'مشهد'),
   SourceEndpoint('telegram-radmanahan', 'رادمان آهن مشهد • تلگرام',
-      'https://t.me/s/radmanahan', 'عمومی', 'telegram', 'مشهد',
-      defaultEnabled: false),
+      'https://t.me/s/radmanahan', 'عمومی', 'telegram', 'مشهد'),
   SourceEndpoint('telegram-fiahan', 'آهن‌آلات حیدری • تلگرام',
-      'https://t.me/s/FIAHAN', 'عمومی', 'telegram', 'تهران',
-      defaultEnabled: false),
+      'https://t.me/s/FIAHAN', 'عمومی', 'telegram', 'تهران'),
   SourceEndpoint('telegram-ahan100', 'آهن صد • تلگرام',
-      'https://t.me/s/atifoolad', 'عمومی', 'telegram', 'نامشخص',
-      defaultEnabled: false),
+      'https://t.me/s/atifoolad', 'عمومی', 'telegram', 'نامشخص'),
+  SourceEndpoint('public-bale-ahanonlineofficial', "آهن آنلاین • بله",
+      "https://ble.ir/s/ahanonlineofficial", 'عمومی', 'bale', "نامشخص"),
+  SourceEndpoint('public-bale-modiranahan', "مدیران آهن • بله",
+      "https://ble.ir/s/modiranahan", 'عمومی', 'bale', "نامشخص"),
+  SourceEndpoint('public-eitaa-modiranahan', "مدیران آهن • ایتا",
+      "https://eitaa.com/modiranahan", 'عمومی', 'eitaa', "نامشخص",
+      defaultEnabled: true),
+  SourceEndpoint('public-eitaa-shekoftehsigmashhad', "گروه شکفته • ایتا",
+      "https://eitaa.com/shekoftehsigmashhad", 'عمومی', 'eitaa', "نامشخص"),
+  SourceEndpoint('public-bale-pivanco', "پیوان • بله",
+      "https://ble.ir/s/pivanco", 'عمومی', 'bale', "نامشخص"),
+  SourceEndpoint('public-eitaa-galvanizeahaninfo', "آهن اینفو • ایتا",
+      "https://eitaa.com/Galvanizeahaninfo", 'عمومی', 'eitaa', "نامشخص"),
+  SourceEndpoint('public-rubika-ahaninja1', "آهن اینجا • روبیکا",
+      "https://rubika.ir/ahaninja1", 'عمومی', 'rubika', "نامشخص"),
+  SourceEndpoint('public-eitaa-ahan100', "آهن صد • ایتا",
+      "https://eitaa.com/Ahan100", 'عمومی', 'eitaa', "نامشخص"),
+  SourceEndpoint('public-rubika-ahan100', "آهن صد • روبیکا",
+      "https://rubika.ir/ahan100", 'عمومی', 'rubika', "نامشخص"),
+  SourceEndpoint('public-bale-ahan100', "آهن صد • بله",
+      "https://ble.ir/s/ahan100", 'عمومی', 'bale', "نامشخص"),
+  SourceEndpoint('public-rubika-novinparsgroup', "نوین پارس • روبیکا",
+      "https://rubika.ir/novinparsgroup/", 'عمومی', 'rubika', "مشهد"),
+  SourceEndpoint('public-bale-novinparsgroup', "نوین پارس • بله",
+      "https://ble.ir/s/novinparsgroup", 'عمومی', 'bale', "مشهد",
+      defaultEnabled: true),
+  SourceEndpoint('public-eitaa-radmanahan', "رادمان آهن • ایتا",
+      "https://eitaa.com/radmanahan", 'عمومی', 'eitaa', "مشهد"),
+  SourceEndpoint('public-rubika-radmanahan', "رادمان آهن • روبیکا",
+      "https://rubika.ir/radmanahan", 'عمومی', 'rubika', "مشهد"),
+  SourceEndpoint('public-eitaa-hayperahan', "هایپر آهن • ایتا",
+      "https://eitaa.com/hayperahan", 'عمومی', 'eitaa', "مشهد"),
+  SourceEndpoint('public-rubika-hayperahan', "هایپر آهن • روبیکا",
+      "https://rubika.ir/hayperahan", 'عمومی', 'rubika', "مشهد"),
+  SourceEndpoint('public-rubika-tikahan', "تیک آهن • روبیکا",
+      "https://rubika.ir/tikahan", 'عمومی', 'rubika', "مشهد"),
+  SourceEndpoint('public-eitaa-fiahan1', "آهن‌آلات حیدری • ایتا",
+      "https://eitaa.com/fiahan1", 'عمومی', 'eitaa', "تهران"),
+  SourceEndpoint('public-rubika-fiahan_com', "آهن‌آلات حیدری • روبیکا",
+      "https://rubika.ir/fiahan_com", 'عمومی', 'rubika', "تهران"),
+  SourceEndpoint('public-bale-fiahan', "آهن‌آلات حیدری • بله",
+      "https://ble.ir/s/fiahan", 'عمومی', 'bale', "تهران"),
+  SourceEndpoint('public-eitaa-samaneahan_com', "سامانه آهن • ایتا",
+      "https://eitaa.com/samaneahan_com", 'عمومی', 'eitaa', "نامشخص"),
+  SourceEndpoint('public-bale-ahaneroz', "آهن روز • بله",
+      "https://ble.ir/s/ahaneroz", 'عمومی', 'bale', "نامشخص"),
+  SourceEndpoint(
+      'public-rubika-khabazzade_iron',
+      "ورق و آهن‌آلات خباززاده • روبیکا",
+      "https://rubika.ir/khabazzade_iron",
+      'عمومی',
+      'rubika',
+      "نامشخص"),
+  SourceEndpoint(
+      'public-rubika-tahamtaniron',
+      "فولاد گستر تهمتن خاورمیانه • روبیکا",
+      "https://rubika.ir/TahamtanIron",
+      'عمومی',
+      'rubika',
+      "نامشخص"),
+  SourceEndpoint(
+      'fardad-sheet',
+      'فرداد فولاد مشهد • ورق',
+      'https://fardadfoolad.ir/products/164/ورق-سیاه',
+      'ورق',
+      'public-table',
+      'مشهد'),
+  SourceEndpoint(
+      'mashhad-sheet',
+      'مشهد فولاد توس • جدول ورق',
+      'https://mashhadfoolad.com/قیمت-ورق-آهن-سیاه/',
+      'ورق',
+      'public-table',
+      'مشهد'),
+  SourceEndpoint('telegram-ghanbari', 'بازرگانی قنبری • فرداد فولاد مشهد',
+      'https://t.me/s/bazargani_ghanbari', 'عمومی', 'telegram', 'مشهد'),
+  SourceEndpoint(
+      'telegram-khabazzade',
+      'خباززاده مشهد • تلگرام رسمی معرفی‌شده در سایت',
+      'https://t.me/s/khabazzade_iron',
+      'عمومی',
+      'telegram',
+      'مشهد'),
+  SourceEndpoint('telegram-iromart', 'آیرومارت • تلگرام',
+      'https://t.me/s/iromart', 'عمومی', 'telegram', 'نامشخص'),
+  SourceEndpoint(
+      'khabazzade-sheet',
+      'خباززاده مشهد • جدول ورق',
+      'https://www.khabazzadeh.com/ahan-price/sheet/',
+      'ورق',
+      'public-table',
+      'مشهد'),
 ];
 // Office location is NOT the manufacturing or loading location.
 const sellers = [
+  {
+    'name': 'آهن‌آلات خباززاده',
+    'city': 'مشهد',
+    'phone': '05136905551',
+    'url': 'https://www.khabazzadeh.com/contact/',
+    'address': 'مشهد، بلوار شهید چراغچی، چراغچی۵۳، نبش طرحچی۶، پلاک۱۱۰',
+    'status':
+        'دفتر و کانال تلگرام از صفحه تماس رسمی؛ مبلغ جدول بدون واحد صریح به کیلو یا برگ فرض نمی‌شود'
+  },
+  {
+    'name': 'فرداد فولاد خراسان',
+    'city': 'مشهد',
+    'phone': '05136908383',
+    'url': 'https://fardadfoolad.ir/contact',
+    'address': 'مشهد، شهید چراغچی ۵۳، بین طرحچی ۱۳ و ۱۵',
+    'status':
+        'دفتر از صفحه تماس رسمی؛ جدول ورق تاریخ صریح دارد، ارز بدون تصریح حدس زده نمی‌شود'
+  },
   {
     'name': 'نوین پارس',
     'city': 'مشهد',
@@ -302,12 +387,29 @@ class SourceParser {
         body.contains('captcha-delivery.com')) {
       throw const FormatException('صفحه مسدود/تعلیق‌شده؛ قیمت دریافت نشد.');
     }
-    return switch (e.parser) {
+    final rows = switch (e.parser) {
+      'public-table' => PublicTables.read(
+          body: body,
+          url: e.url,
+          endpoint: e.id,
+          seller: e.name,
+          city: e.sellerCity,
+          category: e.category,
+          fetchedAt: fetchedAt),
       'melal' => melal(e, body, fetchedAt),
       'asre' => asre(e, body, fetchedAt),
       'telegram' => telegram(e, body, fetchedAt),
+      'eitaa' || 'bale' || 'rubika' => PublicMessages.read(
+          body: body,
+          url: e.url,
+          endpoint: e.id,
+          seller: e.name,
+          city: e.sellerCity,
+          fetchedAt: fetchedAt,
+          platform: e.parser),
       _ => throw const FormatException('مبدل تعریف نشده')
     };
+    return rows.map(TextPriceEngine.enrich).toList();
   }
 
   static List<Quote> melal(SourceEndpoint e, String body, DateTime fetched) {
@@ -479,87 +581,169 @@ class SourceParser {
     return result;
   }
 
-  static List<Quote> telegram(SourceEndpoint e, String body, DateTime fetched) {
-    final doc = html.parse(body);
-    final result = <Quote>[];
-    for (final message in doc.querySelectorAll('.tgme_widget_message')) {
-      final node = message.querySelector('.tgme_widget_message_text');
-      if (node == null) continue;
-      // Preserve message as evidence. Ambiguous units/tax are not promoted to a ranked price.
-      final text = latin(node.text);
-      if (!RegExp('قیمت|میلگرد|نبشی|ناودانی|ورق|تیرآهن|پروفیل|لوله')
-          .hasMatch(text)) continue;
-      final post = message.attributes['data-post'] ?? '';
-      if (post.isEmpty) continue;
-      final date = message.querySelector('time')?.attributes['datetime'] ?? '';
-      final hasImage =
-          message.querySelector('.tgme_widget_message_photo_wrap') != null;
-      final short = text.length > 110 ? text.substring(0, 110) : text;
-      result.add(Quote(
-          id: '${e.id}:$post',
+  static List<Quote> telegram(
+          SourceEndpoint e, String body, DateTime fetched) =>
+      PublicMessages.read(
+          body: body,
+          url: e.url,
           endpoint: e.id,
           seller: e.name,
-          sellerCity: e.sellerCity,
-          title: short,
-          category: e.category,
-          unit: 'unknown',
-          tax: 'نامشخص',
-          sourceUrl: 'https://t.me/$post',
-          sourceDateRaw:
-              '', // Publication is not evidence of the price announcement date.
+          city: e.sellerCity,
           fetchedAt: fetched,
-          amount: null,
-          status: hasImage
-              ? 'فهرست تصویری؛ خارج از مقایسه عددی'
-              : 'اعلام متنی؛ واحد/تاریخ نرخ نیازمند تایید',
-          details: {
-            'متن پیام': text,
-            'زمان انتشار پیام': date,
-            'قالب': hasImage ? 'تصویر' : 'متن'
-          }));
-    }
-    return result;
-  }
+          platform: 'telegram');
 }
 
 class SourceClient {
   final http.Client client;
   List<String> cityNames = [];
-  SourceClient({http.Client? client}) : client = client ?? http.Client();
+  final Map<String, List<SourceEndpoint>> discoveries = {};
+  final Map<String, bool> complete = {};
+  final int maxChannelPages;
+  SourceClient({http.Client? client, this.maxChannelPages = 6})
+      : client = client ?? http.Client();
   Future<List<Quote>> fetch(SourceEndpoint e) async {
     unawaited(AppLogger.instance
         .record('network', 'fetch_started', {'endpoint': e.id}));
-    final r = await client.get(Uri.parse(e.url), headers: {
-      'User-Agent': 'IronPin/0.2 (public price page reader)',
-      'Accept': 'text/html'
-    }).timeout(const Duration(seconds: 22));
-    if (r.statusCode != 200) {
-      throw FormatException('HTTP ${r.statusCode}؛ داده قبلی حفظ شد.');
+    final channel = ['telegram', 'eitaa', 'bale', 'rubika'].contains(e.parser);
+    final all = <String, Quote>{};
+    final tableRows = <Quote>[];
+    final found = <String, SourceEndpoint>{};
+    final visited = <String>{};
+    var url = e.url;
+    var pages = 0;
+    var finished = false;
+    final fetched = DateTime.now().toUtc();
+    while (visited.add(url) && pages < (channel ? maxChannelPages : 1)) {
+      try {
+        // Follow only published same-channel pagination; never construct a private API.
+        final r = await client.get(Uri.parse(url), headers: {
+          'User-Agent': 'IronPin/0.5 (public price reader)',
+          'Accept': 'text/html'
+        }).timeout(const Duration(seconds: 22));
+        if (r.statusCode != 200) {
+          throw FormatException('HTTP ${r.statusCode}؛ داده قبلی حفظ شد.');
+        }
+        if (r.bodyBytes.length > 8 * 1024 * 1024) {
+          throw const FormatException('صفحه بیش از اندازه بزرگ است.');
+        }
+        final body = utf8.decode(r.bodyBytes, allowMalformed: true);
+        final rows = await compute(_parseInBackground, {
+          'endpoint': e,
+          'bytes': r.bodyBytes,
+          'fetchedAt': fetched,
+          'cities': cityNames
+        });
+        final links =
+            await compute(_discoverInBackground, {'body': body, 'url': url});
+        for (final x in links) {
+          found[x.id] = x;
+        }
+        if (!channel) tableRows.addAll(rows);
+        for (final q in rows) {
+          all.putIfAbsent(q.id, () => q);
+        }
+        pages++;
+        if (!channel) {
+          finished = true;
+          break;
+        }
+        final next =
+            await compute(_olderInBackground, {'url': url, 'body': body});
+        final dates = rows
+            .map((q) => q.publishedAt ?? q.marketAt)
+            .whereType<DateTime>()
+            .toList();
+        if (next == null ||
+            (dates.isNotEmpty &&
+                dates.every((d) =>
+                    d.isBefore(fetched.subtract(const Duration(days: 7)))))) {
+          finished = true;
+          break;
+        }
+        url = next;
+        if (pages < maxChannelPages) {
+          await Future<void>.delayed(const Duration(milliseconds: 350));
+        }
+      } catch (error) {
+        if (all.isEmpty) rethrow;
+        finished = false;
+        await AppLogger.instance.record('network', 'older_page_failed', {
+          'endpoint': e.id,
+          'pagesReceived': pages,
+          'errorType': error.runtimeType.toString()
+        });
+        break;
+      }
     }
-    if (r.bodyBytes.length > 8 * 1024 * 1024) {
-      throw const FormatException('صفحه بیش از اندازه بزرگ است.');
-    }
-    final watch = Stopwatch()..start();
-    final rows = await compute(_parseInBackground, {
-      'endpoint': e,
-      'bytes': r.bodyBytes,
-      'fetchedAt': DateTime.now().toUtc(),
-      'cities': cityNames
-    });
+    discoveries[e.id] = found.values.toList();
+    complete[e.id] = finished;
     await AppLogger.instance.record('parser', 'parsed', {
       'endpoint': e.id,
-      'rows': rows.length,
-      'bytes': r.bodyBytes.length,
-      'elapsedMs': watch.elapsedMilliseconds
+      'rows': all.length,
+      'pages': pages,
+      'coverage':
+          finished ? 'preview_exhausted_or_week_reached' : 'page_limit_partial',
+      'discovered': found.length
     });
-    if (rows.isEmpty) {
+    if (all.isEmpty) {
       throw const FormatException(
-          'هیچ ردیف معتبری پیدا نشد؛ احتمال تغییر ساختار سایت.');
+          'متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد.');
     }
-    return rows;
+    return channel ? all.values.toList() : tableRows;
   }
 
   void close() => client.close();
+}
+
+/// URLs are only candidates discovered in public anchors. They remain disabled
+/// until selected by the user; no account/phone/share/invite/private URL crawling.
+SourceEndpoint? publicChannel(String raw,
+    {String? name, String city = 'نامشخص'}) {
+  final u = Uri.tryParse(raw);
+  if (u == null ||
+      !['http', 'https'].contains(u.scheme) ||
+      u.userInfo.isNotEmpty ||
+      u.hasPort) return null;
+  final platforms = {
+    'eitaa.com': 'eitaa',
+    'ble.ir': 'bale',
+    'rubika.ir': 'rubika',
+    't.me': 'telegram',
+    'telegram.me': 'telegram'
+  };
+  final parser = platforms[u.host.toLowerCase()];
+  if (parser == null) return null;
+  final parts = u.pathSegments.where((x) => x.isNotEmpty).toList();
+  if (parts.isNotEmpty && parts.first == 's') parts.removeAt(0);
+  if (parts.length != 1 ||
+      !RegExp(r'^[a-zA-Z][a-zA-Z0-9_]{2,63}$').hasMatch(parts.first)) {
+    return null;
+  }
+  final h = parts.first, low = h.toLowerCase();
+  if (['share', 'join', 'joinchat', 's', 'search', 'proxy'].contains(low) ||
+      low.endsWith('bot') ||
+      low.contains('admin') ||
+      low.contains('marketing')) return null;
+  final host = parser == 'telegram' ? 't.me' : u.host.toLowerCase();
+  return SourceEndpoint(
+      'public-$parser-$low',
+      name ?? 'کشف‌شده: $h',
+      'https://$host/${parser == 'telegram' || parser == 'bale' ? 's/' : ''}$h',
+      'عمومی',
+      parser,
+      city,
+      defaultEnabled: false);
+}
+
+List<SourceEndpoint> _discoverInBackground(Map<String, String> input) {
+  final base = Uri.parse(input['url']!);
+  final doc = html.parse(input['body']!);
+  final result = <String, SourceEndpoint>{};
+  for (final a in doc.querySelectorAll('a[href]')) {
+    final e = publicChannel(base.resolve(a.attributes['href']!).toString());
+    if (e != null) result[e.id] = e;
+  }
+  return result.values.take(30).toList();
 }
 
 List<Quote> _parseInBackground(Map<String, Object> input) {
@@ -581,3 +765,6 @@ List<Quote> _parseInBackground(Map<String, Object> input) {
         : Quote.fromJson(q.toJson()..['loadingCity'] = match);
   }).toList();
 }
+
+String? _olderInBackground(Map<String, String> input) =>
+    PublicMessages.older(input['url']!, input['body']!);

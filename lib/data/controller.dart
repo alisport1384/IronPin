@@ -10,8 +10,50 @@ import 'app_logger.dart';
 class MarketController extends ChangeNotifier {
   final MarketStore store;
   final SourceClient client;
-  final MarketFilter filter = MarketFilter();
+  final MarketFilter filter = MarketFilter()
+    ..recentWeek = true
+    ..sort = 'latest';
   List<Quote> quotes = [];
+  final List<SourceEndpoint> discoveredSources = [];
+  List<SourceEndpoint> get availableEndpoints =>
+      [...endpoints, ...discoveredSources];
+  Future<void> rememberSources(Iterable<SourceEndpoint> found) async {
+    final ids = availableEndpoints.map((e) => publicChannel(e.url)?.id).toSet();
+    var changed = false;
+    for (final e in found) {
+      if (!ids.add(e.id) || discoveredSources.length >= 60) continue;
+      discoveredSources.add(e);
+      changed = true;
+    }
+    if (changed) {
+      await store.setSetting(
+          'discoveredSources',
+          jsonEncode(discoveredSources
+              .map((e) => {'url': e.url, 'name': e.name})
+              .toList()));
+      await AppLogger.instance.record('discovery', 'public_links_found',
+          {'total': discoveredSources.length});
+    }
+  }
+
+  Future<void> addPublicSource(String raw) async {
+    final candidate = publicChannel(raw);
+    if (candidate == null) {
+      throw const FormatException(
+          'پیوند عمومی کانال ایتا/بله/روبیکا/تلگرام معتبر نیست؛ دعوت، تلفن و ربات پذیرفته نمی‌شود.');
+    }
+    final existing = availableEndpoints
+        .where((e) => publicChannel(e.url)?.id == candidate.id)
+        .firstOrNull;
+    if (existing == null) {
+      await rememberSources([candidate]);
+      if (!discoveredSources.any((e) => e.id == candidate.id)) {
+        throw const FormatException('ظرفیت فهرست کشف منابع پر است.');
+      }
+    }
+    await setEnabled(existing?.id ?? candidate.id, true);
+  }
+
   Map<String, Map<String, Object?>> states = {};
   Map<String, dynamic> registry = {};
   List<String> cities = [];
@@ -39,11 +81,23 @@ class MarketController extends ChangeNotifier {
     cities.remove('مشهد');
     cities.insert(0, 'مشهد');
     client.cityNames = cities;
+    filter.queryCities = cities;
+    final savedLinks = await store.setting('discoveredSources');
+    if (savedLinks != null) {
+      try {
+        await rememberSources((jsonDecode(savedLinks) as List)
+            .map((x) =>
+                publicChannel(x['url'] as String, name: x['name'] as String?))
+            .whereType<SourceEndpoint>());
+      } catch (error, stack) {
+        AppLogger.instance.capture(error, stack, section: 'discovery');
+      }
+    }
     final setting = await store.setting('enabled');
     if (setting != null) {
       enabled = (jsonDecode(setting) as List)
           .cast<String>()
-          .where((id) => endpoints.any((e) => e.id == id))
+          .where((id) => availableEndpoints.any((e) => e.id == id))
           .toSet();
     }
     if (await store.setting('sourcesVersion') != '2') {
@@ -51,6 +105,24 @@ class MarketController extends ChangeNotifier {
           ['telegram-mashhad', 'telegram-ahanresan', 'telegram-ahanemashhad']);
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
       await store.setSetting('sourcesVersion', '2');
+    }
+    if (await store.setting('analysisSourcesVersion') != '1') {
+      enabled
+          .addAll(['public-eitaa-modiranahan', 'public-bale-novinparsgroup']);
+      await store.setSetting('enabled', jsonEncode(enabled.toList()));
+      await store.setSetting('analysisSourcesVersion', '1');
+    }
+    if (await store.setting('sheetSourcesVersion') != '1') {
+      enabled.addAll(['fardad-sheet', 'mashhad-sheet']);
+      await store.setSetting('enabled', jsonEncode(enabled.toList()));
+      await store.setSetting('sheetSourcesVersion', '1');
+    }
+    // Explicit user request in 0.5.1: all curated sources ON, once on upgrade.
+    // Unreviewed discovered links are candidates, not confirmed source adapters.
+    if (await store.setting('allRegisteredSourcesEnabledVersion') != '1') {
+      enabled.addAll(endpoints.map((e) => e.id));
+      await store.setSetting('enabled', jsonEncode(enabled.toList()));
+      await store.setSetting('allRegisteredSourcesEnabledVersion', '1');
     }
     autoRefresh = await store.setting('autoRefresh') != 'false';
     await reload();
@@ -164,15 +236,21 @@ class MarketController extends ChangeNotifier {
         .record('network', 'refresh_started', {'sources': enabled.length}));
     finished = 0;
     _notify();
-    final queue = endpoints.where((e) => enabled.contains(e.id)).toList();
+    final queue =
+        availableEndpoints.where((e) => enabled.contains(e.id)).toList();
     var index = 0;
     Future<void> worker() async {
       while (index < queue.length && !disposed) {
         final e = queue[index++];
         try {
           final data = await client.fetch(e);
-          await store.saveSnapshot(e.id, data);
+          await store.saveSnapshot(e.id, data,
+              replaceMissing: client.complete[e.id] ?? true);
+          await rememberSources(client.discoveries[e.id] ?? []);
           historyRevision++;
+          // Publish successful sources immediately; all-ON must not wait for
+          // the slowest source before showing the first received prices.
+          await reload();
         } catch (error, stack) {
           AppLogger.instance.capture(error, stack, section: 'source');
           await store.failure(

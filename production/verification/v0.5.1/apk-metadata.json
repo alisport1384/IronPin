@@ -1,0 +1,66 @@
+[
+  {
+    "file": "IronPin-0.5.1-armeabi-v7a.apk",
+    "abi": "armeabi-v7a",
+    "bytes": 8060340,
+    "sha256": "3cfc068affbc0e5104c5921b22e59cb599e2baf2386a7cba6e609a2025bd098f",
+    "package": "ir.ironpin.ironpin",
+    "versionName": "0.5.1",
+    "versionCode": 1006,
+    "minSdk": 21,
+    "targetSdk": 35,
+    "certificateSha256": "360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4",
+    "signatureV1": true,
+    "signatureV2": true,
+    "registryMatchesSource": true,
+    "nativeAbis": [
+      "armeabi-v7a"
+    ],
+    "elfMachine": 40,
+    "aotMarkers": {
+      "0.5.1": true,
+      "محلی v2": true,
+      "جزئیات بیشتر": true,
+      "allRegisteredSourcesEnabledVersion": true,
+      "telegram-ghanbari": true,
+      "khabazzade-sheet": true,
+      "ProductQuery": true,
+      "PublicTables": true,
+      "retire": true
+    },
+    "removedManualSheetMarkerAbsent": true,
+    "deviceInstallationTested": false
+  },
+  {
+    "file": "IronPin-0.5.1-arm64-v8a.apk",
+    "abi": "arm64-v8a",
+    "bytes": 8441515,
+    "sha256": "f1960e038d24094c2654c0cb07256aabcd04dee0be4b1998aa573988942652b1",
+    "package": "ir.ironpin.ironpin",
+    "versionName": "0.5.1",
+    "versionCode": 2006,
+    "minSdk": 21,
+    "targetSdk": 35,
+    "certificateSha256": "360dabf5f2cf2ee39c9dc90bcb093a381e93a17d6a4f87d978a41d9ecff588b4",
+    "signatureV1": true,
+    "signatureV2": true,
+    "registryMatchesSource": true,
+    "nativeAbis": [
+      "arm64-v8a"
+    ],
+    "elfMachine": 183,
+    "aotMarkers": {
+      "0.5.1": true,
+      "محلی v2": true,
+      "جزئیات بیشتر": true,
+      "allRegisteredSourcesEnabledVersion": true,
+      "telegram-ghanbari": true,
+      "khabazzade-sheet": true,
+      "ProductQuery": true,
+      "PublicTables": true,
+      "retire": true
+    },
+    "removedManualSheetMarkerAbsent": true,
+    "deviceInstallationTested": false
+  }
+]
