@@ -5,7 +5,7 @@ Run after commit. A successful local commit is NOT evidence of a remote push.
 """
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED, ZipInfo
-import hashlib, html, json, lzma, re, shutil, subprocess, tempfile
+import hashlib, html, io, json, lzma, re, shutil, subprocess, tarfile, tempfile
 R=Path(__file__).resolve().parents[3]
 O=R.parent/'deliverables'/'IronPin-0.7.2'
 BASE='a5bde31ba2de2f14351efe13259109f0ae95dc77'
@@ -39,12 +39,19 @@ def main():
     added=sorted(set(c)-set(b));deleted=sorted(set(b)-set(c))
     modified=sorted(p for p in c if p in b and c[p]!=b[p]);payload=sorted(added+modified)
     assert not deleted,deleted
-    for name,pp in [('IronPin-0.7.2-source.zip',paths),('IronPin-0.7.2-changes-only.zip',payload)]:
-        with ZipFile(O/name,'w',ZIP_DEFLATED,compresslevel=9) as z:
-            for p in pp:
-                i=ZipInfo('IronPin/'+p,(2026,11,7,0,0,0));i.compress_type=ZIP_DEFLATED;i.external_attr=0o100644<<16
-                z.writestr(i,c[p],compresslevel=9)
-    with ZipFile(O/'IronPin-0.7.2-source.zip') as z:assert {n.removeprefix('IronPin/'):z.read(n) for n in z.namelist()}==c
+    # A solid tar.xz source archive avoids duplicating historical log/document
+    # compression overhead and stays under the snapshot cap; delta remains ZIP.
+    source=O/'IronPin-0.7.2-source.tar.xz'
+    with tarfile.open(source,'w:xz',preset=9) as t:
+        for p in paths:
+            i=tarfile.TarInfo('IronPin/'+p);i.size=len(c[p]);i.mode=0o644;i.mtime=0
+            t.addfile(i,io.BytesIO(c[p]))
+    with tarfile.open(source) as t:
+        assert {m.name.removeprefix('IronPin/'):t.extractfile(m).read() for m in t.getmembers()}==c
+    with ZipFile(O/'IronPin-0.7.2-changes-only.zip','w',ZIP_DEFLATED,compresslevel=9) as z:
+        for p in payload:
+            i=ZipInfo('IronPin/'+p,(2026,11,7,0,0,0));i.compress_type=ZIP_DEFLATED;i.external_attr=0o100644<<16
+            z.writestr(i,c[p],compresslevel=9)
     with ZipFile(O/'IronPin-0.7.2-changes-only.zip') as z:
         rebuilt=b.copy();rebuilt.update({n.removeprefix('IronPin/'):z.read(n) for n in z.namelist()});assert rebuilt==c
     patch=git('diff','--binary','--no-ext-diff',BASE,head,'--','.')
@@ -74,7 +81,7 @@ def main():
         'pushVerified':False,'sourceFiles':len(paths),'changedFiles':len(payload),
         'addedFiles':len(added),'modifiedFiles':len(modified),'deletedFiles':deleted,
         'offlineTestsPassed':310,'newTestsPassed':48,'analyze':'No issues found',
-        'sourceZipBytesVerified':True,'deltaReconstructionVerified':True,'patchApplyVerified':True,
+        'sourceArchiveBytesVerified':True,'deltaReconstructionVerified':True,'patchApplyVerified':True,
         'runtimeInputHashesVerified':True,'dependencyLockUnchanged':True,
         'historicalFilesVerifiedUnchanged':len(historical),'apkArchive':archive,'apks':apks,
         'deviceInstallationTested':False,'endpointsRegistered':82,
@@ -106,7 +113,7 @@ def main():
 - شهر فقط اطلاعات/یک scope ماندگار؛ دریافت همه منابع فعال مستقل از شهر، داده محلی همه شهرها، لاگ پیش‌فرض خاموش، freshness۴۸ساعت با تاریخ صریح، بکاپ و نوسازی دستی حفظ‌اند. ارز/واحد/سال نامعلوم حدس زده نمی‌شود. lockfile و schema۳ ثابت‌اند.
 
 ## سورس دقیق نسبت به۰.۷.۱
-- [سورس کامل](IronPin-0.7.2-source.zip): {len(paths)}فایل، بدون SDK/cache/APK/کلید/credential.
+- [سورس کامل tar.xz](IronPin-0.7.2-source.tar.xz): {len(paths)}فایل، بدون SDK/cache/APK/کلید/credential. برای سقف فضای محیط به‌صورت tar.xz است؛ با 7-Zip، tar یا Python/tarfile باز می‌شود. ساختار ریشه `IronPin/` حفظ است.
 - [فقط تغییرات](IronPin-0.7.2-changes-only.zip): {len(payload)}فایل، {len(added)}افزوده و {len(modified)}اصلاح، بدون حذف؛ روی سورس دقیق۰.۷.۱ بازنویسی کنید.
 - [patch فشرده](IronPin-0.7.1-to-0.7.2.patch.xz): ابتدا با xz یا Python/lzma باز کنید، سپس `git apply --check` و `git apply` روی سورس دقیق۰.۷.۱. **هر دو روش مستقل، سورس کامل را بایت‌برابر بازسازی کردند.**
 - [آزمون‌ها](TEST_REPORT.fa.md) · [پژوهش و محدودیت‌ها](RESEARCH.fa.md) · [تغییرات](CHANGES.v0.7.2.fa.md) · [سند تولید](PRODUCTION.fa.md) · [مانیفست بسته](PACKAGING.json) · [SHA256](SHA256SUMS.txt).
