@@ -215,6 +215,20 @@ const endpoints = [
       'ورق',
       'public-table',
       'مشهد'),
+  SourceEndpoint(
+      'samen-angle',
+      'ثامن تجارت • نبشی',
+      'https://samentejarat.com/nabshinavdani/nabshi/',
+      'نبشی',
+      'public-table',
+      'نامشخص'),
+  SourceEndpoint(
+      'shahr-mashhad',
+      'شهرآهن • محصولات فولاد پروفیل مشهد',
+      'https://www.shahrahan.com/manufacturers/134-شرکت-فولاد-پروفیل-مشهد',
+      'عمومی',
+      'public-table',
+      'نامشخص'),
 ];
 // Office location is NOT the manufacturing or loading location.
 const sellers = [

@@ -18,6 +18,7 @@ class PublicTables {
     final doc = html.parse(body), out = <Quote>[];
     DateTime? precedingDate;
     String rawDate = '', sheetKind = '';
+    String precedingTax = 'نامشخص';
     var tableIndex = 0;
     final seen = <String, int>{};
     void table(Element table) {
@@ -31,7 +32,10 @@ class PublicTables {
         if (text.any((s) => s.contains('قیمت')) &&
             ((text.any((s) => s.contains('واحد')) &&
                     text.any((s) =>
-                        s.contains('ضخامت') || s.contains('نام کالا'))) ||
+                        s.contains('ضخامت') ||
+                        s.contains('نام کالا') ||
+                        s.contains('محصول') ||
+                        s.contains('اسم'))) ||
                 (text.any((s) => s.contains('محصول')) &&
                     text.any((s) => s.contains('تاریخ'))))) {
           headers = text;
@@ -44,11 +48,22 @@ class PublicTables {
         }
 
         var title = text
-                .where((s) => ProductText.category(s) == category)
+                .where((s) =>
+                    ProductText.category(s).isNotEmpty &&
+                    (category == 'عمومی' ||
+                        ProductText.category(s) == category))
                 .firstOrNull ??
             '';
         if (title.isEmpty) continue;
-        if (sheetKind.isNotEmpty && !title.contains(sheetKind)) {
+        final anchor = cells
+            .expand((c) => c.querySelectorAll('a'))
+            .where((a) => ProductText.category(a.text).isNotEmpty)
+            .firstOrNull;
+        if (anchor != null) title = latin(anchor.text);
+        final rowCategory = ProductText.category(title);
+        if (rowCategory == 'ورق' &&
+            sheetKind.isNotEmpty &&
+            !title.contains(sheetKind)) {
           title = title.replaceFirst('ورق', 'ورق $sheetKind');
         }
         final price = field(r'^قیمت(?:\s|\(|$)');
@@ -56,14 +71,17 @@ class PublicTables {
             (h) => RegExp(r'^قیمت(?:\s|\(|$)').hasMatch(h),
             orElse: () => '');
         final cur = TextPriceEngine.currency('$priceHeader $price');
-        final rawPrice =
-            RegExp(r'(?<![\d.])\d[\d,٬.٫ ]*').firstMatch(price)?[0]?.trim() ??
-                '';
-        final amount = RegExp(r'استعلام|تماس|ناموجود').hasMatch(price)
+        final prices = RegExp(
+                r'(?<![\d.])(?:\d{1,3}(?:[,٬.]\d{3})+(?:٫\d+)?|\d{1,3}(?: \d{3})+|\d+(?:[٫.]\d+)?)(?![\d.,٬])')
+            .allMatches(price)
+            .toList();
+        final rawPrice = prices.length == 1 ? prices.single[0]! : price;
+        final amount = RegExp(r'استعلام|تماس|ناموجود').hasMatch(price) ||
+                prices.length != 1
             ? null
             : TextPriceEngine.money(rawPrice);
         final valid = amount != null && amount.isFinite && amount > 0;
-        final spec = ProductText.spec(title, categoryHint: category);
+        final spec = ProductText.spec(title, categoryHint: rowCategory);
         final unitText = field('واحد'), unit = parseUnit(unitText);
         final thicknessRaw = field('ضخامت');
         final thickness = number(thicknessRaw)?.toString() ?? spec.thickness;
@@ -72,7 +90,11 @@ class PublicTables {
             headers.firstWhere((h) => h.contains('طول'), orElse: () => '');
         final dims = field('ابعاد').isNotEmpty
             ? field('ابعاد')
-            : (width.isNotEmpty && length.isNotEmpty ? '$length × $width' : '');
+            : ProductText.dimension.hasMatch(field('سایز'))
+                ? ProductText.dimension.stringMatch(field('سایز'))!
+                : (width.isNotEmpty && length.isNotEmpty
+                    ? '$length × $width'
+                    : '');
         final rowDate = field('تاریخ|بروزرسانی|به روز'),
             announced =
                 rowDate.isNotEmpty ? sourceDate(rowDate) : precedingDate;
@@ -82,7 +104,10 @@ class PublicTables {
         final identity = '$tableIndex|$title|$brand|$dims|$unit|$cur';
         final count = seen.update(identity, (v) => v + 1, ifAbsent: () => 0);
         final issues = [
-          if (!valid) 'تماس/استعلام؛ نه قیمت صفر',
+          if (!valid)
+            prices.length > 1
+                ? 'مبلغ چندگانه؛ مبنای واحد/مالیات روشن نیست'
+                : 'تماس/استعلام؛ نه قیمت صفر',
           if (cur == 'نامشخص') 'ارز جدول تصریح نشده',
           if (unit == 'unknown') 'واحد قیمت تصریح نشده',
           if (announced == null) 'تاریخ نرخ نامشخص'
@@ -93,7 +118,7 @@ class PublicTables {
             seller: seller,
             sellerCity: city,
             title: title,
-            category: category,
+            category: rowCategory,
             brand: brand.isEmpty ? 'نامشخص' : brand,
             grade: grade.isEmpty ? null : grade,
             thickness: thickness,
@@ -106,7 +131,9 @@ class PublicTables {
             sourceDateRaw: announced?.toIso8601String() ?? '',
             loading: scope.isEmpty ? 'نامشخص' : scope,
             material: materialOf(title),
-            tax: TextPriceEngine.tax(field('مالیات|ارزش افزوده')),
+            tax: TextPriceEngine.tax(field('مالیات|ارزش افزوده')) == 'نامشخص'
+                ? precedingTax
+                : TextPriceEngine.tax(field('مالیات|ارزش افزوده')),
             terms:
                 field('شرایط|تسویه').isEmpty ? 'نامشخص' : field('شرایط|تسویه'),
             lengthM: RegExp(r'\bm\b|متر').hasMatch(lengthHeader)
@@ -118,7 +145,8 @@ class PublicTables {
             details: {
               for (var i = 0; i < headers.length; i++)
                 if (headers[i].isNotEmpty) headers[i]: text[i],
-              if (valid) 'مبلغ استخراج‌شده': rawPrice,
+              if (valid || prices.length > 1) 'مبلغ استخراج‌شده': rawPrice,
+              if (prices.length > 1) 'مبلغ چندگانه': 'بله',
               if (rowDate.isNotEmpty && announced == null)
                 'تاریخ نامعتبر': 'بله',
               'مبنای ارز': cur == 'نامشخص'
@@ -149,6 +177,15 @@ class PublicTables {
           return;
         }
         final text = latin(node.text);
+        if (RegExp(r'^h[1-6]$').hasMatch(node.localName ?? '') &&
+            ProductText.category(text).isNotEmpty) {
+          precedingDate = null;
+          rawDate = '';
+          precedingTax = 'نامشخص';
+        }
+        if (text.length < 120 && TextPriceEngine.tax(text) != 'نامشخص') {
+          precedingTax = TextPriceEngine.tax(text);
+        }
         if (text.length < 120 &&
             text.contains('ورق') &&
             (RegExp(r'^h[1-6]$').hasMatch(node.localName ?? '') ||
@@ -162,6 +199,8 @@ class PublicTables {
         if (text.length < 120 && TextPriceEngine.datePattern.hasMatch(text)) {
           final bare = TextPriceEngine.datePattern.stringMatch(text);
           if (text == bare ||
+              RegExp(r'^(?:شنبه|یکشنبه|دوشنبه|سه\s*شنبه|چهارشنبه|پنج\s*شنبه|جمعه)\s')
+                  .hasMatch(text) ||
               RegExp('تاریخ|بروزرسانی|به روز|لیست قیمت').hasMatch(text)) {
             precedingDate = TextPriceEngine.dateIn(text);
             rawDate = text;

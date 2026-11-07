@@ -122,10 +122,10 @@ class MarketController extends ChangeNotifier {
     }
     // Explicit user request in 0.5.1: all curated sources ON, once on upgrade.
     // Unreviewed discovered links are candidates, not confirmed source adapters.
-    if (await store.setting('allRegisteredSourcesEnabledVersion') != '1') {
-      enabled.addAll(endpoints.map((e) => e.id));
+    if (await store.setting('allRegisteredSourcesEnabledVersion') != '2') {
+      enabled.addAll(availableEndpoints.map((e) => e.id));
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('allRegisteredSourcesEnabledVersion', '1');
+      await store.setSetting('allRegisteredSourcesEnabledVersion', '2');
     }
     autoRefresh = false;
     await store.setSetting('autoRefresh', 'false');

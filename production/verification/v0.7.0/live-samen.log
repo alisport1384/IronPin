@@ -1,0 +1,12 @@
+00:00 +0: loading /home/user/IronPin/tool/live_sources_test.dart
+00:00 +0: live public source smoke
+00:22 +0 -1: live public source smoke [E]
+  Expected: true
+    Actual: <false>
+  All sources failed; see report
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 480:18  expect
+  tool/live_sources_test.dart 111:5                   main.<fn>
+  
+00:22 +0 -1: Some tests failed.

@@ -1,0 +1,11 @@
+
+Running Gradle task 'assembleRelease'...                        
+Checking the license for package Android SDK Platform 34 in /home/user/.cache/android-sdk/licenses
+License for package Android SDK Platform 34 accepted.
+Preparing "Install Android SDK Platform 34 (revision 3)".
+"Install Android SDK Platform 34 (revision 3)" ready.
+Installing Android SDK Platform 34 in /home/user/.cache/android-sdk/platforms/android-34
+"Install Android SDK Platform 34 (revision 3)" complete.
+"Install Android SDK Platform 34 (revision 3)" finished.
+
+MEMORY_GUARD: aborted before sandbox exhaustion.

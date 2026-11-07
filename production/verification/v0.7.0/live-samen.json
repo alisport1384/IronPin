@@ -1,0 +1,9 @@
+[
+  {
+    "endpoint": "samen-angle",
+    "url": "https://samentejarat.com/nabshinavdani/nabshi/",
+    "attemptedAt": "2026-11-07T06:02:22.571231Z",
+    "status": "failed",
+    "error": "TimeoutException after 0:00:22.000000: Future not completed"
+  }
+]

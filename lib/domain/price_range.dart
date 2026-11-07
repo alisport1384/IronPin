@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'market.dart';
 import 'money.dart';
+import 'product_schema.dart';
 
 String _norm(String s) => latin(s)
     .toLowerCase()
@@ -17,44 +18,15 @@ double? singleSpecNumber(String value) {
   return n != null && n.isFinite && n > 0 ? n : null;
 }
 
+/// Technical grouping only. Origin, brand, title, tax and seller do not gate it.
 String? exactProductKey(Quote q) {
-  bool known(String s) =>
-      s.trim().isNotEmpty &&
-      !['نامشخص', 'نامعلوم', 'نامشخص/متفرقه'].contains(s.trim());
-  if (!known(q.brand) ||
-      !known(q.category) ||
-      !known(q.material) ||
-      q.specificationLabel.isEmpty) return null;
-  if (q.category == 'ورق' &&
-      (singleSpecNumber(q.thicknessLabel) == null ||
-          q.dimensionsLabel.isEmpty)) {
-    return null;
-  }
-  if (q.category == 'میلگرد' &&
-      (singleSpecNumber(q.sizeLabel) == null ||
-          q.gradeLabel.isEmpty ||
-          RegExp(r'[,،/؛]|(?:\sتا\s)').hasMatch(q.gradeLabel))) {
-    return null;
-  }
-  if (['پروفیل', 'لوله'].contains(q.category) &&
-      (singleSpecNumber(q.thicknessLabel) == null ||
-          (q.dimensionsLabel.isEmpty && q.sizeLabel.isEmpty))) return null;
+  final f = ProductFacts.of(q);
+  if (!productFields.containsKey(f.family)) return null;
   return jsonEncode([
-    q.category,
-    q.material,
-    q.brand,
-    q.title,
-    q.sizeLabel,
-    q.thicknessLabel,
-    q.dimensionsLabel,
-    q.gradeLabel,
-    q.lengthM?.toString() ?? '',
-    q.details['حالت'] ?? '',
-    q.details['پوشش'] ?? '',
-    q.details['رنگ'] ?? '',
-    q.tax,
-    q.terms
-  ].map(_norm).toList());
+    f.family,
+    for (final key in productFields[f.family]!.keys)
+      if (key != 'mass') [key, specNorm(f.values[key] ?? '')]
+  ]);
 }
 
 String rangeBasis(Quote q) => q.priceFor('kg') != null ? 'kg' : q.unit;
@@ -71,11 +43,16 @@ String announcementKey(Quote q) {
   // Day-only tables have no separate publication identifier: identical rates
   // for the same row/date cannot safely be asserted to be distinct events.
   return jsonEncode([
+    q.endpoint,
+    q.id,
     _norm(q.seller),
     rangeGroupKey(q),
     post ? '${uri.host}${uri.path}' : q.id,
     q.marketAt?.toUtc().toIso8601String(),
-    if (!post) toman(q.priceFor(rangeBasis(q)), q.currency)
+    if (!post)
+      toman(q.priceFor(rangeBasis(q)), q.currency) ??
+          jsonEncode(
+              [q.amount, q.currency, q.unit, q.details['مبلغ استخراج‌شده']])
   ]);
 }
 
@@ -136,8 +113,7 @@ class RangeProduct {
 }
 
 String catalogueKey(Quote q) =>
-    rangeGroupKey(q) ??
-    jsonEncode(['isolated-offer', q.endpoint, q.id, rangeBasis(q)]);
+    jsonEncode([q.endpoint, q.id, rangeGroupKey(q)]);
 
 List<String> rangeUnavailableReasons(Quote q, DateTime now) {
   final reasons = <String>[];
@@ -159,8 +135,7 @@ List<String> rangeUnavailableReasons(Quote q, DateTime now) {
     reasons.add('مبلغ خارج از محدوده محاسبه است');
   }
   if (exactProductKey(q) == null) {
-    reasons.add(
-        'برند یا مشخصات دقیق کافی نیست؛ با کالای فروشنده دیگر ادغام نمی‌شود');
+    reasons.add('نوع محصول تشخیص داده نشده است؛ نیازمند بررسی مشخصات');
   }
   return reasons;
 }
@@ -170,20 +145,22 @@ class RangeReport {
   final Map<String, int> excluded;
   final DateTime at;
   final List<RangeProduct> products;
+  final List<Quote> quotes;
   const RangeReport(this.ranges, this.excluded, this.at,
-      {this.products = const []});
+      {this.products = const [], this.quotes = const []});
 }
 
 /// All real announcements, not one vote per seller. Fetch/metadata changes
 /// never add weight. Only dated, comparable, explicit currencies enter money.
 RangeReport calculateRanges(Iterable<Quote> quotes, DateTime now) {
+  final all = quotes.toList();
   final unique = <String, Quote>{};
   final catalogue = <String, Quote>{};
   final excluded = <String, int>{};
   final since = now.toUtc().subtract(const Duration(hours: 48));
   void reject(String why) =>
       excluded.update(why, (n) => n + 1, ifAbsent: () => 1);
-  for (final q in quotes) {
+  for (final q in all) {
     final productKey = catalogueKey(q);
     final previous = catalogue[productKey];
     if (previous == null || !q.fetchedAt.isBefore(previous.fetchedAt)) {
@@ -206,7 +183,7 @@ RangeReport calculateRanges(Iterable<Quote> quotes, DateTime now) {
       continue;
     }
     if (exactProductKey(q) == null) {
-      reject('مشخصات دقیق یا برند کافی نیست');
+      reject('نوع محصول تشخیص داده نشده است');
       continue;
     }
     final key = announcementKey(q);
@@ -224,13 +201,78 @@ RangeReport calculateRanges(Iterable<Quote> quotes, DateTime now) {
     ..sort((a, b) => a.label.compareTo(b.label));
   final byKey = {for (final range in result) range.key: range};
   final products = catalogue.entries.map((entry) {
-    final range = byKey[entry.key];
-    return RangeProduct(entry.key, range?.example ?? entry.value, range,
+    final range = byKey[rangeGroupKey(entry.value)];
+    return RangeProduct(entry.key, entry.value, range,
         range == null ? rangeUnavailableReasons(entry.value, now) : const []);
   }).toList()
     ..sort((a, b) => a.label.compareTo(b.label));
   for (final product in products) {
     product.searchText;
   }
-  return RangeReport(result, excluded, now.toUtc(), products: products);
+  return RangeReport(result, excluded, now.toUtc(),
+      products: products, quotes: all);
+}
+
+/// The user-selected family/fields define the scope, never an example offer.
+class ProductRangeQuery {
+  final String family, basis;
+  final Map<String, String> fields;
+  const ProductRangeQuery(this.family,
+      {this.fields = const {}, this.basis = ''});
+}
+
+class ProductRangeResult {
+  final List<Quote> announcements;
+  final List<PriceRange> ranges;
+  final Map<String, int> excluded;
+  final DateTime at;
+  const ProductRangeResult(
+      this.announcements, this.ranges, this.excluded, this.at);
+}
+
+ProductRangeResult calculateProductRange(Map<String, Object> input) {
+  final query = input['query'] as ProductRangeQuery,
+      now = input['now'] as DateTime;
+  final quotes = input['quotes'] as List<Quote>;
+  final unique = <String, Quote>{}, excluded = <String, int>{};
+  void reject(String reason) =>
+      excluded.update(reason, (n) => n + 1, ifAbsent: () => 1);
+  for (final q in quotes) {
+    final facts = ProductFacts.of(q);
+    if ((facts.family.isEmpty ? 'سایر' : facts.family) != query.family ||
+        !facts.matches(query.fields)) continue;
+    if (q.marketAt == null) {
+      reject('تاریخ اعلام نامعلوم');
+      continue;
+    }
+    if (q.marketAt!.isAfter(now) ||
+        q.marketAt!.isBefore(now.subtract(const Duration(hours: 48)))) {
+      reject('خارج از ۴۸ ساعت');
+      continue;
+    }
+    final key = announcementKey(q), old = unique[key];
+    if (old == null || !q.fetchedAt.isBefore(old.fetchedAt)) unique[key] = q;
+  }
+  final announcements = unique.values.toList()
+    ..sort((a, b) => b.marketAt!.compareTo(a.marketAt!));
+  final grouped = <String, List<Quote>>{};
+  for (final q in announcements) {
+    final basis = query.basis.isEmpty ? q.unit : query.basis;
+    final price = toman(q.priceFor(basis), q.currency);
+    if (!productFields.containsKey(query.family) ||
+        !['kg', 'ton', 'sheet', 'piece', 'roll', 'm', 'm2'].contains(basis) ||
+        price == null ||
+        !price.isFinite ||
+        price <= 0 ||
+        price > 9000000000000000) {
+      reject('نمایش در اعلام‌ها؛ مبلغ/ارز/واحد یا تبدیل معتبر برای آمار ندارد');
+      continue;
+    }
+    (grouped[basis] ??= []).add(q);
+  }
+  final ranges = [
+    for (final e in grouped.entries)
+      PriceRange(e.key, e.key, e.value.first, e.value)
+  ];
+  return ProductRangeResult(announcements, ranges, excluded, now);
 }

@@ -96,6 +96,8 @@ class MarketStore {
     if (quotes.any((q) => q.endpoint != endpoint)) {
       throw ArgumentError('Endpoint mismatch');
     }
+    final changedProducts = <Map<String, Object?>>[];
+    var changedCount = 0;
     await db.transaction((tx) async {
       // Missing rows disappear from current offers, but their real history stays intact.
       if (replaceMissing) {
@@ -130,6 +132,20 @@ class MarketStore {
               },
               conflictAlgorithm: ConflictAlgorithm.replace);
           if (item['changed'] == true) {
+            changedCount++;
+            if (changedProducts.length < 10) {
+              final q = Quote.fromJson(jsonDecode(item['payload'] as String));
+              changedProducts.add({
+                'id': q.id,
+                'category': q.category,
+                'amount': q.amount,
+                'unit': q.unit,
+                'currency': q.currency,
+                'date': q.sourceDateRaw,
+                'size': q.sizeLabel,
+                'thickness': q.thicknessLabel
+              });
+            }
             batch.insert('history', {
               'id': item['id'],
               'captured_at': item['time'],
@@ -153,8 +169,15 @@ class MarketStore {
           },
           conflictAlgorithm: ConflictAlgorithm.replace);
     });
-    await AppLogger.instance.record('storage', 'snapshot_saved',
-        {'endpoint': endpoint, 'rows': quotes.length});
+    await AppLogger.instance.record('source', 'snapshot_saved',
+        {'endpoint': endpoint, 'rows': quotes.length, 'changed': changedCount});
+    if (changedCount > 0) {
+      await AppLogger.instance.record('product', 'snapshot_changes', {
+        'endpoint': endpoint,
+        'changed': changedCount,
+        'products': changedProducts
+      });
+    }
   }
 
   Future<RangeReport> rangeReport(DateTime now) async {

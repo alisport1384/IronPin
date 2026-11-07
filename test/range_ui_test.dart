@@ -119,7 +119,7 @@ void main() {
     expect(t.takeException(), isNull);
   });
   testWidgets(
-      'range tab loads local data and selects exact product without overflow',
+      'product-first range requires confirmation and pools matching local prices without overflow',
       (t) async {
     t.view.physicalSize = const Size(360, 800);
     t.view.devicePixelRatio = 1;
@@ -140,8 +140,18 @@ void main() {
     expect(find.text('رنج‌گیری ۴۸ ساعت'), findsOneWidget);
     await t.tap(find.byType(ListTile).first);
     await t.pumpAndSettle();
-    expect(find.text('میانگین گرد‌شده'), findsOneWidget);
+    expect(find.text('۱۵۰ تومان / کیلوگرم'), findsNothing);
+    await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('تأیید و نمایش رنج'));
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 160)));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('۱۵۰ تومان / کیلوگرم'), 300,
+        scrollable: find.byType(Scrollable).first);
     expect(find.text('۱۵۰ تومان / کیلوگرم'), findsOneWidget);
+    await t.tap(find.text('محاسبه هزینه • کیلوگرم'));
+    await t.pumpAndSettle();
     await t.scrollUntilVisible(find.text('محاسبات همان کالا'), 300,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('محاسبات همان کالا'), findsOneWidget);

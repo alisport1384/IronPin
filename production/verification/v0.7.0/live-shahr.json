@@ -1,0 +1,9 @@
+[
+  {
+    "endpoint": "shahr-mashhad",
+    "url": "https://www.shahrahan.com/manufacturers/134-شرکت-فولاد-پروفیل-مشهد",
+    "attemptedAt": "2026-11-07T06:02:52.220001Z",
+    "status": "failed",
+    "error": "TimeoutException after 0:00:22.000000: Future not completed"
+  }
+]

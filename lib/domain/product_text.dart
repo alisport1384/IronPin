@@ -18,10 +18,15 @@ class ProductText {
   }
 
   static final product = RegExp(
-      r'میلگرد(?:\s+بستر)?|تیر\s*آهن|تیراهن|هاش|ناودانی|نبشی|پروفیل|قوطی|لوله|ورق|مفتول|تسمه|سپری|رابیتس|توری|مش\s+جوشی|شمش|قراضه');
+      r'میلگرد(?:\s+بستر)?|تیر\s*آهن|تیراهن|هاش|ناودانی|نبشی|پروفیل|قوطی|لوله|ورق|پلیت|صفحه\s+(?:فولادی|آهنی|فلزی)|شیت|\b(?:plate|sheet)\b|چهارپهلو|مفتول|تسمه|سپری|رابیتس|توری|مش\s+جوشی|شمش|قراضه',
+      caseSensitive: false);
   static String category(String text) {
     final s = product.firstMatch(normalize(text))?[0] ?? '';
     if (s.contains('تیر') || s == 'هاش') return 'تیرآهن';
+    if (RegExp(r'پلیت|صفحه|شیت|plate|sheet', caseSensitive: false)
+        .hasMatch(s)) {
+      return 'ورق';
+    }
     if (s == 'قوطی') return 'پروفیل';
     return s;
   }
@@ -32,7 +37,7 @@ class ProductText {
   static final dimension =
       RegExp('$n\\s*[x×*]\\s*$n(?:\\s*[x×*]\\s*$n)?', caseSensitive: false);
   static final gauge = RegExp(
-      r'\b(?:A[1-4]|ST\s*(?:14|37|44|52)|IPE|HEA|HEB|3SP|5SP)\b',
+      r'\b(?:A[1-4]|ST\s*(?:14|37|44|52)|IPE|IPN|INP|HEA|HEB|HEM|UPN|UPE|UNP|A516|A283|CK45|MO40|304L?|316L?|430|3SP|5SP|S(?:235|275|355|420|460)(?:JR|J0|J2|K2)?H?)\b',
       caseSensitive: false);
   static String numeric(String value) =>
       double.tryParse(normalize(value))?.toString() ?? normalize(value);
@@ -57,11 +62,15 @@ class ProductText {
   }
 
   static ProductSpec spec(String text, {String categoryHint = ''}) {
-    final s = normalize(text),
+    final s = normalize(text).replaceAll(
+            RegExp(r'پلیت|صفحه\s+(?:فولادی|آهنی|فلزی)|شیت|\b(?:plate|sheet)\b',
+                caseSensitive: false),
+            'ورق'),
         cat = category(s).isEmpty ? categoryHint : category(s);
     var thick = RegExp('ضخامت\\s*[:：]?\\s*($measure)').firstMatch(s)?[1] ?? '';
     if (thick.isEmpty &&
-        ['ورق', 'پروفیل', 'لوله', 'نبشی', 'ناودانی'].contains(cat)) {
+        ['ورق', 'پروفیل', 'لوله', 'نبشی', 'ناودانی', 'تسمه', 'سپری']
+            .contains(cat)) {
       thick =
           RegExp('($measure)\\s*(?:میلی\\s*متر|میلیمتر|میلیمتری|میل|mm)(?![A-Za-z])',
                       caseSensitive: false)
@@ -79,7 +88,7 @@ class ProductText {
             '';
     if (size.isEmpty && cat != 'ورق') {
       size =
-          RegExp('(?:میلگرد(?: بستر)?|تیر\\s*آهن|تیراهن|نبشی|ناودانی|حرارتی)\\s*($measure)')
+          RegExp('(?:میلگرد(?: بستر)?|تیر\\s*آهن|تیراهن|نبشی|ناودانی|مفتول|چهارپهلو|سپری|حرارتی)\\s*($measure)')
                   .firstMatch(s)?[1] ??
               '';
     }

@@ -1,0 +1,81 @@
+00:00 +0: loading /home/user/IronPin/test/products_v070_test.dart
+00:00 +0: /home/user/IronPin/test/products_v070_test.dart: plate synonyms are canonical and website page alone is not a product
+00:00 +1: /home/user/IronPin/test/products_v070_test.dart: all technical families have independent fields and minimal blank filters
+00:00 +2: /home/user/IronPin/test/products_v070_test.dart: selected physical fields, not source/brand/title/geography/tax, define market range
+00:00 +3: /home/user/IronPin/test/products_v070_test.dart: minimal category default includes unspecified sizes but strict user-selected field excludes unknown
+00:00 +3 -1: /home/user/IronPin/test/products_v070_test.dart: minimal category default includes unspecified sizes but strict user-selected field excludes unknown [E]
+  Bad state: Too many elements
+  dart:core                            List.single
+  test/products_v070_test.dart 120:64  main.<fn>
+  
+00:00 +3 -1: /home/user/IronPin/test/products_v070_test.dart: time is publication/rate date, never fetched time; exact 48-hour endpoints
+00:00 +4 -1: /home/user/IronPin/test/products_v070_test.dart: all announcements weigh equally, not one vote per seller
+00:00 +5 -1: /home/user/IronPin/test/products_v070_test.dart: different price units remain separate; unknown unit/currency/unpriced remain visible
+00:00 +6 -1: /home/user/IronPin/test/products_v070_test.dart: explicit unit choice needs proven source conversion, not estimated density
+00:00 +7 -1: /home/user/IronPin/test/products_v070_test.dart: explicit rials convert once and three modes use actual points
+00:00 +8 -1: /home/user/IronPin/test/products_v070_test.dart: post edits deduplicate but different products in one post do not vanish
+00:00 +9 -1: /home/user/IronPin/test/products_v070_test.dart: legacy specs normalize numeric syntax without inferring missing dimension units
+00:00 +10 -1: /home/user/IronPin/test/products_v070_test.dart: automatic ingestion recognizes plate aliases and persists structured evidence
+00:00 +11 -1: /home/user/IronPin/test/products_v070_test.dart: more than a hundred recent offers remain in results
+00:00 +12 -1: /home/user/IronPin/test/products_v070_test.dart: unknown general iron is visible under other, but not pooled as a known product
+00:00 +13 -1: /home/user/IronPin/test/products_v070_test.dart: new Samen adapter reads transcribed observed columns, units and per-section dates
+00:00 +13 -2: /home/user/IronPin/test/products_v070_test.dart: new Samen adapter reads transcribed observed columns, units and per-section dates [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 480:18  expect
+  test/products_v070_test.dart 242:5                  main.<fn>
+  
+00:00 +13 -2: /home/user/IronPin/test/products_v070_test.dart: multi-family Shahr table identifies each row and never concatenates VAT dual prices
+00:00 +14 -2: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs UI/lifecycle/filter/stack/raw content are not persisted
+00:00 +15 -2: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs only ten product summaries are logged; identical snapshots do not grow log
+00:00 +16 -2: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs UTF8 total and per-file cap hold under rotation and parallel calls
+00:01 +17 -2: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs legacy diagnostic log is retired, unrelated files/database are preserved
+00:01 +18 -2: loading /home/user/IronPin/test/range_catalog_test.dart
+00:01 +18 -2: /home/user/IronPin/test/range_catalog_test.dart: (setUpAll)
+00:01 +18 -2: /home/user/IronPin/test/range_catalog_test.dart: catalogue keeps old, undated, unknown currency/unit, unpriced and incomplete products
+00:02 +19 -2: /home/user/IronPin/test/range_catalog_test.dart: all categories stay selectable independently of statistical eligibility
+00:02 +20 -2: /home/user/IronPin/test/range_catalog_test.dart: offer catalogue retains entries while missing brands no longer excludes matching rates
+00:02 +21 -2: /home/user/IronPin/test/range_catalog_test.dart: catalogue has no 40-item cap and search covers every product
+00:02 +22 -2: /home/user/IronPin/test/range_catalog_test.dart: adding invalid catalogue products never changes valid announcement mean/count
+00:02 +23 -2: /home/user/IronPin/test/range_catalog_test.dart: repeated fetch of an unavailable product gives one selectable entry
+00:02 +24 -2: /home/user/IronPin/test/range_catalog_test.dart: store selection includes inactive historical latest while feed stays active-only
+00:02 +25 -2: /home/user/IronPin/test/range_catalog_test.dart: history-only old product remains selectable after a history-only restore
+00:02 +26 -2: /home/user/IronPin/test/range_catalog_test.dart: an unavailable product is visible and selectable with reasons, not a fabricated range
+00:03 +27 -2: /home/user/IronPin/test/range_catalog_test.dart: UI exposes all pages and can search beyond the first 40 products
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:675:25)
+#1      WidgetController.element (package:flutter_test/src/controller.dart:869:30)
+#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2148:94)
+#3      main.<anonymous closure> (file:///home/user/IronPin/test/range_catalog_test.dart:251:13)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:189:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1032:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  UI exposes all pages and can search beyond the first 40 products
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:04 +27 -3: /home/user/IronPin/test/range_catalog_test.dart: UI exposes all pages and can search beyond the first 40 products [E]
+  Test failed. See exception logs above.
+  The test description was: UI exposes all pages and can search beyond the first 40 products
+  
+00:04 +27 -3: /home/user/IronPin/test/range_catalog_test.dart: (tearDownAll)
+00:04 +27 -3: loading /home/user/IronPin/test/range_ui_test.dart
+00:05 +27 -3: /home/user/IronPin/test/range_ui_test.dart: (setUpAll)
+00:05 +27 -3: /home/user/IronPin/test/range_ui_test.dart: range cost uses selected rate; changing rate clears stale total, not quantity
+00:06 +28 -3: /home/user/IronPin/test/range_ui_test.dart: dimensional range estimate validates thickness and needs explicit product match
+00:06 +29 -3: /home/user/IronPin/test/range_ui_test.dart: explicit rial price is converted once in card, unit panel and details
+00:06 +30 -3: /home/user/IronPin/test/range_ui_test.dart: product-first range requires confirmation and pools matching local prices without overflow
+00:07 +31 -3: /home/user/IronPin/test/range_ui_test.dart: chart samples are real ordered points preserving extrema and endpoints
+00:07 +32 -3: /home/user/IronPin/test/range_ui_test.dart: native picker cancellation cleans temporary export; import cancellation does not mutate
+00:07 +33 -3: /home/user/IronPin/test/range_ui_test.dart: (tearDownAll)
+00:07 +33 -3: Some tests failed.

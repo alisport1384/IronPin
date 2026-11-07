@@ -53,11 +53,13 @@ void main() {
       expect(p.unavailableReasons, isNotEmpty);
     }
     expect(
-        report.products
-            .singleWhere((p) => p.example.id == 'p1')
-            .unavailableReasons
-            .join(),
-        contains('۴۸'));
+        report.quotes
+            .singleWhere((p) => p.id == 'p1')
+            .marketAt!
+            .isBefore(at.subtract(const Duration(hours: 48))),
+        true);
+    expect(report.ranges.single.announcements.map((q) => q.id).toSet(),
+        {'p0', 'p6'});
   });
   test(
       'all categories stay selectable independently of statistical eligibility',
@@ -82,15 +84,16 @@ void main() {
         categories.toSet());
     expect(report.ranges, isEmpty);
   });
-  test('incomplete products remain separate rather than pooling unknown brands',
+  test(
+      'offer catalogue retains entries while missing brands no longer excludes matching rates',
       () {
     final a = item(1, brand: '');
     final b =
         Quote.fromJson({...item(2, brand: '').toJson(), 'title': a.title});
     final report = calculateRanges([a, b], at);
     expect(report.products.length, 2);
-    expect(report.ranges, isEmpty);
-    expect(report.products.every((p) => p.range == null), true);
+    expect(report.ranges.single.announcements.length, 2);
+    expect(report.ranges.single.mean, 100);
   });
   test('catalogue has no 40-item cap and search covers every product', () {
     final report = calculateRanges(
@@ -109,12 +112,16 @@ void main() {
     final a = item(0);
     final b = Quote.fromJson(
         {...a.toJson(), 'id': 'other', 'seller': 'ب', 'amount': 200});
-    final report = calculateRanges(
-        [a, b, item(1, brand: ''), item(2, currency: 'R'), item(3, date: '')],
-        at);
+    final report = calculateRanges([
+      a,
+      b,
+      item(1, amount: null),
+      item(2, currency: 'R'),
+      item(3, date: '')
+    ], at);
     expect(report.ranges.single.mean, 150);
     expect(report.ranges.single.announcements.length, 2);
-    expect(report.products.length, 4);
+    expect(report.products.length, 5);
   });
   test('repeated fetch of an unavailable product gives one selectable entry',
       () {
@@ -139,8 +146,8 @@ void main() {
       final report = await store.rangeReport(at);
       expect(report.products.map((p) => p.example.id).toSet(), {'p0', 'p1'});
       expect(report.ranges.single.example.id, 'p1');
-      expect(report.products.singleWhere((p) => p.example.id == 'p0').range,
-          isNull);
+      expect(report.quotes.any((q) => q.id == 'p0'), true);
+      expect(report.ranges.single.announcements.length, 1);
     } finally {
       await store.close();
     }
@@ -166,8 +173,15 @@ void main() {
       (t) async {
     final store = await t.runAsync(() => MarketStore.open(
         dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
-    await t.runAsync(() =>
-        store!.saveSnapshot('catalog', [item(8, brand: '', amount: null)]));
+    await t.runAsync(() => store!.saveSnapshot('catalog', [
+          Quote.fromJson({
+            ...item(8, brand: '', amount: null).toJson(),
+            'sourceDateRaw': DateTime.now()
+                .toUtc()
+                .subtract(const Duration(hours: 1))
+                .toIso8601String()
+          })
+        ]));
     final c = MarketController(store!);
     addTearDown(() async {
       c.dispose();
@@ -177,14 +191,62 @@ void main() {
     await t.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 120)));
     await t.pumpAndSettle();
-    expect(find.textContaining('محصول۰۰۸'), findsOneWidget);
-    await t.tap(find.byType(ListTile).first);
+    await t.tap(find.text('ورق / پلیت / صفحه فولادی'));
     await t.pumpAndSettle();
-    expect(find.text('برای این کالا فعلاً رنج معتبر نداریم'), findsOneWidget);
-    expect(find.textContaining('مبلغ عددی معتبر ثبت نشده است'), findsOneWidget);
+    await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('تأیید و نمایش رنج'));
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 150)));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('رنج عددی قابل مقایسه نداریم'), 300,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.text('رنج عددی قابل مقایسه نداریم'), findsOneWidget);
+    await t.scrollUntilVisible(find.textContaining('محصول۰۰۸'), 300,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.textContaining('محصول۰۰۸'), findsOneWidget);
     expect(find.byType(RangeCost), findsNothing);
     expect(find.text('میانگین گرد‌شده'), findsNothing);
-    expect(find.text('انتخاب کالای دیگر'), findsOneWidget);
+
+    expect(t.takeException(), isNull);
+  });
+  testWidgets(
+      'old and undated products remain selectable in the local archive without numeric ranges',
+      (t) async {
+    final store = await t.runAsync(() => MarketStore.open(
+        dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
+    await t.runAsync(() =>
+        store!.saveSnapshot('catalog', [item(908, amount: null, date: '')]));
+    final c = MarketController(store!);
+    addTearDown(() async {
+      c.dispose();
+      await store.close();
+    });
+    await t.pumpWidget(MaterialApp(home: Scaffold(body: RangePage(c: c))));
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 120)));
+    await t.pumpAndSettle();
+    await t.tap(find.text('ورق / پلیت / صفحه فولادی'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('تأیید و نمایش رنج'));
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 150)));
+    await t.pumpAndSettle();
+    final archive = find.text('فهرست کامل محلی • ۱ کالا');
+    await t.scrollUntilVisible(archive, 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(archive);
+    await t.pumpAndSettle();
+    final product = find.textContaining('محصول۹۰۸');
+    await t.scrollUntilVisible(product, 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(product);
+    await t.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('این نمایش از آرشیو محلی است'), findsOneWidget);
+    expect(find.byType(RangeCost), findsNothing);
     expect(t.takeException(), isNull);
   });
   testWidgets(
@@ -196,8 +258,16 @@ void main() {
     addTearDown(t.view.resetDevicePixelRatio);
     final store = await t.runAsync(() => MarketStore.open(
         dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
-    await t.runAsync(() => store!.saveSnapshot('catalog',
-        [for (var i = 0; i < 85; i++) item(i, brand: '', amount: null)]));
+    await t.runAsync(() => store!.saveSnapshot('catalog', [
+          for (var i = 0; i < 85; i++)
+            Quote.fromJson({
+              ...item(i, brand: '', amount: null).toJson(),
+              'sourceDateRaw': DateTime.now()
+                  .toUtc()
+                  .subtract(const Duration(hours: 1))
+                  .toIso8601String()
+            })
+        ]));
     final c = MarketController(store!);
     addTearDown(() async {
       c.dispose();
@@ -207,21 +277,33 @@ void main() {
     await t.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 160)));
     await t.pumpAndSettle();
-    await t.enterText(find.byType(TextField), 'محصول084');
+    await t.tap(find.text('ورق / پلیت / صفحه فولادی'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('تأیید و نمایش رنج'));
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 160)));
+    await t.pumpAndSettle();
+    final search =
+        find.widgetWithText(TextField, 'جستجو در تمام اعلام‌های نتیجه');
+    await t.scrollUntilVisible(search, 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.enterText(search, 'محصول084');
     await t.pumpAndSettle();
     expect(find.textContaining('محصول۰۸۴'), findsOneWidget);
-    await t.enterText(find.byType(TextField), '');
+    await t.enterText(search, '');
     await t.pumpAndSettle();
     for (var i = 0; i < 2; i++) {
-      await t.scrollUntilVisible(find.text('نمایش ۴۰ کالای بعدی'), 700,
+      await t.scrollUntilVisible(find.text('نمایش ۴۰ اعلام بعدی'), 700,
           scrollable: find.byType(Scrollable).first, maxScrolls: 80);
-      await t.tap(find.text('نمایش ۴۰ کالای بعدی'));
+      await t.tap(find.text('نمایش ۴۰ اعلام بعدی'));
       await t.pumpAndSettle();
     }
-    await t.scrollUntilVisible(find.text('نمایش ۸۵ از ۸۵ کالا'), 700,
+    await t.scrollUntilVisible(find.text('نمایش ۸۵ از ۸۵ اعلام'), 700,
         scrollable: find.byType(Scrollable).first, maxScrolls: 80);
-    expect(find.text('نمایش ۴۰ کالای بعدی'), findsNothing);
-    expect(find.text('نمایش ۸۵ از ۸۵ کالا'), findsOneWidget);
+    expect(find.text('نمایش ۴۰ اعلام بعدی'), findsNothing);
+    expect(find.text('نمایش ۸۵ از ۸۵ اعلام'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 }

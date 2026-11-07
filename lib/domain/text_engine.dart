@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'market.dart';
 import 'product_text.dart';
+import 'product_schema.dart';
 
 /// Deterministic on-device extraction. Source text is evidence, never instructions.
 /// No density/default length, price magnitude currency inference or network calls.
@@ -37,7 +38,17 @@ class TextPriceEngine {
         j[e.key] = e.value;
       }
     }
-    j['details'] = {...q.details, 'تحلیل خودکار': 'محلی v$version'};
+    final normalized = Quote.fromJson(j);
+    final facts = ProductFacts.of(normalized);
+    if (facts.family.isNotEmpty) j['category'] = facts.family;
+    j['details'] = {
+      ...q.details,
+      'تحلیل خودکار': 'محلی v$version',
+      'نسخه مشخصات': '1',
+      for (final field in facts.values.entries)
+        if (field.value.isNotEmpty) 'مشخصات.${field.key}': field.value,
+      'مبنای مشخصات': 'عنوان و ستون همان ردیف؛ مقدار نامعلوم حدس زده نشد'
+    };
     return Quote.fromJson(j);
   }
 

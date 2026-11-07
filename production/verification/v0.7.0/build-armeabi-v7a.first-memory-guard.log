@@ -1,0 +1,9 @@
+Downloading android-arm-profile/linux-x64 tools...                 456ms
+Downloading android-arm-release/linux-x64 tools...                 199ms
+Downloading android-arm64-profile/linux-x64 tools...               308ms
+Downloading android-arm64-release/linux-x64 tools...               241ms
+Downloading android-x64-profile/linux-x64 tools...                 266ms
+Downloading android-x64-release/linux-x64 tools...                 228ms
+
+Running Gradle task 'assembleRelease'...                        
+MEMORY_GUARD: aborted before sandbox exhaustion.

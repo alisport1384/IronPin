@@ -162,7 +162,9 @@ void main() {
       expect(toman(1, 'ریال'), .1);
       expect(toman(1000, 'R'), isNull);
     });
-    test('thickness, brand, tax and exact title are separate groups', () {
+    test(
+        'technical thickness and sheet kind separate; brand and tax do not exclude',
+        () {
       final report = calculateRanges([
         offer('a', 100),
         offer('b', 200, thickness: '4'),
@@ -170,7 +172,9 @@ void main() {
         offer('d', 400, tax: 'با مالیات'),
         change(offer('e', 500), {'title': 'ورق روغنی'})
       ], now);
-      expect(report.ranges.length, 5);
+      expect(report.ranges.length, 3);
+      expect(report.ranges.singleWhere((r) => r.announcements.length == 3).mean,
+          closeTo(800 / 3, 1e-8));
     });
     test('all cities count; seller office is never inferred from factory', () {
       final r = calculateRanges([
@@ -182,14 +186,17 @@ void main() {
       expect(r.mean, 150);
       expect(r.sellers, 2);
     });
-    test('missing exact brand/dimensions and grouped thickness cannot combine',
+    test(
+        'missing brand/dimensions no longer blocks a priced product; physical groups remain explicit',
         () {
       final report = calculateRanges([
         offer('a', 100, brand: ''),
         offer('b', 200, thickness: '2,3'),
         change(offer('c', 300), {'dimensions': ''})
       ], now);
-      expect(report.ranges, isEmpty);
+      expect(report.ranges.length, 3);
+      expect(
+          report.ranges.fold<int>(0, (n, r) => n + r.announcements.length), 3);
     });
     test(
         'only verified mass converts piece to kg; geometry never changes range',

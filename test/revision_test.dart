@@ -148,6 +148,7 @@ void main() {
         'active': 1
       });
       await store.setSetting('enabled', '["melal-rebar"]');
+      await store.setSetting('allRegisteredSourcesEnabledVersion', '1');
       await store.setSetting('autoRefresh', 'false');
       await store.db.execute('DROP INDEX history_id_seq');
       await store.db.execute('PRAGMA user_version=1');
@@ -160,6 +161,8 @@ void main() {
       expect(c.quotes.single.id, 'row-1');
       expect(c.enabled.contains('melal-rebar'), isTrue);
       expect(c.enabled.contains('melal-sheet'), isTrue);
+      expect(endpoints.every((e) => c.enabled.contains(e.id)), isTrue);
+      expect(await store.setting('allRegisteredSourcesEnabledVersion'), '2');
       await c.setEnabled('telegram-mashhad', false);
       c.dispose();
       final second = MarketController(store);
@@ -186,13 +189,13 @@ void main() {
     test('parallel event calls preserve ordered append and markdown format',
         () async {
       await Future.wait(List.generate(
-          25, (i) => logger.record('test', 'event', {'index': i})));
+          25, (i) => logger.record('source', 'event', {'rows': i})));
       final files = await logger.files();
       expect(files.length, 1);
       final text = await files.single.readAsString();
       expect(text, startsWith('# IronPin'));
-      expect('## '.allMatches(text).length, 26);
-      expect(text.indexOf('"index": 0'), lessThan(text.indexOf('"index": 24')));
+      expect('## '.allMatches(text).length, 25);
+      expect(text.indexOf('"rows":0'), lessThan(text.indexOf('"rows":24')));
       expect(logger.lastError, isNull);
     });
     test(
@@ -205,6 +208,7 @@ void main() {
         return null;
       });
       try {
+        await logger.record('source', 'example', {'endpoint': 'test-source'});
         expect(await logger.export(), isNull);
         expect(calls.single.method, 'exportLogs');
         expect(
