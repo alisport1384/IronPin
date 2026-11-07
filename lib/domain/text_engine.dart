@@ -158,6 +158,11 @@ class TextPriceEngine {
     final normalized = normalize(text);
     final lines =
         normalized.split('\n').where((s) => s.trim().isNotEmpty).toList();
+    // A buy bid is not a published selling price. Do not turn service labor
+    // amounts in these observed channel posts into steel market quotations.
+    if (lines.isNotEmpty &&
+        RegExp(r'خریداریم').hasMatch(lines.first) &&
+        !RegExp(r'فروش|عرضه').hasMatch(normalized)) return [];
     final out = <Quote>[];
     String heading = '',
         contextCategory = '',
@@ -215,6 +220,12 @@ class TextPriceEngine {
       if (RegExp(r'تأسیس|تاسیس|بهره برداری|کارمند|تولیدکننده|ظرفیت تولید')
               .hasMatch(line) &&
           !RegExp(r'تومان|ریال|قیمت|نرخ|💰').hasMatch(line)) continue;
+      if (RegExp(
+              r'خریداریم|خریدار\s+(?:تیر|میلگرد|ورق|آهن)|دستمزد|اجرت\s+(?:دوبل|برش|خم|جوش)|دوبله\s*کردن')
+          .hasMatch(line)) {
+        pending = null;
+        continue;
+      }
       final cat = category(line);
       if (cat.isEmpty &&
           RegExp(r'حداقل\s*سفارش|^وزن|^طول|^تعداد|^بارگیری').hasMatch(line)) {

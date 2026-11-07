@@ -180,8 +180,7 @@ class MarketStore {
     }
   }
 
-  Future<RangeReport> rangeReport(DateTime now) async {
-    final watch = Stopwatch()..start();
+  Future<List<String>> rangePayloads(DateTime now) async {
     final rows = await db.rawQuery(
         'SELECT payload FROM history WHERE market_at>=? AND market_at<=? '
         // Include every retained product, even inactive/old/undated rows, for
@@ -197,10 +196,14 @@ class MarketStore {
           now.toUtc().subtract(const Duration(hours: 48)).toIso8601String(),
           now.toUtc().toIso8601String()
         ]);
-    final report = await compute(_rangesInBackground, {
-      'payloads': rows.map((r) => r['payload'] as String).toList(),
-      'now': now
-    });
+    return rows.map((r) => r['payload'] as String).toList();
+  }
+
+  Future<RangeReport> rangeReport(DateTime now) async {
+    final watch = Stopwatch()..start();
+    final rows = await rangePayloads(now);
+    final report =
+        await compute(_rangesInBackground, {'payloads': rows, 'now': now});
     await AppLogger.instance.record('range', 'computed', {
       'rows': rows.length,
       'groups': report.ranges.length,

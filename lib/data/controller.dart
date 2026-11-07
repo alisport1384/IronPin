@@ -64,6 +64,25 @@ class MarketController extends ChangeNotifier {
   bool busy = false, ready = false, autoRefresh = false, disposed = false;
   bool foreground = true;
   int finished = 0, historyRevision = 0;
+  String get selectedCity => filter.city;
+  bool loggingEnabled = false;
+  Future<void> setCity(String city) async {
+    filter.city = city.trim();
+    filter.cityKind = 'all';
+    _filtered = [];
+    _filteredCity = selectedCity;
+    _filterKey = '';
+    await store.setSetting('selectedCity', selectedCity);
+    _notify();
+  }
+
+  Future<void> setLogging(bool value) async {
+    loggingEnabled = value;
+    await AppLogger.instance.setEnabled(value);
+    await store.setSetting('loggingEnabled', '$value');
+    _notify();
+  }
+
   void historyChanged() {
     historyRevision++;
     historyEpoch++;
@@ -77,6 +96,10 @@ class MarketController extends ChangeNotifier {
   MarketController(this.store, {SourceClient? client})
       : client = client ?? SourceClient();
   Future<void> init() async {
+    filter.city = await store.setting('selectedCity') ?? '';
+    filter.cityKind = 'all';
+    loggingEnabled = await store.setting('loggingEnabled') == 'true';
+    await AppLogger.instance.setEnabled(loggingEnabled);
     registry = jsonDecode(await rootBundle.loadString('assets/registry.json'));
     final cityData =
         jsonDecode(await rootBundle.loadString('assets/cities.json')) as List;
@@ -122,10 +145,10 @@ class MarketController extends ChangeNotifier {
     }
     // Explicit user request in 0.5.1: all curated sources ON, once on upgrade.
     // Unreviewed discovered links are candidates, not confirmed source adapters.
-    if (await store.setting('allRegisteredSourcesEnabledVersion') != '2') {
+    if (await store.setting('allRegisteredSourcesEnabledVersion') != '3') {
       enabled.addAll(availableEndpoints.map((e) => e.id));
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('allRegisteredSourcesEnabledVersion', '2');
+      await store.setSetting('allRegisteredSourcesEnabledVersion', '3');
     }
     autoRefresh = false;
     await store.setSetting('autoRefresh', 'false');
@@ -152,13 +175,19 @@ class MarketController extends ChangeNotifier {
   }
 
   List<Quote> _filtered = [];
-  String _filterKey = '';
+  String _filterKey = '', _filteredCity = '';
   bool filtering = false;
   String get _currentFilterKey =>
       '${identityHashCode(quotes)}:${filter.cacheKey}:${DateTime.now().millisecondsSinceEpoch ~/ 60000}';
   List<Quote> get filtered {
+    if (_filteredCity != selectedCity) {
+      _filtered = [];
+      _filteredCity = selectedCity;
+    }
     final key = _currentFilterKey;
-    if (key == _filterKey) return _filtered;
+    if (key == _filterKey) {
+      return _filtered;
+    }
     if (quotes.length <= 200) {
       _filtered = filter.apply(quotes, DateTime.now());
       _filterKey = key;

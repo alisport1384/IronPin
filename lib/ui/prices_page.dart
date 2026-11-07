@@ -41,7 +41,7 @@ class PricesPage extends StatelessWidget {
                       c.changed();
                     })),
             IconButton(
-                tooltip: 'فیلتر قیمت و شهر',
+                tooltip: 'فیلتر قیمت و مشخصات',
                 onPressed: () => showMarketFilters(context, c),
                 icon: const Icon(Icons.tune, size: 21))
           ])),
@@ -475,25 +475,8 @@ Future<void> showMarketFilters(BuildContext context, MarketController c) async {
                           {'': 'همه جنس‌ها', for (final v in mats) v: v},
                           (v) => update(() => f.material = v)),
                       const SizedBox(height: 14),
-                      selectField(
-                          'شهر بر اساس',
-                          f.cityKind,
-                          {
-                            'seller': 'شهر دفتر فروشنده',
-                            'loading': 'شهر بارگیری'
-                          },
-                          (v) => update(() => f.cityKind = v)),
-                      const SizedBox(height: 14),
-                      OutlinedButton.icon(
-                          onPressed: () async {
-                            final city = await showSearch<String>(
-                                context: ctx, delegate: CitySearch(c.cities));
-                            if (city != null) update(() => f.city = city);
-                          },
-                          icon: const Icon(Icons.location_city),
-                          label: Text(
-                              f.city.isEmpty ? 'تمام شهرهای ایران' : f.city)),
-                      const SizedBox(height: 14),
+                      Text(
+                          'شهر سراسری: ${c.selectedCity.isEmpty ? 'همه شهرها' : c.selectedCity}؛ تغییر فقط در اطلاعات'),
                       selectField(
                           'واحد فروش در منبع',
                           f.unit,
@@ -581,7 +564,7 @@ Future<void> showMarketFilters(BuildContext context, MarketController c) async {
           }));
 }
 
-class CitySearch extends SearchDelegate<String> {
+class CitySearch extends SearchDelegate<String?> {
   final List<String> cities;
   CitySearch(this.cities) : super(searchFieldLabel: 'جستجوی تمام شهرها');
   @override
@@ -594,7 +577,8 @@ class CitySearch extends SearchDelegate<String> {
       ];
   @override
   Widget buildLeading(BuildContext context) => IconButton(
-      onPressed: () => close(context, ''), icon: const Icon(Icons.arrow_back));
+      onPressed: () => close(context, null),
+      icon: const Icon(Icons.arrow_back));
   @override
   Widget buildResults(BuildContext context) => buildSuggestions(context);
   @override

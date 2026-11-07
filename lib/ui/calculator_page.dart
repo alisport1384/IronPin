@@ -9,7 +9,8 @@ import 'common.dart';
 import '../domain/money.dart';
 
 class CalculatorPage extends StatefulWidget {
-  const CalculatorPage({super.key});
+  final String city;
+  const CalculatorPage({super.key, this.city = ''});
   @override
   State<CalculatorPage> createState() => _CalculatorPageState();
 }
@@ -153,6 +154,9 @@ class _CalculatorPageState extends State<CalculatorPage> {
         ]),
         const Text('کیلوگرم، متراژ، تعداد و مساحت — با واحد صریح',
             style: TextStyle(fontSize: 12, color: muted)),
+        Text(
+            'شهر سراسری: ${widget.city.isEmpty ? 'همه شهرها' : widget.city}؛ این حسابگر از ورودی دستی استفاده می‌کند، نه قیمت شهر دیگر.',
+            style: const TextStyle(fontSize: 11, color: muted)),
         const SizedBox(height: 22),
         SwitchListTile(
             contentPadding: EdgeInsets.zero,

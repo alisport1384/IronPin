@@ -1,3 +1,4 @@
+import 'city_scope.dart';
 import 'dart:convert';
 import 'market.dart';
 import 'money.dart';
@@ -77,6 +78,12 @@ class PriceRange {
                 announcements.length)
             .round(),
         sellers = announcements.map((q) => _norm(q.seller)).toSet().length;
+  PriceRange.computed(this.key, this.basis, this.example, this.announcements,
+      {required this.minimum,
+      required this.maximum,
+      required this.mean,
+      required this.roundedMean,
+      required this.sellers});
   double rate(String choice) => switch (choice) {
         'min' => minimum,
         'max' => maximum,
@@ -95,7 +102,9 @@ class RangeProduct {
   final Quote example;
   final PriceRange? range;
   final List<String> unavailableReasons;
-  RangeProduct(this.key, this.example, this.range, this.unavailableReasons);
+  final String? preparedSearch;
+  RangeProduct(this.key, this.example, this.range, this.unavailableReasons,
+      {this.preparedSearch});
   late final String label = range?.label ??
       [
         example.title.isEmpty ? 'کالای بدون عنوان' : example.title,
@@ -109,7 +118,7 @@ class RangeProduct {
         'مالیات: ${example.tax}',
         'شرایط: ${example.terms}'
       ].where((s) => s.isNotEmpty).join(' • ');
-  late final String searchText = latin(label).toLowerCase();
+  late final String searchText = preparedSearch ?? latin(label).toLowerCase();
 }
 
 String catalogueKey(Quote q) =>
@@ -215,10 +224,10 @@ RangeReport calculateRanges(Iterable<Quote> quotes, DateTime now) {
 
 /// The user-selected family/fields define the scope, never an example offer.
 class ProductRangeQuery {
-  final String family, basis;
+  final String family, basis, city;
   final Map<String, String> fields;
   const ProductRangeQuery(this.family,
-      {this.fields = const {}, this.basis = ''});
+      {this.fields = const {}, this.basis = '', this.city = ''});
 }
 
 class ProductRangeResult {
@@ -238,6 +247,7 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
   void reject(String reason) =>
       excluded.update(reason, (n) => n + 1, ifAbsent: () => 1);
   for (final q in quotes) {
+    if (!cityMatches(q, query.city)) continue;
     final facts = ProductFacts.of(q);
     if ((facts.family.isEmpty ? 'سایر' : facts.family) != query.family ||
         !facts.matches(query.fields)) continue;

@@ -1,0 +1,16 @@
+{
+  "archive": "ARCHIVED-APK-0.5.0-0.5.1.tar.xz",
+  "archiveBytes": 12320244,
+  "archiveSha256": "98e41582378142e5cf9afdac42f311eb6b5979f71ae2bc41fdf108efbd041f1c",
+  "originalBytes": 33001061,
+  "savedBytes": 20680817,
+  "independentStandardPythonRestore": "passed",
+  "fourOriginalByteComparisons": "passed",
+  "removedOnly": [
+    "IronPin-0.5.0/IronPin-0.5.0-armeabi-v7a.apk",
+    "IronPin-0.5.0/IronPin-0.5.0-arm64-v8a.apk",
+    "IronPin-0.5.1/IronPin-0.5.1-armeabi-v7a.apk",
+    "IronPin-0.5.1/IronPin-0.5.1-arm64-v8a.apk"
+  ],
+  "restoreOutput": "/home/user/.cache/archive-050-051/recovered/IronPin-0.5.0/IronPin-0.5.0-armeabi-v7a.apk 4db79cff44a2c45477952b60762718c2175a0a7c8d31b7c50c4e2df04f3e63f9\n/home/user/.cache/archive-050-051/recovered/IronPin-0.5.0/IronPin-0.5.0-arm64-v8a.apk 37cec2b81ed59e2c7e55ac4a3e400322e828427ddea4387baa70d599873f6b25\n/home/user/.cache/archive-050-051/recovered/IronPin-0.5.1/IronPin-0.5.1-armeabi-v7a.apk 3cfc068affbc0e5104c5921b22e59cb599e2baf2386a7cba6e609a2025bd098f\n/home/user/.cache/archive-050-051/recovered/IronPin-0.5.1/IronPin-0.5.1-arm64-v8a.apk f1960e038d24094c2654c0cb07256aabcd04dee0be4b1998aa573988942652b1\n"
+}

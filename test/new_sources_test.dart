@@ -13,7 +13,7 @@ void main() {
   test(
       'all curated endpoints are enabled on fresh installation; candidates remain unapproved',
       () {
-    expect(endpoints.length, 72);
+    expect(endpoints.length, 74);
     expect(endpoints.every((e) => e.defaultEnabled), true);
     expect(
         endpoints

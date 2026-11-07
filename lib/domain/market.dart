@@ -1,3 +1,4 @@
+import 'city_scope.dart';
 import 'money.dart';
 import 'dart:convert';
 import 'product_text.dart';
@@ -451,7 +452,10 @@ class MarketFilter {
     return (category.isEmpty || q.category == category) &&
         (material.isEmpty || q.material == material) &&
         (city.isEmpty ||
-            (cityKind == 'seller' ? q.sellerCity : q.loadingCity) == city) &&
+            (cityKind == 'all'
+                ? cityMatches(q, city)
+                : (cityKind == 'seller' ? q.sellerCity : q.loadingCity) ==
+                    city)) &&
         (unit.isEmpty || q.unit == unit) &&
         (size.isEmpty || _sameMeasure(q.sizeLabel, size)) &&
         (thickness.isEmpty || _sameMeasure(q.thicknessLabel, thickness)) &&

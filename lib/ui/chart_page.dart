@@ -1,3 +1,4 @@
+import '../domain/city_scope.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import '../data/app_logger.dart';
@@ -25,7 +26,7 @@ class _ChartPageState extends State<ChartPage> {
   String loadedKey = '';
   int historyLimit = 1000;
   String historyKey(String endpoint) =>
-      '${widget.c.historyEpoch}:${widget.c.endpointRevisions[endpoint] ?? 0}';
+      '${widget.c.selectedCity}:${widget.c.historyEpoch}:${widget.c.endpointRevisions[endpoint] ?? 0}';
   @override
   void initState() {
     super.initState();
@@ -138,7 +139,8 @@ class _ChartPageState extends State<ChartPage> {
             final f = widget.c.filter;
             final series = snap.data!.where((q) {
               final p = q.tomanFor(f.basis);
-              return p != null &&
+              return cityMatches(q, widget.c.selectedCity) &&
+                  p != null &&
                   (days == 0 ||
                       DateTime.now().toUtc().difference(q.fetchedAt).inDays <=
                           days) &&

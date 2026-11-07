@@ -294,7 +294,7 @@ void main() {
     late AppLogger log;
     setUp(() async {
       dir = await Directory.systemTemp.createTemp('ironpin-070-');
-      log = AppLogger(maxBytes: 4096, fileBytes: 1024);
+      log = AppLogger(enabled: true, maxBytes: 4096, fileBytes: 1024);
       await log.initialize(directory: dir);
     });
     tearDown(() async {
@@ -344,7 +344,7 @@ void main() {
     });
     test('minimum 512-byte file cap also bounds Persian oversized fallback',
         () async {
-      final tiny = AppLogger(maxBytes: 1024, fileBytes: 512);
+      final tiny = AppLogger(enabled: true, maxBytes: 1024, fileBytes: 512);
       await tiny.initialize(directory: dir);
       await tiny.record('source', 'fetch', {
         'endpoint': 'آ' * 200,

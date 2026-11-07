@@ -15,7 +15,7 @@ class InfoPage extends StatefulWidget {
 }
 
 class _InfoPageState extends State<InfoPage> {
-  String city = '', query = '', platform = '';
+  String query = '', platform = '';
   bool exporting = false;
   Future<void> exportLogs() async {
     setState(() => exporting = true);
@@ -90,6 +90,24 @@ class _InfoPageState extends State<InfoPage> {
   @override
   Widget build(BuildContext context) {
     final c = widget.c;
+    final city = c.selectedCity;
+    bool inCity(Map row) {
+      if (city.isEmpty) return true;
+      final explicit = latin([
+        row['city'],
+        row['coverage'],
+        row['owner'],
+        row['name'],
+        row['title']
+      ].whereType<String>().join(' '));
+      if (RegExp('(?<![آ-یA-Za-z])${RegExp.escape(city)}(?![آ-یA-Za-z])')
+          .hasMatch(explicit)) return true;
+      final url = '${row['url'] ?? ''}'.replaceAll('/s/', '/').toLowerCase();
+      return c.availableEndpoints.any((e) =>
+          e.sellerCity == city &&
+          e.url.replaceAll('/s/', '/').toLowerCase() == url);
+    }
+
     final offices = sellers
         .where((s) =>
             (city.isEmpty || s['city'] == city) &&
@@ -99,8 +117,9 @@ class _InfoPageState extends State<InfoPage> {
           (a['city'] == 'مشهد' ? 0 : 1).compareTo(b['city'] == 'مشهد' ? 0 : 1));
     final sites = (c.registry['sources'] as List? ?? [])
         .where((s) =>
-            query.isEmpty ||
-            latin('${s['name']} ${s['coverage']}').contains(latin(query)))
+            inCity(s) &&
+            (query.isEmpty ||
+                latin('${s['name']} ${s['coverage']}').contains(latin(query))))
         .toList();
     return ListView(padding: const EdgeInsets.all(20), children: [
       const Text('اطلاعات و منابع',
@@ -120,6 +139,15 @@ class _InfoPageState extends State<InfoPage> {
             infoBox('ذخیره محلی و تصمیم ماهانه',
                 'داده‌های قبلی با نوسازی یا قطع اینترنت حذف نمی‌شوند. ابتدای هر ماه شمسی، هنگام استفاده از اپ درباره حفظ یا پاک‌سازی تاریخچه ماه‌های قبل سؤال می‌شود. قیمت جاری و تنظیمات باقی می‌مانند. حذف برنامه یا پاک‌کردن داده برنامه توسط Android می‌تواند این اطلاعات را حذف کند.'),
           ]),
+      SwitchListTile(
+          title: const Text('ثبت لاگ محصولات و منابع'),
+          subtitle:
+              const Text('پیش‌فرض خاموش؛ روشن‌کردن اختیاری، سقف مجموع۱مگابایت'),
+          value: c.loggingEnabled,
+          onChanged: (value) async {
+            await c.setLogging(value);
+            if (mounted) setState(() {});
+          }),
       ExpansionTile(
           tilePadding: EdgeInsets.zero,
           title: const Text('لاگ Markdown و مسیر فایل‌ها'),
@@ -129,7 +157,7 @@ class _InfoPageState extends State<InfoPage> {
             const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                    'رویدادهای شبکه، تبدیل، پایگاه داده، فیلتر، پیشنهاد، نمودار، محاسبات و خطاها در حافظه اختصاصی برنامه ثبت می‌شوند. پاک‌سازی ماهانه تاریخچه، لاگ‌ها را حذف نمی‌کند. برای نگهداری خارج از برنامه از دکمه زیر خروجی بگیر.')),
+                    'فقط با روشن‌کردن کلید لاگ، خلاصه محصول و منبع در حافظه اختصاصی ثبت می‌شود؛ کلیک، فیلتر، محاسبه و خطای عمومی ثبت نمی‌شوند. پاک‌سازی ماهانه تاریخچه، لاگ‌ها را حذف نمی‌کند. برای نگهداری خارج از برنامه از دکمه زیر خروجی بگیر.')),
             if (AppLogger.instance.lastError != null)
               const Text(
                   'ثبت لاگ با خطا روبه‌رو شده؛ فضای خالی و دسترسی پوشه را بررسی کنید.',
@@ -150,12 +178,18 @@ class _InfoPageState extends State<InfoPage> {
           onChanged: (v) => setState(() => query = v)),
       OutlinedButton.icon(
           onPressed: () async {
-            final v = await showSearch<String>(
+            final v = await showSearch<String?>(
                 context: context, delegate: CitySearch(c.cities));
-            if (v != null) setState(() => city = v);
+            if (v != null) {
+              await c.setCity(v);
+              if (mounted) setState(() {});
+            }
           },
           icon: const Icon(Icons.location_on_outlined),
-          label: Text(city.isEmpty ? 'تمام شهرها • مشهد در اولویت' : city)),
+          label: Text(
+              city.isEmpty ? 'شهر سراسری: تمام شهرها' : 'شهر سراسری: $city')),
+      infoBox('شهر فقط فیلتر نمایش است',
+          'دفتر، بارگیری، محل تولید و اشاره صریح همان کالا بررسی می‌شوند؛ اطلاعات شهرهای دیگر نمایش یا محاسبه نمی‌شوند. دریافت از همه منابع فعال، مستقل از شهر ادامه دارد. شهر نامعلوم حدس زده نمی‌شود.'),
       const Text('اتصال‌های قابل نوسازی',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
       const Text(
@@ -310,7 +344,8 @@ class _InfoPageState extends State<InfoPage> {
                       child: const Text('بازکردن منبع'))
                 ])),
       ExpansionTile(title: const Text('کانال‌های تلگرام تحقیق'), children: [
-        for (final ch in c.registry['telegram_channels'] as List? ?? [])
+        for (final ch in (c.registry['telegram_channels'] as List? ?? [])
+            .where((x) => inCity(x)))
           ListTile(
               title: Text('${ch['owner']} / ${ch['handle']}',
                   style: const TextStyle(fontSize: 12)),
@@ -321,7 +356,8 @@ class _InfoPageState extends State<InfoPage> {
               onTap: () => openLink(context, ch['url']))
       ]),
       ExpansionTile(title: const Text('لینک‌های محصول و کارخانه'), children: [
-        for (final p in c.registry['product_pages'] as List? ?? [])
+        for (final p in (c.registry['product_pages'] as List? ?? [])
+            .where((x) => inCity(x)))
           ListTile(
               title: Text(p['title'], style: const TextStyle(fontSize: 12)),
               subtitle: Text(p['group'], style: const TextStyle(fontSize: 10)),
@@ -335,9 +371,9 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: () => showLicensePage(
               context: context,
               applicationName: 'IronPin',
-              applicationVersion: '0.5.0'),
+              applicationVersion: '0.7.1'),
           child: const Text('مجوزهای نرم‌افزار و داده')),
-      const Text('IronPin 0.5.0 • تحلیل محلی • پژوهش: ۱۵ آبان ۱۴۰۵',
+      const Text('IronPin 0.7.1 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: muted)),
       const SizedBox(height: 18),

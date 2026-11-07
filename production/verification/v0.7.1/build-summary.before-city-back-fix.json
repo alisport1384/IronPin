@@ -1,0 +1,24 @@
+[
+  {
+    "abi": "armeabi-v7a",
+    "aot": {
+      "elapsedSeconds": 24.85,
+      "minimumAvailableMiB": 709.7,
+      "exitCode": 0
+    },
+    "elapsedSeconds": 78.97,
+    "minimumAvailableMiB": 324.5,
+    "exitCode": 0
+  },
+  {
+    "abi": "arm64-v8a",
+    "aot": {
+      "elapsedSeconds": 26.08,
+      "minimumAvailableMiB": 708.4,
+      "exitCode": 0
+    },
+    "elapsedSeconds": 52.89,
+    "minimumAvailableMiB": 413.0,
+    "exitCode": 0
+  }
+]

@@ -1,0 +1,51 @@
+00:00 +0: loading /home/user/IronPin/test/release_v071_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: global city covers explicit office, loading, production and product title
+00:00 +1: global city persists and immediately shields old cached lists
+00:00 +2: logging default OFF writes nothing; explicit opt-in and OFF work
+00:00 +3: logger opt-in preference persists independently of selected city
+00:00 +4: range worker matches domain rules; cities, uncertainty, units and catalogue preserved
+00:00 +5: worker gives a terminal empty result, not indefinite loading
+00:00 +6: worker exception and deadline both terminate; retry succeeds
+00:00 +7: cancel terminates a confirmed job without admitting its late result
+00:00 +8: large stable snapshot emits progress and leaves main-isolate timers responsive
+Shell: RANGE071_METRIC rows=8730 selected=4365 elapsedMs=910 mainTimerTicks=841 progress=47
+00:01 +9: new Mashhad endpoints are distinct existing-channel identities
+00:01 +10: observed Bonyan rows never invent currency/unit or fresh dates
+00:01 +10 -1: observed Bonyan rows never invent currency/unit or fresh dates [E]
+  Expected: non-empty
+    Actual: WhereIterable<Quote>:[]
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 480:18  expect
+  test/release_v071_test.dart 258:5                   main.<fn>
+  
+00:01 +10 -1: buyer offers and doubling labor never become selling prices
+00:02 +11 -1: UI deadline ends spinner and offers retry without deleting data
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextContainingWidgetFinder:<Found 0 widgets with text containing مهلت محاسبه تمام شد: []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/user/IronPin/test/release_v071_test.dart:299:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:189:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1032:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/user/IronPin/test/release_v071_test.dart line 299
+The test description was:
+  UI deadline ends spinner and offers retry without deleting data
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +11 -2: UI deadline ends spinner and offers retry without deleting data [E]
+  Test failed. See exception logs above.
+  The test description was: UI deadline ends spinner and offers retry without deleting data
+  
+00:03 +11 -2: (tearDownAll)
+00:03 +11 -2: Some tests failed.

@@ -1,0 +1,20 @@
+00:00 +0: loading /home/user/IronPin/test/release_v071_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: global city covers explicit office, loading, production and product title
+00:00 +1: global city persists and immediately shields old cached lists
+00:00 +2: logging default OFF writes nothing; explicit opt-in and OFF work
+00:00 +3: logger opt-in preference persists independently of selected city
+00:00 +4: range worker matches domain rules; cities, uncertainty, units and catalogue preserved
+00:00 +5: worker gives a terminal empty result, not indefinite loading
+00:00 +6: worker exception and deadline both terminate; retry succeeds
+00:00 +7: cancel terminates a confirmed job without admitting its late result
+00:00 +8: large stable snapshot emits progress and leaves main-isolate timers responsive
+Shell: RANGE071_METRIC rows=8730 selected=4365 elapsedMs=842 mainTimerTicks=778 progress=47
+00:01 +9: new Mashhad endpoints are distinct existing-channel identities
+00:01 +10: observed Bonyan rows never invent currency/unit or fresh dates
+00:01 +11: buyer offers and doubling labor never become selling prices
+00:01 +12: selected city never reduces enabled-source acquisition or stored data
+00:02 +13: refresh revisions do not restart confirmed range; city change clears stale result
+00:04 +14: UI deadline ends spinner and offers retry without deleting data
+00:04 +15: (tearDownAll)
+00:04 +15: All tests passed!

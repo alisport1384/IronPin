@@ -12,6 +12,14 @@ class AppLogger {
   Directory? _directory;
   Future<void> _pending = Future.value();
   String? lastError;
+  bool enabled;
+  Future<void> setEnabled(bool value) async {
+    enabled = value;
+    if (value && _directory == null) await initialize();
+    if (!value) _recentProducts.clear();
+    await flush();
+  }
+
   String get directoryPath => _directory?.path ?? 'هنوز آماده نشده';
   Future<void> initialize({Directory? directory}) async {
     try {
@@ -57,7 +65,10 @@ class AppLogger {
     'thickness'
   };
   final int maxBytes, fileBytes;
-  AppLogger({this.maxBytes = 1024 * 1024, this.fileBytes = 128 * 1024})
+  AppLogger(
+      {this.maxBytes = 1024 * 1024,
+      this.fileBytes = 128 * 1024,
+      this.enabled = false})
       : assert(fileBytes >= 512 && maxBytes >= fileBytes);
   File? _active;
   int _serial = 0;
@@ -86,7 +97,8 @@ class AppLogger {
 
   Future<void> record(String section, String event,
       [Map<String, Object?> fields = const {}]) {
-    if (_directory == null ||
+    if (!enabled ||
+        _directory == null ||
         (section != 'product' && !_sourceSections.contains(section))) {
       return Future.value();
     }
@@ -118,8 +130,9 @@ class AppLogger {
     }
     final bytes = utf8.encode(block);
     _pending = _pending.then((_) async {
+      if (!enabled) return;
       try {
-        const header = '# IronPin — products and sources | 0.7.0\n';
+        const header = '# IronPin — products and sources | 0.7.1\n';
         final newFile = _active == null ||
             !await _active!.exists() ||
             await _active!.length() + bytes.length > fileBytes;

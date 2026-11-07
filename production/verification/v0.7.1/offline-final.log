@@ -1,0 +1,301 @@
+00:00 +0: loading /home/user/IronPin/test/range_ui_test.dart
+00:00 +0: /home/user/IronPin/test/range_ui_test.dart: (setUpAll)
+00:00 +0: /home/user/IronPin/test/range_ui_test.dart: range cost uses selected rate; changing rate clears stale total, not quantity
+00:00 +1: /home/user/IronPin/test/range_ui_test.dart: dimensional range estimate validates thickness and needs explicit product match
+00:01 +2: /home/user/IronPin/test/range_ui_test.dart: explicit rial price is converted once in card, unit panel and details
+00:01 +3: /home/user/IronPin/test/range_ui_test.dart: product-first range requires confirmation and pools matching local prices without overflow
+00:02 +4: /home/user/IronPin/test/range_ui_test.dart: chart samples are real ordered points preserving extrema and endpoints
+00:02 +5: /home/user/IronPin/test/range_ui_test.dart: native picker cancellation cleans temporary export; import cancellation does not mutate
+00:02 +6: /home/user/IronPin/test/range_ui_test.dart: (tearDownAll)
+00:02 +6: loading /home/user/IronPin/test/market_test.dart
+00:02 +6: /home/user/IronPin/test/market_test.dart: normalizes Persian and Arabic digits
+00:02 +7: /home/user/IronPin/test/market_test.dart: Jalali source date is not capture time
+00:02 +8: /home/user/IronPin/test/market_test.dart: unknown date not replaced with today
+00:02 +9: /home/user/IronPin/test/market_test.dart: freshness uses announced date
+00:02 +10: /home/user/IronPin/test/market_test.dart: future date not trusted
+00:02 +11: /home/user/IronPin/test/market_test.dart: ascending order within unit group
+00:02 +12: /home/user/IronPin/test/market_test.dart: descending order within group
+00:02 +13: /home/user/IronPin/test/market_test.dart: Mashhad priority can override price but explicit toggle disables it
+00:02 +14: /home/user/IronPin/test/market_test.dart: seller city never inferred from loading city
+00:02 +15: /home/user/IronPin/test/market_test.dart: unit filter preserves original branch type
+00:02 +16: /home/user/IronPin/test/market_test.dart: kg normalization needs real supplied mass
+00:02 +17: /home/user/IronPin/test/market_test.dart: branch and kilogram stay separate without conversion
+00:03 +18: /home/user/IronPin/test/market_test.dart: different tax basis remains separate
+00:03 +19: /home/user/IronPin/test/market_test.dart: price range applied to chosen comparison basis
+00:03 +20: /home/user/IronPin/test/market_test.dart: no price is not zero and not ranked
+00:03 +21: /home/user/IronPin/test/market_test.dart: category material search filters
+00:03 +22: /home/user/IronPin/test/market_test.dart: serialization preserves raw quote and history signature
+00:03 +23: /home/user/IronPin/test/market_test.dart: material detection does not equate alloys to stainless
+00:03 +24: loading /home/user/IronPin/test/automatic_ingestion_test.dart
+00:03 +24: /home/user/IronPin/test/automatic_ingestion_test.dart: (setUpAll)
+00:03 +24: /home/user/IronPin/test/automatic_ingestion_test.dart: refresh automatically analyzes, stores and searches real channel sheet text without any manual UI
+00:04 +25: /home/user/IronPin/test/automatic_ingestion_test.dart: table refresh automatically keeps amount candidate and specs when currency is absent
+00:05 +26: /home/user/IronPin/test/automatic_ingestion_test.dart: explicit all-ON migration enables all registered sources once and preserves later opt-out
+00:05 +27: /home/user/IronPin/test/automatic_ingestion_test.dart: all-ON refresh publishes each successful source before a slow source completes
+00:05 +28: /home/user/IronPin/test/automatic_ingestion_test.dart: (tearDownAll)
+00:06 +28: loading /home/user/IronPin/test/calculator_test.dart
+00:06 +28: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations 16mm x 12m round uses density, not mismatched units
+00:06 +29: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations 1x2m sheet 2mm is 31.4kg
+00:06 +30: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations sheet surface-to-weight
+00:06 +31: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations coating total both sides in gsm is added once
+00:06 +32: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations pipe uses OD and hollow interior
+00:06 +33: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations RHS sharp corner approximation subtracts interior
+00:06 +34: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations angle removes overlapping square
+00:06 +35: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations channel with distinct web and flange
+00:06 +36: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations I beam ideal geometry without root radii
+00:06 +37: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations tee geometry
+00:06 +38: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations rectangle bar
+00:06 +39: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations hex uses across flats, not across vertices
+00:06 +40: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations catalog IPE200 sample 12m
+00:06 +41: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations formed sheet uses unfolded width, not useful width
+00:06 +42: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations mesh sums actual wire count two directions
+00:06 +43: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations rabitz requires declared piece mass
+00:06 +44: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations bulk from measured kilograms
+00:06 +45: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations inverse round trip kg to metres
+00:06 +46: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations piece input keeps equivalent count
+00:06 +47: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations density varies by actual material
+00:06 +48: /home/user/IronPin/test/calculator_test.dart: Dimensional weight calculations waste added once
+00:06 +49: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs zero and negative
+00:06 +50: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs pipe cannot be solid
+00:06 +51: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs RHS collapsed interior
+00:06 +52: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs invalid angle
+00:06 +53: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs invalid I web/flange
+00:06 +54: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs useful width exceeds developed width
+00:06 +55: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs wire count must be integer
+00:06 +56: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs area cannot be inferred for bar
+00:06 +57: /home/user/IronPin/test/calculator_test.dart: Reject invalid geometry and inputs metres cannot be inferred for scrap
+00:06 +58: /home/user/IronPin/test/calculator_test.dart: Cost calculation kg + tax + final shipping and services
+00:06 +59: /home/user/IronPin/test/calculator_test.dart: Cost calculation ton price conversion
+00:06 +60: /home/user/IronPin/test/calculator_test.dart: Cost calculation metres, pieces and area
+00:06 +61: /home/user/IronPin/test/calculator_test.dart: Cost calculation negative price rejected
+00:06 +62: loading /home/user/IronPin/test/manual_history_test.dart
+00:07 +62: /home/user/IronPin/test/manual_history_test.dart: (setUpAll)
+00:07 +62: /home/user/IronPin/test/manual_history_test.dart: legacy automatic setting, init, re-init, setAuto and transfer never fetch
+00:08 +63: /home/user/IronPin/test/manual_history_test.dart: no pull-to-refresh or resume network; only toolbar button fetches
+00:10 +64: /home/user/IronPin/test/manual_history_test.dart: indexed 12000-point history returns only latest 1000, preserving full data
+HISTORY_METRIC total=12000 initial=1000 tailMs=21 fullMs=209 timerTicks=196
+00:11 +65: /home/user/IronPin/test/manual_history_test.dart: real schema-2 upgrade backfills indexed dates without touching payload/history/settings
+00:11 +66: /home/user/IronPin/test/manual_history_test.dart: (tearDownAll)
+00:11 +66: loading /home/user/IronPin/test/products_v070_test.dart
+00:12 +66: /home/user/IronPin/test/products_v070_test.dart: plate synonyms are canonical and website page alone is not a product
+00:12 +67: /home/user/IronPin/test/products_v070_test.dart: all technical families have independent fields and minimal blank filters
+00:12 +68: /home/user/IronPin/test/products_v070_test.dart: selected physical fields, not source/brand/title/geography/tax, define market range
+00:12 +69: /home/user/IronPin/test/products_v070_test.dart: minimal category default includes unspecified sizes but strict user-selected field excludes unknown
+00:12 +70: /home/user/IronPin/test/products_v070_test.dart: time is publication/rate date, never fetched time; exact 48-hour endpoints
+00:12 +71: /home/user/IronPin/test/products_v070_test.dart: all announcements weigh equally, not one vote per seller
+00:12 +72: /home/user/IronPin/test/products_v070_test.dart: different price units remain separate; unknown unit/currency/unpriced remain visible
+00:12 +73: /home/user/IronPin/test/products_v070_test.dart: explicit unit choice needs proven source conversion, not estimated density
+00:12 +74: /home/user/IronPin/test/products_v070_test.dart: explicit rials convert once and three modes use actual points
+00:12 +75: /home/user/IronPin/test/products_v070_test.dart: post edits deduplicate but different products in one post do not vanish
+00:12 +76: /home/user/IronPin/test/products_v070_test.dart: legacy specs normalize numeric syntax without inferring missing dimension units
+00:12 +77: /home/user/IronPin/test/products_v070_test.dart: automatic ingestion recognizes plate aliases and persists structured evidence
+00:12 +78: /home/user/IronPin/test/products_v070_test.dart: more than a hundred recent offers remain in results
+00:12 +79: /home/user/IronPin/test/products_v070_test.dart: unknown general iron is visible under other, but not pooled as a known product
+00:12 +80: /home/user/IronPin/test/products_v070_test.dart: new Samen adapter reads transcribed observed columns, units and per-section dates
+00:12 +81: /home/user/IronPin/test/products_v070_test.dart: multi-family Shahr table identifies each row and never concatenates VAT dual prices
+00:12 +82: /home/user/IronPin/test/products_v070_test.dart: legacy carbon material default cannot establish a selected material match
+00:12 +83: /home/user/IronPin/test/products_v070_test.dart: three-number dimensions are not arbitrarily reversed and grades retain supplier spelling
+00:12 +84: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs UI/lifecycle/filter/stack/raw content are not persisted
+00:12 +85: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs only ten product summaries are logged; identical snapshots do not grow log
+00:12 +86: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs minimum 512-byte file cap also bounds Persian oversized fallback
+00:12 +87: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs UTF8 total and per-file cap hold under rotation and parallel calls
+00:13 +88: /home/user/IronPin/test/products_v070_test.dart: bounded source/product logs legacy diagnostic log is retired, unrelated files/database are preserved
+00:13 +89: loading /home/user/IronPin/test/product_search_test.dart
+00:13 +89: /home/user/IronPin/test/product_search_test.dart: sheet 3 means exact thickness, never price, year, 30, 13 or rebar size
+00:13 +90: /home/user/IronPin/test/product_search_test.dart: search and ingestion share the same spec vocabulary and aliases
+00:13 +91: /home/user/IronPin/test/product_search_test.dart: factory names are not silently treated as seller office cities
+00:13 +92: /home/user/IronPin/test/product_search_test.dart: decimal and Persian/Arabic digits normalize without substring matches
+00:13 +93: /home/user/IronPin/test/product_search_test.dart: brand tokens need not be contiguous and caption of another product cannot satisfy them
+00:13 +94: /home/user/IronPin/test/product_search_test.dart: real observed Hayper sheet rows are analyzed automatically, every numbered line keeps its model
+00:13 +95: /home/user/IronPin/test/product_search_test.dart: observed Fardad table content: date and all specs, but no invented currency
+00:14 +96: /home/user/IronPin/test/product_search_test.dart: explicit table currency and row date win; changed price does not change identity
+00:14 +97: /home/user/IronPin/test/product_search_test.dart: invalid explicit row date must not fall back to a valid date before table
+00:14 +98: /home/user/IronPin/test/product_search_test.dart: explicit multi-thickness and descending range stay grouped but can be found by a member
+00:14 +99: loading /home/user/IronPin/test/widget_test.dart
+00:14 +99: /home/user/IronPin/test/widget_test.dart: (setUpAll)
+00:14 +99: /home/user/IronPin/test/widget_test.dart: RTL app has all five working tabs and truthful empty state
+00:16 +100: /home/user/IronPin/test/widget_test.dart: observed real fixture offers render without overflow on narrow screen
+00:17 +101: /home/user/IronPin/test/widget_test.dart: calculator accepts defaults and computes a real result
+00:17 +102: /home/user/IronPin/test/widget_test.dart: thousands of offers use a lazy chart search, not an eager dropdown
+00:18 +103: /home/user/IronPin/test/widget_test.dart: simple calculator hides density and preserves input across tabs
+00:18 +104: /home/user/IronPin/test/widget_test.dart: beginner sheet example gives 31.4 kg without millimetre confusion
+00:19 +105: /home/user/IronPin/test/widget_test.dart: beginner beam uses declared branch mass, never a guessed size table
+00:19 +106: /home/user/IronPin/test/widget_test.dart: domestic directory filters owner, city and platform without fake rates
+00:19 +107: /home/user/IronPin/test/widget_test.dart: controller starts with latest-first and recent-week while discovered sources stay opt-in
+00:19 +108: /home/user/IronPin/test/widget_test.dart: unknown pricing basis is not relabelled as a kilogram price
+00:20 +109: /home/user/IronPin/test/widget_test.dart: compact feed hides manual analyzer; tap expands specifications then arrow opens full evidence
+00:20 +110: /home/user/IronPin/test/widget_test.dart: source rows are compact and reveal health/toggle only after opening
+00:20 +111: /home/user/IronPin/test/widget_test.dart: typed sheet 3 query uses semantic engine in the price feed
+00:21 +112: /home/user/IronPin/test/widget_test.dart: (tearDownAll)
+00:21 +112: loading /home/user/IronPin/test/release_v071_test.dart
+00:21 +112: /home/user/IronPin/test/release_v071_test.dart: (setUpAll)
+00:21 +112: /home/user/IronPin/test/release_v071_test.dart: global city covers explicit office, loading, production and product title
+00:21 +113: /home/user/IronPin/test/release_v071_test.dart: global city persists and immediately shields old cached lists
+00:21 +114: /home/user/IronPin/test/release_v071_test.dart: logging default OFF writes nothing; explicit opt-in and OFF work
+00:21 +115: /home/user/IronPin/test/release_v071_test.dart: logger opt-in preference persists independently of selected city
+00:21 +116: /home/user/IronPin/test/release_v071_test.dart: range worker matches domain rules; cities, uncertainty, units and catalogue preserved
+00:21 +117: /home/user/IronPin/test/release_v071_test.dart: worker gives a terminal empty result, not indefinite loading
+00:21 +118: /home/user/IronPin/test/release_v071_test.dart: worker exception and deadline both terminate; retry succeeds
+00:22 +119: /home/user/IronPin/test/release_v071_test.dart: cancel terminates a confirmed job without admitting its late result
+00:22 +120: /home/user/IronPin/test/release_v071_test.dart: large stable snapshot emits progress and leaves main-isolate timers responsive
+Shell: RANGE071_METRIC rows=8730 selected=4365 elapsedMs=780 mainTimerTicks=719 progress=47
+00:23 +121: /home/user/IronPin/test/release_v071_test.dart: new Mashhad endpoints are distinct existing-channel identities
+00:23 +122: /home/user/IronPin/test/release_v071_test.dart: observed Bonyan rows never invent currency/unit or fresh dates
+00:23 +123: /home/user/IronPin/test/release_v071_test.dart: buyer offers and doubling labor never become selling prices
+00:23 +124: /home/user/IronPin/test/release_v071_test.dart: selected city never reduces enabled-source acquisition or stored data
+00:23 +125: /home/user/IronPin/test/release_v071_test.dart: refresh revisions do not restart confirmed range; city change clears stale result
+00:25 +126: /home/user/IronPin/test/release_v071_test.dart: city-search Back preserves scope; only explicit all-cities clears it
+00:25 +127: /home/user/IronPin/test/release_v071_test.dart: UI deadline ends spinner and offers retry without deleting data
+00:26 +128: /home/user/IronPin/test/release_v071_test.dart: (tearDownAll)
+00:26 +128: loading /home/user/IronPin/test/range_catalog_test.dart
+00:26 +128: /home/user/IronPin/test/range_catalog_test.dart: (setUpAll)
+00:26 +128: /home/user/IronPin/test/range_catalog_test.dart: catalogue keeps old, undated, unknown currency/unit, unpriced and incomplete products
+00:26 +129: /home/user/IronPin/test/range_catalog_test.dart: all categories stay selectable independently of statistical eligibility
+00:26 +130: /home/user/IronPin/test/range_catalog_test.dart: offer catalogue retains entries while missing brands no longer excludes matching rates
+00:26 +131: /home/user/IronPin/test/range_catalog_test.dart: catalogue has no 40-item cap and search covers every product
+00:26 +132: /home/user/IronPin/test/range_catalog_test.dart: adding invalid catalogue products never changes valid announcement mean/count
+00:26 +133: /home/user/IronPin/test/range_catalog_test.dart: repeated fetch of an unavailable product gives one selectable entry
+00:26 +134: /home/user/IronPin/test/range_catalog_test.dart: store selection includes inactive historical latest while feed stays active-only
+00:26 +135: /home/user/IronPin/test/range_catalog_test.dart: history-only old product remains selectable after a history-only restore
+00:26 +136: /home/user/IronPin/test/range_catalog_test.dart: an unavailable product is visible and selectable with reasons, not a fabricated range
+00:28 +137: /home/user/IronPin/test/range_catalog_test.dart: old and undated products remain selectable in the local archive without numeric ranges
+00:29 +138: /home/user/IronPin/test/range_catalog_test.dart: UI exposes all pages and can search beyond the first 40 products
+00:30 +139: /home/user/IronPin/test/range_catalog_test.dart: (tearDownAll)
+00:30 +139: loading /home/user/IronPin/test/range_backup_test.dart
+00:30 +139: /home/user/IronPin/test/range_backup_test.dart: (setUpAll)
+00:30 +139: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range seller with two real announcements has twice the weight
+00:30 +140: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range 48-hour endpoints included; older/future/undated excluded
+00:30 +141: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range mean uses every point and half-up rounds one toman
+00:30 +142: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range re-fetch and metadata changes do not add a vote
+00:30 +143: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range edited same message/date uses its last captured revision
+00:30 +144: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range two separate public posts with equal prices both count
+00:30 +145: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range rials/tomans normalize; unknown currency never inferred by magnitude
+00:31 +146: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range technical thickness and sheet kind separate; brand and tax do not exclude
+00:31 +147: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range all cities count; seller office is never inferred from factory
+00:31 +148: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range missing brand/dimensions no longer blocks a priced product; physical groups remain explicit
+00:31 +149: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range only verified mass converts piece to kg; geometry never changes range
+00:31 +150: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range Persian words and digits match displayed, rounded amounts
+00:31 +151: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range financial filters use tomans without mutating raw rials
+00:31 +152: /home/user/IronPin/test/range_backup_test.dart: Exact 48h all-announcement range researched plate/pipe/solid shape formulas and overflow guard
+00:31 +153: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge round trip restores inactive/current rows, history, settings and sync
+00:31 +154: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge export rejects a record that could not pass its own import limits
+00:31 +155: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge second import is idempotent, not extra history/announcements
+00:31 +156: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge newer local price and existing settings win; new channels merge
+00:31 +157: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge explicit settings restore can recover source choices on an initialized new phone
+00:31 +158: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge truncated file rolls back ALL prior batches, not just final batch
+00:31 +159: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge multi-chunk rollback restores data after more than 300 prepared records
+00:31 +160: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge checksum damage and footer-count damage reject without mutation
+00:31 +161: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge unknown table/schema/unsafe source URL are rejected atomically
+00:31 +162: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge missing currency cannot silently default to toman on restore
+00:32 +163: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge invalid source setting and history ID mismatch reject
+00:32 +164: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge records after footer and giant unterminated lines reject
+00:32 +165: /home/user/IronPin/test/range_backup_test.dart: Full backup: transactional safe merge importing older history cannot become latest signature for refresh
+00:32 +166: /home/user/IronPin/test/range_backup_test.dart: (tearDownAll)
+00:32 +166: loading /home/user/IronPin/test/unit_prices_test.dart
+00:32 +166: /home/user/IronPin/test/unit_prices_test.dart: kg, metre, branch and tonne computed without intermediate rounding
+00:32 +167: /home/user/IronPin/test/unit_prices_test.dart: branch price inverts with explicit mass and length
+00:32 +168: /home/user/IronPin/test/unit_prices_test.dart: length alone can convert branch to metre but never to kilogram
+00:32 +169: /home/user/IronPin/test/unit_prices_test.dart: metre native price needs no mass for branch conversion
+00:32 +170: /home/user/IronPin/test/unit_prices_test.dart: missing length is never guessed from rebar nominal size
+00:32 +171: /home/user/IronPin/test/unit_prices_test.dart: no geometric estimate from a plate thickness or dimensions
+00:32 +172: /home/user/IronPin/test/unit_prices_test.dart: verified sheet area supports kg/metre/sheet/square metre
+00:32 +173: /home/user/IronPin/test/unit_prices_test.dart: native square metre price converts only when explicit sheet area exists
+00:32 +174: /home/user/IronPin/test/unit_prices_test.dart: roll stays roll and is never labelled a branch
+00:32 +175: /home/user/IronPin/test/unit_prices_test.dart: tonne conversion has exact SI ratio
+00:32 +176: /home/user/IronPin/test/unit_prices_test.dart: zero and nonfinite mass/length do not invent a valid conversion
+00:32 +177: /home/user/IronPin/test/unit_prices_test.dart: conversion overflow is unknown, not infinity
+00:32 +178: /home/user/IronPin/test/unit_prices_test.dart: currency and tax basis remain unchanged; rials are not called tomans
+00:32 +179: /home/user/IronPin/test/unit_prices_test.dart: old payload without area remains readable and IDs unchanged
+00:32 +180: /home/user/IronPin/test/unit_prices_test.dart: domestic directory separates contacts and channels; all entries have provenance
+00:32 +181: /home/user/IronPin/test/unit_prices_test.dart: main-feed conversion panel displays decimals with unknown units explicitly
+00:33 +182: loading /home/user/IronPin/test/new_sources_test.dart
+00:33 +182: /home/user/IronPin/test/new_sources_test.dart: all curated endpoints are enabled on fresh installation; candidates remain unapproved
+00:33 +183: /home/user/IronPin/test/new_sources_test.dart: actual newly found Ghanbari sheets include three recent exact thickness 3 rows
+00:34 +184: /home/user/IronPin/test/new_sources_test.dart: real Khabazzade grouped sizes remain grouped and searchable without invented currency
+00:34 +185: /home/user/IronPin/test/new_sources_test.dart: new product-price-date table works without unit column and preserves individual old dates
+00:34 +186: loading /home/user/IronPin/test/sources_test.dart
+00:34 +186: /home/user/IronPin/test/sources_test.dart: observed Melal table matches headers and row date
+00:34 +187: /home/user/IronPin/test/sources_test.dart: parses observed sheet/profile/pipe/angle header variants
+00:34 +188: /home/user/IronPin/test/sources_test.dart: mobile accordion metadata uses per-row unit, source date and stable ID
+00:34 +189: /home/user/IronPin/test/sources_test.dart: observed channel desktop and mobile use identical confirmed currency and product IDs
+00:34 +190: /home/user/IronPin/test/sources_test.dart: mismatched visible and data-price2 is quarantined
+00:34 +191: /home/user/IronPin/test/sources_test.dart: contact price is never numeric zero
+00:34 +192: /home/user/IronPin/test/sources_test.dart: layout change produces no invented rows
+00:34 +193: /home/user/IronPin/test/sources_test.dart: suspended 200 is rejected
+00:34 +194: /home/user/IronPin/test/sources_test.dart: Asre real detail schema ignores unavailable historical prices
+00:34 +195: /home/user/IronPin/test/sources_test.dart: category minima do not become product offers
+00:34 +196: /home/user/IronPin/test/sources_test.dart: telegram extracts declared amount but never assumes its unit
+00:34 +197: /home/user/IronPin/test/sources_test.dart: HTTP errors fail without a successful empty snapshot
+00:34 +198: /home/user/IronPin/test/sources_test.dart: HTTP 200 changed layout is reported as parser error
+00:35 +199: loading /home/user/IronPin/test/store_test.dart
+00:35 +199: /home/user/IronPin/test/store_test.dart: (setUpAll)
+00:35 +199: /home/user/IronPin/test/store_test.dart: empty installation has no fake seed data
+00:35 +200: /home/user/IronPin/test/store_test.dart: snapshot writes latest and a history point atomically
+00:35 +201: /home/user/IronPin/test/store_test.dart: unchanged refresh updates seen time but not historical price point
+00:35 +202: /home/user/IronPin/test/store_test.dart: price change appends rather than replaces history
+00:35 +203: /home/user/IronPin/test/store_test.dart: network failure preserves data and last success
+00:35 +204: /home/user/IronPin/test/store_test.dart: missing current product removed from latest but history retained
+00:35 +205: /home/user/IronPin/test/store_test.dart: empty or wrong endpoint snapshot rejected before mutation
+00:35 +206: /home/user/IronPin/test/store_test.dart: older cached source date never downgrades a newer quote
+00:35 +207: /home/user/IronPin/test/store_test.dart: source settings persist
+00:35 +208: /home/user/IronPin/test/store_test.dart: history date range isolates observations
+00:35 +209: /home/user/IronPin/test/store_test.dart: bounded channel pagination and manual imports preserve prior active rows
+00:35 +210: /home/user/IronPin/test/store_test.dart: v2 reparsing retires old v1 model ids only in reread posts; history and unread data survive
+00:35 +211: /home/user/IronPin/test/store_test.dart: (tearDownAll)
+00:35 +211: loading /home/user/IronPin/test/text_engine_test.dart
+00:36 +211: /home/user/IronPin/test/text_engine_test.dart: Persian month with and without ماه, slash/dash/dot dates are equivalent
+00:36 +212: /home/user/IronPin/test/text_engine_test.dart: real reviewed Eitaa caption splits models and ignores decreases
+00:36 +213: /home/user/IronPin/test/text_engine_test.dart: explicit currency and kilogram basis permit numeric comparisons
+00:36 +214: /home/user/IronPin/test/text_engine_test.dart: physical branch hashtag is NOT a pricing basis
+00:36 +215: /home/user/IronPin/test/text_engine_test.dart: separate product and amount lines and dot thousand separators
+00:36 +216: /home/user/IronPin/test/text_engine_test.dart: unknown currency retains visible raw candidate, never promotes conversion
+00:36 +217: /home/user/IronPin/test/text_engine_test.dart: price date wins over fresh re-publication
+00:36 +218: /home/user/IronPin/test/text_engine_test.dart: publication can date an undated rate but is not copied to announcedAt
+00:36 +219: /home/user/IronPin/test/text_engine_test.dart: fetch time cannot date undated messages
+00:36 +220: /home/user/IronPin/test/text_engine_test.dart: future and invalid explicit dates are not recent
+00:36 +221: /home/user/IronPin/test/text_engine_test.dart: 7x24h inclusive boundary and newest across unrelated groups
+00:36 +222: /home/user/IronPin/test/text_engine_test.dart: phone, quantities, changes and dates never become prices
+00:36 +223: /home/user/IronPin/test/text_engine_test.dart: multiple unlabelled amounts are ambiguous, not arbitrarily selected
+00:36 +224: /home/user/IronPin/test/text_engine_test.dart: currency conversion is never guessed and small explicit amounts are literal
+00:36 +225: /home/user/IronPin/test/text_engine_test.dart: terms, tax, length and branch mass require explicit evidence
+00:36 +226: /home/user/IronPin/test/text_engine_test.dart: stable IDs survive price edits
+00:36 +227: /home/user/IronPin/test/text_engine_test.dart: actual Telegram fixture now yields price models without assuming kg
+00:36 +228: /home/user/IronPin/test/text_engine_test.dart: semantic Eitaa post anchors do not join neighbouring messages
+00:36 +229: /home/user/IronPin/test/text_engine_test.dart: Rubika profile is not a post or price and cannot pretend success
+00:36 +230: /home/user/IronPin/test/text_engine_test.dart: only observed safe same-channel older links are followed
+00:36 +231: /home/user/IronPin/test/text_engine_test.dart: discovery allows public handles, never phone/admin/bot/invite/SSRF
+00:36 +232: /home/user/IronPin/test/text_engine_test.dart: pagination merges messages and records bounded partial coverage
+00:37 +233: /home/user/IronPin/test/text_engine_test.dart: range remains visible but never becomes the upper bound price
+00:37 +234: /home/user/IronPin/test/text_engine_test.dart: relative dates use publication, never fetch time
+00:37 +235: /home/user/IronPin/test/text_engine_test.dart: same-day rate uses publication time for latest order, not fetch time
+00:37 +236: /home/user/IronPin/test/text_engine_test.dart: product and contact in one line keeps actual price
+00:37 +237: /home/user/IronPin/test/text_engine_test.dart: invalid Gregorian dates are not normalized into a different day
+00:37 +238: /home/user/IronPin/test/text_engine_test.dart: older-page failure preserves the latest parsed page as partial
+00:37 +239: /home/user/IronPin/test/text_engine_test.dart: explicit thousands/millions and toman spelling are literal, not magnitude guesses
+00:37 +240: /home/user/IronPin/test/text_engine_test.dart: real source pattern: model heading before date retains context and literal kg basis
+00:37 +241: /home/user/IronPin/test/text_engine_test.dart: width/dimensions/quantities are not mistaken for unlabelled prices
+00:37 +242: /home/user/IronPin/test/text_engine_test.dart: model dimensions preceding a separate price line remain attached
+00:37 +243: /home/user/IronPin/test/text_engine_test.dart: emoji cleanup never leaves an unpaired UTF16 surrogate
+00:37 +244: /home/user/IronPin/test/text_engine_test.dart: reviewed Fiahan heat-treated model and bundle/retail conditions remain explicit
+00:37 +245: /home/user/IronPin/test/text_engine_test.dart: actual manufacturing news years are not a price range, nor substring الی in فعالیت
+00:37 +246: /home/user/IronPin/test/text_engine_test.dart: model size and table dimensions cannot become a leading thousands group of the amount
+00:37 +247: /home/user/IronPin/test/text_engine_test.dart: explicit fields remain attached to the row; verified mass, length, area and row factory
+00:37 +248: loading /home/user/IronPin/test/revision_test.dart
+00:38 +248: /home/user/IronPin/test/revision_test.dart: (setUpAll)
+00:38 +248: /home/user/IronPin/test/revision_test.dart: Structured product specifications 8 and 10 mm sheets never share a comparison group
+00:38 +249: /home/user/IronPin/test/revision_test.dart: Structured product specifications legacy payload reads thickness, size, dimensions and grade without losing ID
+00:38 +250: /home/user/IronPin/test/revision_test.dart: Structured product specifications beam sizes, brands and grades are not interchangeable
+00:38 +251: /home/user/IronPin/test/revision_test.dart: Retention without implicit deletion keep persists decision; only a new Persian month is due
+00:38 +252: /home/user/IronPin/test/revision_test.dart: Retention without implicit deletion explicit cleanup deletes only older history, never latest/settings
+00:38 +253: /home/user/IronPin/test/revision_test.dart: Retention without implicit deletion batch upsert preserves latest date guard for a large snapshot
+00:39 +254: /home/user/IronPin/test/revision_test.dart: version-1 database preserves payload; explicit all-ON migration runs once
+00:39 +255: /home/user/IronPin/test/revision_test.dart: Markdown logger parallel event calls preserve ordered append and markdown format
+00:39 +256: /home/user/IronPin/test/revision_test.dart: Markdown logger export sends existing md paths and treats picker cancellation as cancellation
+00:39 +257: /home/user/IronPin/test/revision_test.dart: Markdown logger write failures are reported, not propagated into UI
+00:39 +258: /home/user/IronPin/test/revision_test.dart: all researched channels except unverified Tikahan have explicit evidence adapters
+00:39 +259: /home/user/IronPin/test/revision_test.dart: Mashhad image publications never become fresh numeric prices
+00:39 +260: /home/user/IronPin/test/revision_test.dart: cached filtering is asynchronous and stale search work cannot win
+Shell: FILTER_METRIC rows=8000 matches=4000 elapsedMs=212 mainTimerTicks=191
+00:39 +261: /home/user/IronPin/test/revision_test.dart: large HTTP HTML parsing leaves main isolate timers responsive
+00:40 +262: /home/user/IronPin/test/revision_test.dart: (tearDownAll)
+00:40 +262: All tests passed!

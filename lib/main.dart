@@ -20,7 +20,6 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(['Vazirmatn font / Iran city data'],
         await rootBundle.loadString('assets/THIRD_PARTY_NOTICES.txt'));
   });
-  await AppLogger.instance.initialize();
   AppLogger.instance.installErrorHandlers();
   runApp(const IronPinApp());
 }
@@ -233,7 +232,7 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
                   })),
           1 => ChartPage(c: c, selectedId: chartId),
           2 => RangePage(c: c),
-          3 => const CalculatorPage(),
+          3 => CalculatorPage(city: c.selectedCity),
           _ => InfoPage(c: c),
         };
         return Scaffold(

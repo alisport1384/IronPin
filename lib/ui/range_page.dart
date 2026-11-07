@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import '../domain/range_task.dart';
 import 'package:flutter/material.dart';
 import '../data/app_logger.dart';
 import '../data/controller.dart';
@@ -13,14 +13,28 @@ import 'common.dart';
 
 class RangePage extends StatefulWidget {
   final MarketController c;
-  const RangePage({super.key, required this.c});
+  final Duration taskTimeout, readTimeout;
+  const RangePage(
+      {super.key,
+      required this.c,
+      this.taskTimeout = const Duration(seconds: 45),
+      this.readTimeout = const Duration(seconds: 20)});
   @override
   State<RangePage> createState() => _RangePageState();
 }
 
 class _RangePageState extends State<RangePage> {
-  Future<RangeReport>? future;
   int revision = -1, generation = 0, visible = 40, catalogVisible = 40;
+  RangeTask? task;
+  RangeSelection? selection;
+  String scopeCity = '', stage = '';
+  int processed = 0, totalRows = 0;
+  @override
+  void initState() {
+    super.initState();
+    scopeCity = widget.c.selectedCity;
+  }
+
   String? family;
   String mode = 'mean', basis = '', error = '';
   bool calculating = false;
@@ -29,6 +43,8 @@ class _RangePageState extends State<RangePage> {
   final search = TextEditingController();
   @override
   void dispose() {
+    generation++;
+    task?.cancel();
     for (final c in [...fields.values, search]) {
       c.dispose();
     }
@@ -37,6 +53,9 @@ class _RangePageState extends State<RangePage> {
 
   void invalidate() {
     generation++;
+    task?.cancel();
+    task = null;
+    selection = null;
     result = null;
     calculating = false;
     error = '';
@@ -59,33 +78,70 @@ class _RangePageState extends State<RangePage> {
   }
 
   Future<void> confirm() async {
+    task?.cancel();
     final token = ++generation;
+    final at = DateTime.now().toUtc();
+    revision = widget.c.historyRevision;
+    final city = widget.c.selectedCity;
+    final constraints = fields.map((k, v) => MapEntry(k, v.text.trim()));
     setState(() {
       calculating = true;
       error = '';
       result = null;
+      selection = null;
       visible = 40;
+      catalogVisible = 40;
+      stage = 'خواندن snapshot محلی';
+      processed = 0;
+      totalRows = 0;
     });
-    final query = ProductRangeQuery(family!,
-        fields: fields.map((k, v) => MapEntry(k, v.text.trim())), basis: basis);
     try {
-      final report = await future!;
-      final next = await compute(calculateProductRange, {
-        'quotes': report.quotes,
-        'query': query,
-        'now': DateTime.now().toUtc()
+      final payloads =
+          await widget.c.store.rangePayloads(at).timeout(widget.readTimeout);
+      if (!mounted || token != generation) return;
+      final job = RangeTask();
+      task = job;
+      final next = await job.run({
+        'payloads': payloads,
+        'family': family!,
+        'fields': constraints,
+        'basis': basis,
+        'city': city,
+        'now': at.millisecondsSinceEpoch,
+      }, timeout: widget.taskTimeout, onProgress: (label, count, total) {
+        if (mounted && token == generation) {
+          setState(() {
+            stage = label;
+            processed = count;
+            totalRows = total;
+          });
+        }
       });
       if (mounted && token == generation) {
         setState(() {
-          result = next;
+          selection = next;
+          result = next.result;
           calculating = false;
+          task = null;
+        });
+      }
+    } on RangeCancelled {
+      // The user/changed parameters already invalidated this generation.
+    } on TimeoutException {
+      if (mounted && token == generation) {
+        setState(() {
+          calculating = false;
+          task = null;
+          error =
+              'مهلت محاسبه تمام شد؛ داده حذف نشده است. دوباره تأیید کنید یا مشخصات را محدودتر کنید.';
         });
       }
     } catch (_) {
       if (mounted && token == generation) {
         setState(() {
           calculating = false;
-          error = 'رنج خوانده نشد؛ داده قبلی حذف نشده است.';
+          task = null;
+          error = 'محاسبه کامل نشد؛ داده قبلی حفظ شد. دوباره تلاش کنید.';
         });
       }
     }
@@ -103,225 +159,213 @@ class _RangePageState extends State<RangePage> {
           onChanged: (_) => setState(invalidate)));
   @override
   Widget build(BuildContext context) {
-    if (future == null || revision != widget.c.historyRevision) {
-      revision = widget.c.historyRevision;
-      future = widget.c.store.rangeReport(DateTime.now());
+    // Refresh notifications never restart or starve a confirmed calculation.
+    // A changed city is a changed query, so stale/cross-city results disappear.
+    if (scopeCity != widget.c.selectedCity) {
+      scopeCity = widget.c.selectedCity;
       invalidate();
     }
-    return FutureBuilder<RangeReport>(
-        future: future,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-                child: infoBox('خطای خواندن رنج',
-                    'بدون حذف داده، برنامه را دوباره باز کنید.'));
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final entries = productFields[family]?.keys.toList() ?? <String>[];
-          final needle = specNorm(search.text);
-          final shown = result?.announcements
-                  .where((q) =>
-                      specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
-                          .contains(needle))
-                  .toList() ??
-              <Quote>[];
-          final constraints = fields.map((k, v) => MapEntry(k, v.text.trim()));
-          final catalog = result == null
-              ? <RangeProduct>[]
-              : snap.data!.products.where((p) {
-                  final facts = ProductFacts.of(p.example);
-                  return (facts.family.isEmpty ? 'سایر' : facts.family) ==
-                          family &&
-                      facts.matches(constraints) &&
-                      specNorm(
-                              '${p.example.title} ${p.example.specificationLabel} ${p.example.seller}')
-                          .contains(needle);
-                }).toList();
-          return ListView(padding: const EdgeInsets.all(14), children: [
-            const Text('رنج‌گیری ۴۸ ساعت',
-                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
-            const Text('نوع محصول ← مشخصات ← مود قیمت ← تأیید',
-                style: TextStyle(color: muted)),
-            const Text(
-                'مبنای تازگی: تاریخ اعلام نرخ/انتشار منبع؛ نه زمان دریافت. کارخانه، فروشنده و شهر محدودکننده نیستند.',
-                style: TextStyle(fontSize: 12, height: 1.8)),
-            if (family == null) ...[
-              const Text('انتخاب نوع محصول',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              for (final name in [...productFields.keys, 'سایر'])
-                ListTile(
-                    title:
-                        Text(name == 'ورق' ? 'ورق / پلیت / صفحه فولادی' : name),
-                    trailing: const Icon(Icons.chevron_left),
-                    onTap: () => setState(() => select(name))),
-            ] else ...[
-              Row(children: [
-                Expanded(
-                    child: Text(
-                        family == 'ورق' ? 'ورق / پلیت / صفحه فولادی' : family!,
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold))),
-                TextButton(
-                    onPressed: () => setState(() => select(null)),
-                    child: const Text('تغییر محصول'))
-              ]),
-              const Text(
-                  'پیش‌فرض حداقلی است؛ فقط فیلدهایی را که می‌خواهید محدود شوند تکمیل کنید. مشخصات خالی شامل همه انواع و کارخانه‌هاست.',
-                  style: TextStyle(fontSize: 12)),
-              for (final key in entries.take(3)) input(key),
-              if (entries.length > 3)
-                ExpansionTile(
-                    title: const Text('مشخصات بیشتر'),
-                    children: [for (final key in entries.skip(3)) input(key)]),
-              selectField(
-                  'واحد مقایسه',
-                  basis,
-                  {
-                    '': 'همه واحدها؛ جداگانه',
-                    'kg': 'کیلوگرم',
-                    'ton': 'تن',
-                    'sheet': 'برگ',
-                    'piece': 'شاخه',
-                    'roll': 'رول',
-                    'm': 'متر',
-                    'm2': 'مترمربع'
-                  },
-                  (v) => setState(() {
-                        basis = v;
-                        invalidate();
-                      })),
-              selectField(
-                  'مود قیمت',
-                  mode,
-                  {
-                    'min': 'پایین‌ترین قیمت',
-                    'max': 'بالاترین قیمت',
-                    'mean': 'میانگین قیمت'
-                  },
-                  (v) => setState(() {
-                        mode = v;
-                        invalidate();
-                      })),
-              FilledButton.icon(
-                  onPressed: calculating ? null : confirm,
-                  icon: const Icon(Icons.check),
-                  label: const Text('تأیید و نمایش رنج')),
-              if (calculating) const LinearProgressIndicator(),
-              if (error.isNotEmpty) infoBox('خطا', error, color: Colors.red),
-              if (result != null) ...[
-                Text(
-                    'تا ${dateLabel(result!.at)} • ${fmt(result!.announcements.length)} اعلام یکتای مرتبط'),
-                infoBox('نرخ‌های اعلامی مطابق فیلتر شما',
-                    'برند و محل تولید شرط نیستند. مشخصات تعیین‌نشده بدون محدودیت‌اند؛ مالیات، شرایط و نوع‌های مختلف ممکن است متفاوت باشند. واحدهای نامرتبط با هم میانگین نمی‌شوند. این نتیجه تضمین همسانی تمام مشخصات یا فاکتور نهایی نیست.'),
-                if (result!.ranges.isEmpty)
-                  infoBox('رنج عددی قابل مقایسه نداریم',
-                      'اعلام‌های مرتبط در پایین باقی می‌مانند. مبلغ/واحد/ارز نامعلوم با حدس وارد آمار نمی‌شود.'),
-                for (final range in result!.ranges)
-                  Card(
-                      child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+    final entries = productFields[family]?.keys.toList() ?? <String>[];
+    final needle = specNorm(search.text);
+    final shown = result?.announcements
+            .where((q) =>
+                specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
+                    .contains(needle))
+            .toList() ??
+        <Quote>[];
+    final catalog = selection?.catalog
+            .where((p) => p.searchText.contains(needle))
+            .toList() ??
+        <RangeProduct>[];
+    return ListView(padding: const EdgeInsets.all(14), children: [
+      const Text('رنج‌گیری ۴۸ ساعت',
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
+      const Text('نوع محصول ← مشخصات ← مود قیمت ← تأیید',
+          style: TextStyle(color: muted)),
+      const Text(
+          'مبنای تازگی: تاریخ اعلام نرخ/انتشار منبع؛ نه زمان دریافت. شهر سراسری از بخش اطلاعات اعمال می‌شود؛ دریافت منابع مستقل است.',
+          style: TextStyle(fontSize: 12, height: 1.8)),
+      Text(
+          'شهر سراسری: ${widget.c.selectedCity.isEmpty ? 'همه شهرها' : widget.c.selectedCity}'),
+      if (family == null) ...[
+        const Text('انتخاب نوع محصول',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        for (final name in [...productFields.keys, 'سایر'])
+          ListTile(
+              title: Text(name == 'ورق' ? 'ورق / پلیت / صفحه فولادی' : name),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () => setState(() => select(name))),
+      ] else ...[
+        Row(children: [
+          Expanded(
+              child: Text(
+                  family == 'ورق' ? 'ورق / پلیت / صفحه فولادی' : family!,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold))),
+          TextButton(
+              onPressed: () => setState(() => select(null)),
+              child: const Text('تغییر محصول'))
+        ]),
+        const Text(
+            'پیش‌فرض حداقلی است؛ فقط فیلدهایی را که می‌خواهید محدود شوند تکمیل کنید. مشخصات خالی شامل همه انواع و کارخانه‌هاست.',
+            style: TextStyle(fontSize: 12)),
+        for (final key in entries.take(3)) input(key),
+        if (entries.length > 3)
+          ExpansionTile(
+              title: const Text('مشخصات بیشتر'),
+              children: [for (final key in entries.skip(3)) input(key)]),
+        selectField(
+            'واحد مقایسه',
+            basis,
+            {
+              '': 'همه واحدها؛ جداگانه',
+              'kg': 'کیلوگرم',
+              'ton': 'تن',
+              'sheet': 'برگ',
+              'piece': 'شاخه',
+              'roll': 'رول',
+              'm': 'متر',
+              'm2': 'مترمربع'
+            },
+            (v) => setState(() {
+                  basis = v;
+                  invalidate();
+                })),
+        selectField(
+            'مود قیمت',
+            mode,
+            {
+              'min': 'پایین‌ترین قیمت',
+              'max': 'بالاترین قیمت',
+              'mean': 'میانگین قیمت'
+            },
+            (v) => setState(() {
+                  mode = v;
+                  invalidate();
+                })),
+        FilledButton.icon(
+            onPressed: calculating ? null : confirm,
+            icon: const Icon(Icons.check),
+            label: const Text('تأیید و نمایش رنج')),
+        if (calculating) ...[
+          const LinearProgressIndicator(),
+          Text('$stage • ${fmt(processed)} / ${fmt(totalRows)}'),
+          TextButton(
+              onPressed: () => setState(invalidate),
+              child: const Text('لغو محاسبه')),
+        ],
+        if (error.isNotEmpty) infoBox('خطا', error, color: Colors.red),
+        if (result != null) ...[
+          if (revision != widget.c.historyRevision)
+            infoBox('داده جدید رسیده است',
+                'این نتیجه snapshot زمان تأیید است. برای محاسبه داده تازه دوباره تأیید کنید.'),
+          Text(
+              'تا ${dateLabel(result!.at)} • ${fmt(result!.announcements.length)} اعلام یکتای مرتبط'),
+          infoBox('نرخ‌های اعلامی مطابق فیلتر شما',
+              'برند و محل تولید شرط نیستند. مشخصات تعیین‌نشده بدون محدودیت‌اند؛ مالیات، شرایط و نوع‌های مختلف ممکن است متفاوت باشند. واحدهای نامرتبط با هم میانگین نمی‌شوند. این نتیجه تضمین همسانی تمام مشخصات یا فاکتور نهایی نیست.'),
+          if (result!.ranges.isEmpty)
+            infoBox('رنج عددی قابل مقایسه نداریم',
+                'اعلام‌های مرتبط در پایین باقی می‌مانند. مبلغ/واحد/ارز نامعلوم با حدس وارد آمار نمی‌شود.'),
+          for (final range in result!.ranges)
+            Card(
+                child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text({
+                            'min': 'پایین‌ترین قیمت',
+                            'max': 'بالاترین قیمت',
+                            'mean': 'میانگین قیمت'
+                          }[mode]!),
+                          Text(
+                              '${fmt(range.rate(mode), decimals: mode == 'mean' ? 0 : 2)} تومان / ${unitLabel(range.basis)}',
+                              style: const TextStyle(
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.bold,
+                                  color: teal)),
+                          Text(
+                              '${moneyWords(range.rate(mode))} • ${fmt(range.announcements.length)} اعلام',
+                              style: const TextStyle(fontSize: 11)),
+                          ExpansionTile(
+                              title: Text(
+                                  'محاسبه هزینه • ${unitLabel(range.basis)}'),
                               children: [
-                                Text({
-                                  'min': 'پایین‌ترین قیمت',
-                                  'max': 'بالاترین قیمت',
-                                  'mean': 'میانگین قیمت'
-                                }[mode]!),
-                                Text(
-                                    '${fmt(range.rate(mode), decimals: mode == 'mean' ? 0 : 2)} تومان / ${unitLabel(range.basis)}',
-                                    style: const TextStyle(
-                                        fontSize: 21,
-                                        fontWeight: FontWeight.bold,
-                                        color: teal)),
-                                Text(
-                                    '${moneyWords(range.rate(mode))} • ${fmt(range.announcements.length)} اعلام',
-                                    style: const TextStyle(fontSize: 11)),
-                                ExpansionTile(
-                                    title: Text(
-                                        'محاسبه هزینه • ${unitLabel(range.basis)}'),
-                                    children: [
-                                      RangeCost(
-                                          key: ValueKey(
-                                              '${range.key}:$mode:${result!.at}'),
-                                          range: range,
-                                          rate: range.rate(mode),
-                                          allowGeometry: false)
-                                    ]),
-                              ]))),
-                TextField(
-                    controller: search,
-                    decoration: const InputDecoration(
-                        labelText: 'جستجو در تمام اعلام‌های نتیجه'),
-                    onChanged: (_) => setState(() {
-                          visible = 40;
-                          catalogVisible = 40;
-                        })),
-                for (final q in shown.take(visible))
-                  ListTile(
-                      dense: true,
-                      title: Text(faDigits(q.title)),
-                      subtitle: Text(
-                          '${q.amount == null ? (q.details['مبلغ استخراج‌شده'] ?? 'تماس / مبلغ نامعلوم') : fmt(toman(q.amount, q.currency) ?? q.amount, decimals: 2)} ${toman(q.amount, q.currency) == null ? q.currency : 'تومان'} / ${unitLabel(q.unit)}\n${faDigits(q.specificationLabel)}\n${dateLabel(q.marketAt)} • ${faDigits(q.seller)}\n${faDigits(q.tax)} • ${faDigits(q.terms)}',
-                          style: const TextStyle(fontSize: 11)),
-                      onTap: q.sourceUrl.isEmpty
-                          ? null
-                          : () => openLink(context, q.sourceUrl)),
-                Text(
-                    'نمایش ${fmt(shown.length < visible ? shown.length : visible)} از ${fmt(shown.length)} اعلام'),
-                if (shown.length > visible)
-                  OutlinedButton(
-                      onPressed: () => setState(() => visible += 40),
-                      child: const Text('نمایش ۴۰ اعلام بعدی')),
-                if (shown.isEmpty)
-                  const Text(
-                      'اعلامی مطابق این جستجو/مشخصات در ۴۸ ساعت گذشته موجود نیست.'),
-                ExpansionTile(
-                  title: Text('فهرست کامل محلی • ${fmt(catalog.length)} کالا'),
-                  subtitle: const Text(
-                      'شامل قدیمی، بی‌تاریخ و بی‌قیمت؛ خارج از آمار ۴۸ ساعت'),
-                  children: [
-                    for (final p in catalog.take(catalogVisible))
-                      ListTile(
-                        title: Text(faDigits(p.example.title)),
-                        subtitle: Text(faDigits(
-                            '${p.example.specificationLabel} • ${p.example.seller}\n${rangeUnavailableReasons(p.example, result!.at).join('؛ ')}')),
-                        onTap: () => showDialog<void>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                                  title: Text(faDigits(p.example.title)),
-                                  content: SingleChildScrollView(
-                                      child: Text(faDigits(
-                                          '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ انتخاب آن نرخ قدیمی یا نامعتبر را وارد آمار نمی‌کند.'))),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('بستن'))
-                                  ],
-                                )),
-                      ),
-                    Text(
-                        'نمایش ${fmt(catalog.length < catalogVisible ? catalog.length : catalogVisible)} از ${fmt(catalog.length)} کالای محلی'),
-                    if (catalog.length > catalogVisible)
-                      TextButton(
-                          onPressed: () => setState(() => catalogVisible += 40),
-                          child: const Text('نمایش ۴۰ کالای محلی بعدی')),
-                  ],
+                                RangeCost(
+                                    key: ValueKey(
+                                        '${range.key}:$mode:${result!.at}'),
+                                    range: range,
+                                    rate: range.rate(mode),
+                                    allowGeometry: false)
+                              ]),
+                        ]))),
+          TextField(
+              controller: search,
+              decoration: const InputDecoration(
+                  labelText: 'جستجو در تمام اعلام‌های نتیجه'),
+              onChanged: (_) => setState(() {
+                    visible = 40;
+                    catalogVisible = 40;
+                  })),
+          for (final q in shown.take(visible))
+            ListTile(
+                dense: true,
+                title: Text(faDigits(q.title)),
+                subtitle: Text(
+                    '${q.amount == null ? (q.details['مبلغ استخراج‌شده'] ?? 'تماس / مبلغ نامعلوم') : fmt(toman(q.amount, q.currency) ?? q.amount, decimals: 2)} ${toman(q.amount, q.currency) == null ? q.currency : 'تومان'} / ${unitLabel(q.unit)}\n${faDigits(q.specificationLabel)}\n${dateLabel(q.marketAt)} • ${faDigits(q.seller)}\n${faDigits(q.tax)} • ${faDigits(q.terms)}',
+                    style: const TextStyle(fontSize: 11)),
+                onTap: q.sourceUrl.isEmpty
+                    ? null
+                    : () => openLink(context, q.sourceUrl)),
+          Text(
+              'نمایش ${fmt(shown.length < visible ? shown.length : visible)} از ${fmt(shown.length)} اعلام'),
+          if (shown.length > visible)
+            OutlinedButton(
+                onPressed: () => setState(() => visible += 40),
+                child: const Text('نمایش ۴۰ اعلام بعدی')),
+          if (shown.isEmpty)
+            const Text(
+                'اعلامی مطابق این جستجو/مشخصات در ۴۸ ساعت گذشته موجود نیست.'),
+          ExpansionTile(
+            title: Text('فهرست کامل محلی • ${fmt(catalog.length)} کالا'),
+            subtitle: const Text(
+                'شامل قدیمی، بی‌تاریخ و بی‌قیمت؛ خارج از آمار ۴۸ ساعت'),
+            children: [
+              for (final p in catalog.take(catalogVisible))
+                ListTile(
+                  title: Text(faDigits(p.example.title)),
+                  subtitle: Text(faDigits(
+                      '${p.example.specificationLabel} • ${p.example.seller}\n${rangeUnavailableReasons(p.example, result!.at).join('؛ ')}')),
+                  onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                            title: Text(faDigits(p.example.title)),
+                            content: SingleChildScrollView(
+                                child: Text(faDigits(
+                                    '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ انتخاب آن نرخ قدیمی یا نامعتبر را وارد آمار نمی‌کند.'))),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('بستن'))
+                            ],
+                          )),
                 ),
-                if (result!.excluded.isNotEmpty)
-                  ExpansionTile(
-                      title: const Text('علت نبودن در آمار'),
-                      children: [
-                        for (final e in result!.excluded.entries)
-                          ListTile(
-                              title: Text(e.key), trailing: Text(fmt(e.value)))
-                      ]),
-              ],
+              Text(
+                  'نمایش ${fmt(catalog.length < catalogVisible ? catalog.length : catalogVisible)} از ${fmt(catalog.length)} کالای محلی'),
+              if (catalog.length > catalogVisible)
+                TextButton(
+                    onPressed: () => setState(() => catalogVisible += 40),
+                    child: const Text('نمایش ۴۰ کالای محلی بعدی')),
             ],
-          ]);
-        });
+          ),
+          if (result!.excluded.isNotEmpty)
+            ExpansionTile(title: const Text('علت نبودن در آمار'), children: [
+              for (final e in result!.excluded.entries)
+                ListTile(title: Text(e.key), trailing: Text(fmt(e.value)))
+            ]),
+        ],
+      ],
+    ]);
   }
 }
 

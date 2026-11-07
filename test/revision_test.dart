@@ -162,7 +162,7 @@ void main() {
       expect(c.enabled.contains('melal-rebar'), isTrue);
       expect(c.enabled.contains('melal-sheet'), isTrue);
       expect(endpoints.every((e) => c.enabled.contains(e.id)), isTrue);
-      expect(await store.setting('allRegisteredSourcesEnabledVersion'), '2');
+      expect(await store.setting('allRegisteredSourcesEnabledVersion'), '3');
       await c.setEnabled('telegram-mashhad', false);
       c.dispose();
       final second = MarketController(store);
@@ -179,7 +179,7 @@ void main() {
     late AppLogger logger;
     setUp(() async {
       dir = await Directory.systemTemp.createTemp('ironpin-logs-');
-      logger = AppLogger();
+      logger = AppLogger(enabled: true);
       await logger.initialize(directory: dir);
     });
     tearDown(() async {
@@ -220,7 +220,7 @@ void main() {
     });
     test('write failures are reported, not propagated into UI', () async {
       final bad = File('${dir.path}/not-directory')..writeAsStringSync('x');
-      final l = AppLogger();
+      final l = AppLogger(enabled: true);
       await l.initialize(directory: Directory(bad.path));
       await l.record('test', 'failed');
       expect(l.lastError, isNotNull);

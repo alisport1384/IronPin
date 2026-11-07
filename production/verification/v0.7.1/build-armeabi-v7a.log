@@ -1,0 +1,3 @@
+
+Running Gradle task 'assembleRelease'...                           55.2s
+✓ Built build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk (8.2MB)

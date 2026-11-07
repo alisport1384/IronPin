@@ -1,0 +1,10 @@
+[
+  {
+    "url": "https://ahan.co/",
+    "error": "<urlopen error [Errno -2] Name or service not known>"
+  },
+  {
+    "url": "https://lpnt.ir/channel-price-profile/",
+    "error": "<urlopen error [Errno -2] Name or service not known>"
+  }
+]

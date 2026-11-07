@@ -215,6 +215,10 @@ const endpoints = [
       'ورق',
       'public-table',
       'مشهد'),
+  SourceEndpoint('telegram-bonyan-ghavam', 'بنیان فولاد قوام مشهد',
+      'https://t.me/s/BonyanFouladGhavam', 'عمومی', 'telegram', 'مشهد'),
+  SourceEndpoint('eitaa-bonyan-ghavam', 'بنیان فولاد قوام مشهد',
+      'https://eitaa.com/bonyanfouladghavam2', 'عمومی', 'eitaa', 'مشهد'),
   SourceEndpoint(
       'samen-angle',
       'ثامن تجارت • نبشی',

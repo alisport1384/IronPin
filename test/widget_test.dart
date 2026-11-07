@@ -84,7 +84,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('میلگرد ۱۲ ذوب آهن اصفهان'), findsWidgets);
     expect(t.takeException(), isNull);
-    await t.tap(find.byTooltip('فیلتر قیمت و شهر'));
+    await t.tap(find.byTooltip('فیلتر قیمت و مشخصات'));
     await t.pumpAndSettle();
     expect(find.text('فیلتر بازار'), findsOneWidget);
     expect(t.takeException(), isNull);
@@ -218,7 +218,7 @@ void main() {
         scrollable: find.byType(Scrollable).first, maxScrolls: 40);
     await t.enterText(find.byType(TextField), 'رادمان');
     await t.pumpAndSettle();
-    await t.tap(find.text('تمام شهرها • مشهد در اولویت'));
+    await t.tap(find.text('شهر سراسری: تمام شهرها'));
     await t.pumpAndSettle();
     await t.enterText(find.byType(TextField).last, 'مشهد');
     await t.pumpAndSettle();
