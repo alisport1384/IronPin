@@ -152,8 +152,8 @@ String _offerUnit(Quote q, String basis) {
   final currency =
       toman(_visibleRawAmount(q), q.currency) == null ? q.currency : 'تومان';
   return q.priceFor(basis) == null && q.hasTextAmount
-      ? '$currency • واحد: ${unitLabel(q.unit)}'
-      : '$currency / ${unitLabel(basis == 'original' ? q.unit : basis)}';
+      ? '$currency • واحد: ${q.unitName(q.unit)}'
+      : '$currency / ${q.unitName(basis == 'original' ? q.unit : basis)}';
 }
 
 class QuoteCard extends StatelessWidget {

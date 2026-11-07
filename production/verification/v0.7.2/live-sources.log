@@ -1,0 +1,4 @@
+00:00 +0: loading /home/user/IronPin/tool/new_sources_v072_live_test.dart
+00:00 +0: actual SourceClient for eight newly registered Mashhad-related routes
+LIVE_RESULTS [{"id":"khoshkam-rebar","status":"failed","rows":null,"fresh":null},{"id":"maham-beam12","status":"failed","rows":null,"fresh":null},{"id":"rahsakht-bastar","status":"failed","rows":null,"fresh":null},{"id":"rahsakht-galv","status":"failed","rows":null,"fresh":null},{"id":"rahsakht-rabits","status":"failed","rows":null,"fresh":null},{"id":"rahsakht-wire","status":"failed","rows":null,"fresh":null},{"id":"telegram-profilonline","status":"parsed","rows":38,"fresh":0},{"id":"telegram-rahsakht","status":"parsed","rows":18,"fresh":0}]
+00:44 +1: All tests passed!

@@ -160,7 +160,7 @@ void main() {
             .toSet()
             .length,
         rows.length);
-    expect(sellers.where((x) => x['city'] == 'مشهد').length, 11);
+    expect(sellers.where((x) => x['city'] == 'مشهد').length, 14);
   });
   testWidgets(
       'main-feed conversion panel displays decimals with unknown units explicitly',

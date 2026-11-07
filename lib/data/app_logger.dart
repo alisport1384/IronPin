@@ -132,7 +132,7 @@ class AppLogger {
     _pending = _pending.then((_) async {
       if (!enabled) return;
       try {
-        const header = '# IronPin — products and sources | 0.7.1\n';
+        const header = '# IronPin — products and sources | 0.7.2\n';
         final newFile = _active == null ||
             !await _active!.exists() ||
             await _active!.length() + bytes.length > fileBytes;

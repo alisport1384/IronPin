@@ -17,6 +17,17 @@ class SourceEndpoint {
       {this.defaultEnabled = true});
 }
 
+const mashhadV072EndpointIds = {
+  'rahsakht-wire',
+  'rahsakht-galv',
+  'rahsakht-rabits',
+  'rahsakht-bastar',
+  'telegram-rahsakht',
+  'telegram-profilonline',
+  'khoshkam-rebar',
+  'maham-beam12'
+};
+
 const endpoints = [
   SourceEndpoint(
       'melal-rebar',
@@ -233,9 +244,81 @@ const endpoints = [
       'عمومی',
       'public-table',
       'نامشخص'),
+  SourceEndpoint('rahsakht-wire', 'راه‌ساخت • مفتول سیاه',
+      'https://rahsakht.ir/maftol-siah/', 'مفتول', 'rahsakht-table', 'مشهد'),
+  SourceEndpoint(
+      'rahsakht-galv',
+      'راه‌ساخت • مفتول گالوانیزه',
+      'https://rahsakht.ir/maftol-galvanizeh/',
+      'مفتول',
+      'rahsakht-table',
+      'مشهد'),
+  SourceEndpoint('rahsakht-rabits', 'راه‌ساخت • رابیتس',
+      'https://rahsakht.ir/rabits/', 'رابیتس', 'rahsakht-table', 'مشهد'),
+  SourceEndpoint(
+      'rahsakht-bastar',
+      'راه‌ساخت • میلگرد بستر',
+      'https://rahsakht.ir/milgerd-bastar/',
+      'میلگرد بستر',
+      'rahsakht-table',
+      'مشهد'),
+  SourceEndpoint('telegram-rahsakht', 'راه‌ساخت مشهد • کانال',
+      'https://t.me/s/rahsakhtir', 'عمومی', 'telegram', 'مشهد'),
+  SourceEndpoint('telegram-profilonline', 'توس پولاد رستگاران • پروفیل آنلاین',
+      'https://t.me/s/profilonline', 'عمومی', 'telegram', 'مشهد'),
+  SourceEndpoint(
+      'khoshkam-rebar',
+      'خوش‌کام مشهد • جدول میلگرد',
+      'https://khoshkamiron.ir/product-category/rebar/',
+      'میلگرد',
+      'public-table',
+      'مشهد'),
+  SourceEndpoint(
+      'maham-beam12',
+      'آهن مهام • تیرآهن۱۲ با تفکیک بارگیری',
+      'https://ahanmaham.com/product-category/girder/grider-12/',
+      'تیرآهن',
+      'public-table',
+      'نامشخص'),
 ];
 // Office location is NOT the manufacturing or loading location.
 const sellers = [
+  {
+    'name': 'لوله و پروفیل تایباد / پایپ تایباد',
+    'city': 'مشهد',
+    'phone': '09150030103',
+    'url': 'https://lpnt.ir/contact-us/',
+    'address': 'مشهد، طرحچی۱۵، بعد از چهارراه دوم، لوله و پروفیل تایباد',
+    'status':
+        'نشانی در نتیجه نمایه‌شده صفحه تماس رسمی؛ دریافت مستقیم ناموفق. سرنخ تسمه و مقاطع انبار مشهد؛ نه اتصال نرخ تازه تأییدشده'
+  },
+  {
+    'name': 'صنایع فولادی راه‌ساخت / امیرخانی',
+    'city': 'مشهد',
+    'phone': '05191012022',
+    'url': 'https://rahsakht.ir/contact/',
+    'address': 'مشهد، بزرگراه شهید چراغچی، طرحچی حدفاصل۳و۵؛ دفتر۲ طرحچی۱',
+    'status':
+        'نشانی رسمی؛ چهار جدول قیمت عمومی و کانال؛ دریافت مستقیم محیط آزمون شبکه ممکن است ناموفق باشد'
+  },
+  {
+    'name': 'توس پولاد رستگاران / پروفیل آنلاین',
+    'city': 'مشهد',
+    'phone': '05191093530',
+    'url': 'https://rubika.ir/profilonline',
+    'address': 'مشهد، چراغچی۵۳، نبش طرحچی۱۷/۴',
+    'status':
+        'معرفی عمومی روبیکا و ارجاع تلگرام؛ وب روبیکا پیام قیمت نشان نداد؛ اتصال روبیکا ادعا نشده'
+  },
+  {
+    'name': 'مشهد بست',
+    'city': 'نامشخص',
+    'phone': '09152091520',
+    'url': 'https://mashhadbast.ir/product/249/انکر-بولت-سایز-12/',
+    'address': 'نامشخص؛ معرفی سایت مشهد بست',
+    'status':
+        'سرنخ جدید انکربولت؛ عدد صفحه بدون ارز/واحد/تاریخ صریح در خروجی خوانده‌شده؛ فقط معرفی، نه اتصال نرخ تأییدشده'
+  },
   {
     'name': 'آهن‌آلات خباززاده',
     'city': 'مشهد',
@@ -406,14 +489,15 @@ class SourceParser {
       throw const FormatException('صفحه مسدود/تعلیق‌شده؛ قیمت دریافت نشد.');
     }
     final rows = switch (e.parser) {
-      'public-table' => PublicTables.read(
+      'public-table' || 'rahsakht-table' => PublicTables.read(
           body: body,
           url: e.url,
           endpoint: e.id,
           seller: e.name,
           city: e.sellerCity,
           category: e.category,
-          fetchedAt: fetchedAt),
+          fetchedAt: fetchedAt,
+          inlinePriceUnits: e.parser == 'rahsakht-table'),
       'melal' => melal(e, body, fetchedAt),
       'asre' => asre(e, body, fetchedAt),
       'telegram' => telegram(e, body, fetchedAt),

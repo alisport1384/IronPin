@@ -1,0 +1,76 @@
+00:00 +0: loading /home/user/IronPin/test/range_catalog_test.dart
+00:00 +0: /home/user/IronPin/test/range_catalog_test.dart: (setUpAll)
+00:00 +0: /home/user/IronPin/test/range_catalog_test.dart: catalogue keeps old, undated, unknown currency/unit, unpriced and incomplete products
+00:00 +1: /home/user/IronPin/test/range_catalog_test.dart: all categories stay selectable independently of statistical eligibility
+00:00 +2: /home/user/IronPin/test/range_catalog_test.dart: offer catalogue retains entries while missing brands no longer excludes matching rates
+00:00 +3: /home/user/IronPin/test/range_catalog_test.dart: catalogue has no 40-item cap and search covers every product
+00:00 +4: /home/user/IronPin/test/range_catalog_test.dart: adding invalid catalogue products never changes valid announcement mean/count
+00:00 +5: /home/user/IronPin/test/range_catalog_test.dart: repeated fetch of an unavailable product gives one selectable entry
+00:00 +6: /home/user/IronPin/test/range_catalog_test.dart: store selection includes inactive historical latest while feed stays active-only
+00:00 +7: /home/user/IronPin/test/range_catalog_test.dart: history-only old product remains selectable after a history-only restore
+00:00 +8: /home/user/IronPin/test/range_catalog_test.dart: an unavailable product is visible and selectable with reasons, not a fabricated range
+00:02 +9: /home/user/IronPin/test/range_catalog_test.dart: old and undated products remain selectable in the local archive without numeric ranges
+00:03 +10: /home/user/IronPin/test/range_catalog_test.dart: UI exposes all pages and can search beyond the first 40 products
+00:04 +11: /home/user/IronPin/test/range_catalog_test.dart: (tearDownAll)
+00:04 +11: loading /home/user/IronPin/test/unit_prices_test.dart
+00:05 +11: /home/user/IronPin/test/unit_prices_test.dart: kg, metre, branch and tonne computed without intermediate rounding
+00:05 +12: /home/user/IronPin/test/unit_prices_test.dart: branch price inverts with explicit mass and length
+00:05 +13: /home/user/IronPin/test/unit_prices_test.dart: length alone can convert branch to metre but never to kilogram
+00:05 +14: /home/user/IronPin/test/unit_prices_test.dart: metre native price needs no mass for branch conversion
+00:05 +15: /home/user/IronPin/test/unit_prices_test.dart: missing length is never guessed from rebar nominal size
+00:05 +16: /home/user/IronPin/test/unit_prices_test.dart: no geometric estimate from a plate thickness or dimensions
+00:05 +17: /home/user/IronPin/test/unit_prices_test.dart: verified sheet area supports kg/metre/sheet/square metre
+00:05 +18: /home/user/IronPin/test/unit_prices_test.dart: native square metre price converts only when explicit sheet area exists
+00:05 +19: /home/user/IronPin/test/unit_prices_test.dart: roll stays roll and is never labelled a branch
+00:05 +20: /home/user/IronPin/test/unit_prices_test.dart: tonne conversion has exact SI ratio
+00:05 +21: /home/user/IronPin/test/unit_prices_test.dart: zero and nonfinite mass/length do not invent a valid conversion
+00:05 +22: /home/user/IronPin/test/unit_prices_test.dart: conversion overflow is unknown, not infinity
+00:05 +23: /home/user/IronPin/test/unit_prices_test.dart: currency and tax basis remain unchanged; rials are not called tomans
+00:05 +24: /home/user/IronPin/test/unit_prices_test.dart: old payload without area remains readable and IDs unchanged
+00:05 +25: /home/user/IronPin/test/unit_prices_test.dart: domestic directory separates contacts and channels; all entries have provenance
+00:05 +26: /home/user/IronPin/test/unit_prices_test.dart: main-feed conversion panel displays decimals with unknown units explicitly
+00:05 +27: loading /home/user/IronPin/test/release_v072_test.dart
+00:06 +27: /home/user/IronPin/test/release_v072_test.dart: bolt canonical vocabulary: بولت M20
+00:06 +28: /home/user/IronPin/test/release_v072_test.dart: bolt canonical vocabulary: انکر بولت M20
+00:06 +29: /home/user/IronPin/test/release_v072_test.dart: bolt canonical vocabulary: انکربولت M20
+00:06 +30: /home/user/IronPin/test/release_v072_test.dart: bolt canonical vocabulary: رول بولت M20
+00:06 +31: /home/user/IronPin/test/release_v072_test.dart: bolt canonical vocabulary: Anchor bolt M20
+00:06 +32: /home/user/IronPin/test/release_v072_test.dart: billet is not mistaken for bolt
+00:06 +33: /home/user/IronPin/test/release_v072_test.dart: flat and bolt schemas expose dedicated technical fields
+00:06 +34: /home/user/IronPin/test/release_v072_test.dart: flat 50x5mm x6m gives 11.775kg
+00:06 +35: /home/user/IronPin/test/release_v072_test.dart: flat mass-to-length round trip and count
+00:06 +36: /home/user/IronPin/test/release_v072_test.dart: bolt M20 500mm uses developed length, not chart guesses
+00:06 +37: /home/user/IronPin/test/release_v072_test.dart: bolt measured accessories added once per piece
+00:06 +38: /home/user/IronPin/test/release_v072_test.dart: custom density applies to body, not already weighed accessories
+00:06 +39: /home/user/IronPin/test/release_v072_test.dart: measured complete anchor set never gets cylindrical weight
+00:06 +40: /home/user/IronPin/test/release_v072_test.dart: measured anchor kg converts to equivalent pieces
+00:06 +41: /home/user/IronPin/test/release_v072_test.dart: measured set rejects unsupported m
+00:06 +42: /home/user/IronPin/test/release_v072_test.dart: measured set rejects unsupported m2
+00:06 +43: /home/user/IronPin/test/release_v072_test.dart: bolt rejects fractional quantity and negative accessories
+00:06 +44: /home/user/IronPin/test/release_v072_test.dart: flat rejects zero/negative/nonfinite dimensions
+00:06 +45: /home/user/IronPin/test/release_v072_test.dart: set count and kg/ton price reconcile without double conversion
+00:06 +46: /home/user/IronPin/test/release_v072_test.dart: quote unit number is explicit and has no theoretical kg conversion
+00:06 +47: /home/user/IronPin/test/release_v072_test.dart: explicit bolt text extracts diameter, grade and count unit
+00:06 +48: /home/user/IronPin/test/release_v072_test.dart: unknown technical bolt specs remain listed, not numerically pooled
+00:06 +49: /home/user/IronPin/test/release_v072_test.dart: complete technically identical rods compare across sellers
+00:06 +50: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: نوع
+00:06 +51: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: سایز
+00:06 +52: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: طول
+00:06 +53: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: طول رزوه
+00:07 +54: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: گام رزوه
+00:07 +55: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: گرید
+00:07 +56: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: پوشش
+00:07 +57: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: شمول
+00:07 +58: /home/user/IronPin/test/release_v072_test.dart: technical change separates bolt ranges: واحد ابعاد
+00:07 +59: /home/user/IronPin/test/release_v072_test.dart: mechanical/chemical anchors require exact model and embedment
+00:07 +60: /home/user/IronPin/test/release_v072_test.dart: 8 endpoints added without reordering or duplicate URLs
+00:07 +61: /home/user/IronPin/test/release_v072_test.dart: inline price unit/currency wins over toggle label; nominal package weight not injected
+00:07 +62: /home/user/IronPin/test/release_v072_test.dart: rahsakht subsection h3 preserves declared price date only within section
+00:07 +63: /home/user/IronPin/test/release_v072_test.dart: missing currency is not inferred from site or amount
+00:07 +64: /home/user/IronPin/test/release_v072_test.dart: missing inline unit remains unknown; header unit-mabna is not a real unit
+00:07 +65: /home/user/IronPin/test/release_v072_test.dart: yearless or absent date never gets fetchedAt as marketAt
+00:07 +66: /home/user/IronPin/test/release_v072_test.dart: inquiry and conflicting currencies are not numeric rates
+00:07 +67: /home/user/IronPin/test/release_v072_test.dart: unit and preceding date never leak across a new main product section
+00:07 +68: /home/user/IronPin/test/release_v072_test.dart: generic public parser does not inherit rahsakht inline-unit policy
+00:07 +69: /home/user/IronPin/test/release_v072_test.dart: beginner selector exposes independent flat and both bolt methods
+00:08 +70: All tests passed!

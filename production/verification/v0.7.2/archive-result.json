@@ -1,0 +1,48 @@
+{
+  "archive": "IronPin-0.7.2-apks.lossless.zip",
+  "bytes": 839889,
+  "sha256": "57655f7c0ac62b78405f2f12eb11a63de7c406a63715461e63f7c1698c72559e",
+  "historicalFilesModified": false,
+  "standardLibraryRestorationVerified": true,
+  "apkByteEqualityVerified": true,
+  "files": [
+    {
+      "file": "IronPin-0.7.2-armeabi-v7a.apk",
+      "bytes": 8179344,
+      "sha256": "830f772620aa9d98a95fbf8f042116369e6267eb93a365de4cb6a534ee0416cb",
+      "base": "../IronPin-0.7.1/IronPin-0.7.1-armeabi-v7a.apk",
+      "baseSha256": "a340ef337779894d7f092499ebd3fa65be02809f3f97b537d4912d4db5808b83",
+      "member": "lib/armeabi-v7a/libapp.so",
+      "baseOffset": 323253,
+      "baseCompressedBytes": 3170450,
+      "rawSha256": "046e7f205e297bf9a2f1f07354966450b74d962c12ff562ad443be3f6be88a0e",
+      "rawBytes": 7914068,
+      "compressedSha256": "361db8da2d68940daf7ef094498eb86dbcefcf1f8a9f846511eb61e171d3c99d",
+      "compressedBytes": 3180402,
+      "syntheticSha256": "4ee7c663de7b3ebec6a4c5f5b07e38d65fd928fa35e9deb37630e6cf586b0c16",
+      "rawPatch": "armeabi-v7a.libapp.bsdiff",
+      "rawPatchSha256": "0edc7db4c66675985d37419aeba4e4be1dc3b7897e74ac646fb2532450ec3fb5",
+      "outerPatch": "armeabi-v7a.outer.bsdiff",
+      "outerPatchSha256": "cefa9559d5ee2883d2a734f4933e3f265df67ebf2f20d634d7d99f98586a32ab"
+    },
+    {
+      "file": "IronPin-0.7.2-arm64-v8a.apk",
+      "bytes": 8552493,
+      "sha256": "4bf72ab6a86d59a25adb6dc6efefe4b40a557a2c59bae23e4ba87501ddb7cf0d",
+      "base": "../IronPin-0.7.1/IronPin-0.7.1-arm64-v8a.apk",
+      "baseSha256": "56ecfe082d40b35bec292e253ee74dd8656a9a107012303038e93f25b2ec022b",
+      "member": "lib/arm64-v8a/libapp.so",
+      "baseOffset": 323251,
+      "baseCompressedBytes": 2834837,
+      "rawSha256": "e3dc4a66e9759e16e3dc5e9d6737b694e065b5f1007d46f38ce355d2e01b5635",
+      "rawBytes": 7078816,
+      "compressedSha256": "4083e0a92fee4f61974d14c47c561cb38479811dc54a74933a968c5d19419a0c",
+      "compressedBytes": 2839913,
+      "syntheticSha256": "2fb674a19737bb660634de920bc3ba5e4cdd2a90a0a7117f2dbfdb925af7e45a",
+      "rawPatch": "arm64-v8a.libapp.bsdiff",
+      "rawPatchSha256": "96ed008621e7e8fb610be90e56c923dffee61aaa6510ef238c7efb373816a736",
+      "outerPatch": "arm64-v8a.outer.bsdiff",
+      "outerPatchSha256": "f98c0c2cc1e72d27d8c3f8f589785cce819968a7c51ddf85968befd8238e06b0"
+    }
+  ]
+}

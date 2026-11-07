@@ -102,7 +102,9 @@ String parseUnit(String v) {
   final s = latin(v);
   if (s.contains('کیلو') || s == 'kg') return 'kg';
   if (s.contains('مترمربع') || s.contains('متر مربع')) return 'm2';
-  if (s.contains('شاخه')) return 'piece';
+  if (s.contains('شاخه') || RegExp(r'^(?:هر\s+)?عدد$').hasMatch(s)) {
+    return 'piece';
+  }
   if (s == 'متر') return 'm';
   if (s == 'تن') return 'ton';
   if (s.contains('برگ')) return 'sheet';
@@ -269,11 +271,22 @@ class Quote {
     return 'piece';
   }
 
-  String unitName(String u) => u == 'piece' &&
-          !['میلگرد', 'تیرآهن', 'نبشی', 'ناودانی', 'پروفیل', 'لوله', 'سپری']
-              .contains(category)
-      ? 'قطعه'
-      : unitLabel(u);
+  String unitName(String u) =>
+      u == 'piece' && ProductText.category(category) == 'بولت'
+          ? 'عدد / ست'
+          : u == 'piece' &&
+                  ![
+                    'میلگرد',
+                    'تیرآهن',
+                    'نبشی',
+                    'ناودانی',
+                    'پروفیل',
+                    'لوله',
+                    'سپری',
+                    'تسمه'
+                  ].contains(category)
+              ? 'قطعه'
+              : unitLabel(u);
   List<String> get displayUnits => <String>{
         'kg',
         'm',

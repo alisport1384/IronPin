@@ -150,6 +150,12 @@ class MarketController extends ChangeNotifier {
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
       await store.setSetting('allRegisteredSourcesEnabledVersion', '3');
     }
+    // Add only the eight newly requested routes once; preserve old OFF choices.
+    if (await store.setting('mashhadSourcesVersion') != '072') {
+      enabled.addAll(mashhadV072EndpointIds);
+      await store.setSetting('enabled', jsonEncode(enabled.toList()));
+      await store.setSetting('mashhadSourcesVersion', '072');
+    }
     autoRefresh = false;
     await store.setSetting('autoRefresh', 'false');
     await reload();

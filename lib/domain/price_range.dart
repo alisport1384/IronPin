@@ -23,6 +23,25 @@ double? singleSpecNumber(String value) {
 String? exactProductKey(Quote q) {
   final f = ProductFacts.of(q);
   if (!productFields.containsKey(f.family)) return null;
+  // Proprietary anchors and bare rods are not interchangeable by diameter alone.
+  if (f.family == 'بولت' &&
+      [
+        'kind',
+        'size',
+        'length',
+        'threadLength',
+        'pitch',
+        'grade',
+        'material',
+        'coating',
+        'accessories',
+        'dimUnit'
+      ].any((key) => (f.values[key] ?? '').isEmpty)) return null;
+  if (f.family == 'بولت' &&
+      RegExp('مکانیکی|شیمیایی').hasMatch(f.values['kind'] ?? '') &&
+      ['model', 'embedment'].any((key) => (f.values[key] ?? '').isEmpty)) {
+    return null;
+  }
   return jsonEncode([
     f.family,
     for (final key in productFields[f.family]!.keys)
@@ -144,7 +163,9 @@ List<String> rangeUnavailableReasons(Quote q, DateTime now) {
     reasons.add('مبلغ خارج از محدوده محاسبه است');
   }
   if (exactProductKey(q) == null) {
-    reasons.add('نوع محصول تشخیص داده نشده است؛ نیازمند بررسی مشخصات');
+    reasons.add(ProductFacts.of(q).family == 'بولت'
+        ? 'مشخصات تخصصی بولت برای مقایسه کامل نیست؛ نوع، ابعاد، رزوه، جنس، گرید، پوشش و شمول ست لازم است'
+        : 'نوع محصول تشخیص داده نشده است؛ نیازمند بررسی مشخصات');
   }
   return reasons;
 }
@@ -278,11 +299,20 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
       reject('نمایش در اعلام‌ها؛ مبلغ/ارز/واحد یا تبدیل معتبر برای آمار ندارد');
       continue;
     }
-    (grouped[basis] ??= []).add(q);
+    final technicalKey = exactProductKey(q);
+    if (query.family == 'بولت' && technicalKey == null) {
+      reject(
+          'بولت با مشخصات ناقص؛ نوع، ابعاد، رزوه، گرید، پوشش و شمول ست برای مقایسه لازم است');
+      continue;
+    }
+    final grouping =
+        query.family == 'بولت' ? jsonEncode([basis, technicalKey]) : basis;
+    (grouped[grouping] ??= []).add(q);
   }
   final ranges = [
     for (final e in grouped.entries)
-      PriceRange(e.key, e.key, e.value.first, e.value)
+      PriceRange(e.key, query.basis.isEmpty ? e.value.first.unit : query.basis,
+          e.value.first, e.value)
   ];
   return ProductRangeResult(announcements, ranges, excluded, now);
 }

@@ -14,7 +14,8 @@ class PublicTables {
       required String seller,
       required String city,
       required String category,
-      required DateTime fetchedAt}) {
+      required DateTime fetchedAt,
+      bool inlinePriceUnits = false}) {
     final doc = html.parse(body), out = <Quote>[];
     DateTime? precedingDate;
     String rawDate = '', sheetKind = '';
@@ -30,14 +31,16 @@ class PublicTables {
             .toList();
         final text = cells.map((c) => latin(c.text)).toList();
         if (text.any((s) => s.contains('قیمت')) &&
-            ((text.any((s) => s.contains('واحد')) &&
+            ((inlinePriceUnits && text.any((s) => s.contains('محصول'))) ||
+                (text.any((s) => s.contains('واحد')) &&
                     text.any((s) =>
                         s.contains('ضخامت') ||
                         s.contains('نام کالا') ||
                         s.contains('محصول') ||
                         s.contains('اسم'))) ||
                 (text.any((s) => s.contains('محصول')) &&
-                    text.any((s) => s.contains('تاریخ'))))) {
+                    text.any((s) =>
+                        RegExp('تاریخ|بروزرسانی|به روز').hasMatch(s))))) {
           headers = text;
           continue;
         }
@@ -55,11 +58,19 @@ class PublicTables {
                 .firstOrNull ??
             '';
         if (title.isEmpty) continue;
+        final heading = cells
+            .expand((c) => c.querySelectorAll('h3,h4'))
+            .where((h) => ProductText.category(h.text).isNotEmpty)
+            .firstOrNull;
         final anchor = cells
             .expand((c) => c.querySelectorAll('a'))
             .where((a) => ProductText.category(a.text).isNotEmpty)
             .firstOrNull;
-        if (anchor != null) title = latin(anchor.text);
+        if (heading != null) {
+          title = latin(heading.text);
+        } else if (anchor != null) {
+          title = latin(anchor.text);
+        }
         final rowCategory = ProductText.category(title);
         if (rowCategory == 'ورق' &&
             sheetKind.isNotEmpty &&
@@ -82,7 +93,13 @@ class PublicTables {
             : TextPriceEngine.money(rawPrice);
         final valid = amount != null && amount.isFinite && amount > 0;
         final spec = ProductText.spec(title, categoryHint: rowCategory);
-        final unitText = field('واحد'), unit = parseUnit(unitText);
+        final unitText = field(r'^واحد(?:\s|$)');
+        final cellUnit = parseUnit(unitText);
+        final unit = cellUnit != 'unknown'
+            ? cellUnit
+            : inlinePriceUnits
+                ? TextPriceEngine.priceUnit(price)
+                : 'unknown';
         final thicknessRaw = field('ضخامت');
         final thickness = number(thicknessRaw)?.toString() ?? spec.thickness;
         final width = field('عرض'), length = field('طول');
@@ -129,7 +146,11 @@ class PublicTables {
             fetchedAt: fetchedAt,
             sourceUrl: url,
             sourceDateRaw: announced?.toIso8601String() ?? '',
-            loading: scope.isEmpty ? 'نامشخص' : scope,
+            loading: field('بارگیری|محل تحویل').isNotEmpty
+                ? field('بارگیری|محل تحویل')
+                : scope.isEmpty
+                    ? 'نامشخص'
+                    : scope,
             material: materialOf(title),
             tax: TextPriceEngine.tax(field('مالیات|ارزش افزوده')) == 'نامشخص'
                 ? precedingTax
@@ -152,7 +173,11 @@ class PublicTables {
               'مبنای ارز': cur == 'نامشخص'
                   ? 'نامشخص؛ از نام سایت حدس زده نشد'
                   : 'سرستون/سلول قیمت',
-              'مبنای واحد': unit == 'unknown' ? 'نامشخص' : 'سلول واحد جدول',
+              'مبنای واحد': unit == 'unknown'
+                  ? 'نامشخص'
+                  : cellUnit != 'unknown'
+                      ? 'سلول واحد جدول'
+                      : 'عبارت صریح هر واحد در سلول قیمت',
               'مبنای تاریخ': announced == null
                   ? 'نامشخص'
                   : rowDate.isNotEmpty
@@ -177,7 +202,8 @@ class PublicTables {
           return;
         }
         final text = latin(node.text);
-        if (RegExp(r'^h[1-6]$').hasMatch(node.localName ?? '') &&
+        if ((inlinePriceUnits ? RegExp(r'^h[12]$') : RegExp(r'^h[1-6]$'))
+                .hasMatch(node.localName ?? '') &&
             ProductText.category(text).isNotEmpty) {
           precedingDate = null;
           rawDate = '';

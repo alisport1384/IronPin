@@ -74,7 +74,7 @@ class TextPriceEngine {
     if (RegExp(r'کیلویی|کیلویی|تومانی?\s*[/\\]\s*کیلو|ریال\s*[/\\]\s*کیلو')
         .hasMatch(s)) return 'kg';
     final m = RegExp(
-            r'(?:هر\s+|[/\\]\s*|مبنای\s+|واحد\s*[:：]?\s*|به\s*ازای\s+)(کیلوگرم|کیلو|متر\s*مربع|مترمربع|شاخه|برگ|رول|تن|متر)')
+            r'(?:هر\s+|[/\\]\s*|مبنای\s+|واحد\s*[:：]?\s*|به\s*ازای\s+)(کیلوگرم|کیلو|متر\s*مربع|مترمربع|شاخه|عدد|برگ|رول|تن|متر)')
         .firstMatch(s);
     return m == null ? 'unknown' : parseUnit(m[1]!);
   }
@@ -401,7 +401,7 @@ class TextPriceEngine {
           sourceUrl: sourceUrl,
           fetchedAt: fetchedAt,
           sourceDateRaw: priceTime?.toIso8601String() ?? '',
-          size: sizeMatch?[1],
+          size: sizeMatch?[1] ?? (sharedSpec.size.isEmpty ? null : sharedSpec.size),
           thickness: thick,
           dimensions: dims,
           grade: grade,
@@ -419,7 +419,9 @@ class TextPriceEngine {
                 : chosen[0]!,
             if (invalidDate) 'تاریخ نامعتبر': 'بله',
             'مبنای ارز': cur,
-            'مبنای واحد': unitLabel(unit),
+            'مبنای واحد': unit == 'piece' && productCategory == 'بولت'
+                ? 'عدد / ست'
+                : unitLabel(unit),
             'زمان انتشار پیام': publishedAt?.toUtc().toIso8601String() ?? '',
             'دقت تاریخ نرخ': datePrecision,
             'مبنای تاریخ': priceTime != null

@@ -1,0 +1,154 @@
+{
+  "attemptedAt": "2026-11-07T08:56:02.285590Z",
+  "records": [
+    {
+      "id": "khoshkam-rebar",
+      "url": "https://khoshkamiron.ir/product-category/rebar/",
+      "transportStatus": "failed",
+      "elapsedMs": 22001,
+      "error": "TimeoutException after 0:00:22.000000: Future not completed"
+    },
+    {
+      "id": "maham-beam12",
+      "url": "https://ahanmaham.com/product-category/girder/grider-12/",
+      "transportStatus": "failed",
+      "elapsedMs": 22001,
+      "error": "TimeoutException after 0:00:22.000000: Future not completed"
+    },
+    {
+      "id": "rahsakht-bastar",
+      "url": "https://rahsakht.ir/milgerd-bastar/",
+      "transportStatus": "failed",
+      "elapsedMs": 22001,
+      "error": "TimeoutException after 0:00:22.000000: Future not completed"
+    },
+    {
+      "id": "rahsakht-galv",
+      "url": "https://rahsakht.ir/maftol-galvanizeh/",
+      "transportStatus": "failed",
+      "elapsedMs": 22002,
+      "error": "TimeoutException after 0:00:22.000000: Future not completed"
+    },
+    {
+      "id": "rahsakht-rabits",
+      "url": "https://rahsakht.ir/rabits/",
+      "transportStatus": "failed",
+      "elapsedMs": 22001,
+      "error": "TimeoutException after 0:00:22.000000: Future not completed"
+    },
+    {
+      "id": "rahsakht-wire",
+      "url": "https://rahsakht.ir/maftol-siah/",
+      "transportStatus": "failed",
+      "elapsedMs": 22016,
+      "error": "TimeoutException after 0:00:22.000000: Future not completed"
+    },
+    {
+      "id": "telegram-profilonline",
+      "url": "https://t.me/s/profilonline",
+      "transportStatus": "parsed",
+      "elapsedMs": 2477,
+      "rows": 38,
+      "numericRows": 4,
+      "freshRanges": 0,
+      "excluded": {
+        "خارج از ۴۸ ساعت گذشته": 38
+      },
+      "samples": [
+        {
+          "id": "telegram-profilonline:profilonline/93854",
+          "endpoint": "telegram-profilonline",
+          "seller": "توس پولاد رستگاران • پروفیل آنلاین",
+          "sellerCity": "مشهد",
+          "title": "جدول وزن انواع قوطی و لوله با ضخامت های مختلف موجود",
+          "category": "پروفیل",
+          "material": "فولاد کربنی",
+          "brand": "",
+          "loading": "نامشخص",
+          "loadingCity": "نامشخص",
+          "unit": "unknown",
+          "tax": "نامشخص",
+          "currency": "نامشخص",
+          "terms": "نامشخص",
+          "sourceUrl": "https://t.me/profilonline/93854",
+          "sourceDateRaw": "",
+          "status": "فهرست تصویری/متن فاقد مبلغ روشن؛ OCR انجام نشده",
+          "amount": null,
+          "pieceKg": null,
+          "lengthM": null,
+          "areaM2": null,
+          "fetchedAt": "2026-11-07T08:55:40.280353Z",
+          "size": "",
+          "thickness": "",
+          "dimensions": "",
+          "grade": "",
+          "details": {
+            "متن پیام": "جدول وزن انواع قوطی و لوله  با ضخامت های مختلف موجود",
+            "سرعنوان گروه": "جدول وزن انواع قوطی و لوله با ضخامت های مختلف موجود",
+            "زمان انتشار پیام": "2026-02-28T04:07:04.000Z",
+            "قالب": "تصویر",
+            "تحلیل متن": "محلی v2",
+            "تحلیل خودکار": "محلی v2",
+            "نسخه مشخصات": "1",
+            "مبنای مشخصات": "عنوان و ستون همان ردیف؛ مقدار نامعلوم حدس زده نشد"
+          }
+        }
+      ]
+    },
+    {
+      "id": "telegram-rahsakht",
+      "url": "https://t.me/s/rahsakhtir",
+      "transportStatus": "parsed",
+      "elapsedMs": 2555,
+      "rows": 18,
+      "numericRows": 0,
+      "freshRanges": 0,
+      "excluded": {
+        "خارج از ۴۸ ساعت گذشته": 16,
+        "تاریخ نرخ/انتشار نامعلوم یا نامعتبر": 1,
+        "مبلغ، ارز یا واحد نامعتبر/نامعلوم": 1
+      },
+      "samples": [
+        {
+          "id": "telegram-rahsakht:rahsakhtir/8888",
+          "endpoint": "telegram-rahsakht",
+          "seller": "راه‌ساخت مشهد • کانال",
+          "sellerCity": "مشهد",
+          "title": "📊 قیمت روز محصولات فولاد راه ساخت | امیرخانی\nبرای مشاهده قیمت و مشخصات, روی نام محصول بزنید 👇\n🔗 رابیتس | مفتول",
+          "category": "رابیتس",
+          "material": "فولاد کربنی",
+          "brand": "",
+          "loading": "نامشخص",
+          "loadingCity": "نامشخص",
+          "unit": "unknown",
+          "tax": "نامشخص",
+          "currency": "نامشخص",
+          "terms": "نامشخص",
+          "sourceUrl": "https://t.me/rahsakhtir/8888",
+          "sourceDateRaw": "",
+          "status": "فهرست تصویری/متن فاقد مبلغ روشن؛ OCR انجام نشده",
+          "amount": null,
+          "pieceKg": null,
+          "lengthM": null,
+          "areaM2": null,
+          "fetchedAt": "2026-11-07T08:55:40.279760Z",
+          "size": "",
+          "thickness": "",
+          "dimensions": "",
+          "grade": "",
+          "details": {
+            "متن پیام": "📊 قیمت روز محصولات فولاد راه ساخت | امیرخانی\nبرای مشاهده قیمت و مشخصات، روی نام محصول بزنید 👇\n🔗  رابیتس | مفتول سیاه | مفتول گالوانیزه\n🔗 توری مرغی | توری فرنگی | توری گابیون\n🔗 توری حصاری | گابیون سیل‌بند | مشبک | مش جوشی\n🔗 ورق پانچ | میخ | پایه لوله | میلگرد بستر\n🔗 الکترود | نبشی | میلگرد | وال پست | رول بولت\n🔗 پشم شیشه | اسپیسر | پلاستیک شناژ | افزودنی بتن\n━━━━━━━━━━━━━━\n⚠️ با توجه به نوسانات بازار فولاد، قیمت‌ها ممکن است در طول روز تغییر کنند.\n📌 قیمت نهایی فروش را از سایت یا واحد فروش استعلام کنید.\n☎️ 05191012022\n🌐 rahsakht.ir\n📱 @rahsakhtir\n‏📸 اینستاگرام:\n‏🔗 instagram.com/rahsakht.ir\n🏭 فولاد راه ساخت | امیرخانی\n📦 ارسال به سراسر کشور",
+            "سرعنوان گروه": "🔗 الکترود | نبشی | میلگرد | وال پست | رول بولت",
+            "زمان انتشار پیام": "2026-10-28T05:01:31.000Z",
+            "قالب": "تصویر",
+            "تحلیل متن": "محلی v2",
+            "تحلیل خودکار": "محلی v2",
+            "نسخه مشخصات": "1",
+            "مبنای مشخصات": "عنوان و ستون همان ردیف؛ مقدار نامعلوم حدس زده نشد"
+          }
+        }
+      ]
+    }
+  ],
+  "note": "Eight complete attempts; this assertion is not a claim that all transports or prices succeeded."
+}

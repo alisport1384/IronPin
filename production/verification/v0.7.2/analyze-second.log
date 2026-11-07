@@ -1,0 +1,10 @@
+Analyzing IronPin...                                            
+
+   info • Statements in an if should be enclosed in a block • lib/domain/market.dart:106:5 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/domain/price_range.dart:42:5 • curly_braces_in_flow_control_structures
+  error • Conditions must have a static type of 'bool' • lib/domain/product_schema.dart:223:40 • non_bool_condition
+warning • The left operand can't be null, so the right operand is never executed • lib/domain/product_schema.dart:223:155 • dead_null_aware_expression
+  error • Expected an identifier • lib/domain/product_schema.dart:224:118 • missing_identifier
+  error • Expected to find ':' • lib/domain/product_schema.dart:224:118 • expected_token
+
+6 issues found. (ran in 4.0s)

@@ -282,9 +282,17 @@ void main() {
     await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
         scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تأیید و نمایش رنج'));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 160)));
+    await t.pump();
+    // Real isolate/I/O time does not advance with fake-clock pumpAndSettle.
+    // Bounded wait checks completion rather than assuming a fixed 160ms host speed.
+    for (var i = 0; i < 100; i++) {
+      await t.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await t.pump();
+      if (find.byType(LinearProgressIndicator).evaluate().isEmpty) break;
+    }
     await t.pumpAndSettle();
+    expect(find.byType(LinearProgressIndicator), findsNothing);
     final search =
         find.widgetWithText(TextField, 'جستجو در تمام اعلام‌های نتیجه');
     await t.scrollUntilVisible(search, 250,

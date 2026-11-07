@@ -185,7 +185,7 @@ class _ChartPageState extends State<ChartPage> {
                                           color: teal,
                                           fontWeight: FontWeight.bold)),
                                   Text(
-                                      'به ازای ${unitLabel(f.basis == 'kg' ? 'kg' : current.unit)} • ${current.tax}',
+                                      'به ازای ${current.unitName(f.basis == 'kg' ? 'kg' : current.unit)} • ${current.tax}',
                                       style: const TextStyle(
                                           fontSize: 12, color: muted)),
                                   const SizedBox(height: 20),

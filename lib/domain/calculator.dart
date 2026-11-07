@@ -14,13 +14,37 @@ class Shape {
 
 const shapes = [
   Shape(
+      'flat',
+      'تسمه فولادی',
+      [
+        CalcField('b', 'عرض تسمه (میلی‌متر)', 50),
+        CalcField('t', 'ضخامت تسمه (میلی‌متر)', 5),
+      ],
+      'وزن نظری = عرض × ضخامت × طول × چگالی؛ با واحد صریح. فابریک، نوردی و برشی با گرید و تلرانس یکسان مقایسه شوند؛ باسکول مبنای تسویه است.'),
+  Shape(
+      'anchor',
+      'بولت خام / انکربولت خم‌دار — وزن نظری بدنه',
+      [
+        CalcField('d', 'قطر اسمی بدنه (میلی‌متر)', 20),
+        CalcField('extraKg',
+            'جرم واقعی متعلقات هر عدد (کیلوگرم؛ صفر = حذف متعلقات)', 0),
+      ],
+      'طول هر عدد باید طول بازشده روی محور میله طبق نقشه باشد، نه ارتفاع نصب یا عمق کاشت. خم L/J/U با طول بازشده حساب می‌شود. رزوه از استوانه اسمی کسر نشده؛ مهره، واشر، سر و پوشش فقط با جرم واقعی متعلقات افزوده می‌شوند. این روش برای انکر مکانیکی/شیمیایی کامل یا تعیین ظرفیت باربری نیست.'),
+  Shape(
+      'anchorMeasured',
+      'انکر مکانیکی / شیمیایی / ست بولت — وزن واقعی',
+      [
+        CalcField('kgpiece', 'وزن واقعی هر عدد یا ست کامل (کیلوگرم)', 0.5),
+      ],
+      'وزن از کاتالوگ همان مدل یا توزین وارد شود؛ نیم کیلو فقط مثال است. ست کامل با میله تنها مقایسه نشود. چسب و متعلقات فقط در صورت شمول در وزن/قیمت ست. قطر به‌تنهایی تعیین‌کننده وزن یا ظرفیت نیست. طراحی کاشت، بتن، فاصله لبه، فاصله انکرها، گشتاور و زمان عمل‌آوری طبق تأییدیه همان سیستم و نظر مهندس است.'),
+  Shape(
       'round',
       'میلگرد / مفتول / گرد توپر',
       [CalcField('d', 'قطر (میلی‌متر)', 16)],
       'وزن هندسی اسمی؛ وزن باسکول/کارخانه مبنای خرید است.'),
   Shape(
       'plate',
-      'ورق تخت / تسمه',
+      'ورق تخت',
       [
         CalcField('b', 'عرض (میلی‌متر)', 1000),
         CalcField('t', 'ضخامت فلز پایه (میلی‌متر)', 2),
@@ -173,16 +197,20 @@ class SteelCalculator {
     final spec = shapes.firstWhere((s) => s.id == shape);
     for (final f in spec.fields) {
       final v = values[f.key];
-      if (v == null || !v.isFinite || (f.key == 'coat' ? v < 0 : v <= 0)) {
+      if (v == null ||
+          !v.isFinite ||
+          (['coat', 'extraKg'].contains(f.key) ? v < 0 : v <= 0)) {
         throw FormatException('${f.label}: مقدار معتبر لازم است.');
       }
     }
     double v(String key) => values[key]!;
     double areaMm = 0, kgm = 0, kgPiece = 0, unitArea = 0;
     switch (shape) {
+      case 'anchor':
       case 'round':
         areaMm = math.pi * v('d') * v('d') / 4;
         break;
+      case 'flat':
       case 'plate':
         areaMm = v('b') * v('t');
         unitArea = v('b') / 1000;
@@ -249,9 +277,10 @@ class SteelCalculator {
                 1e6;
         unitArea = v('width') * v('panelLength');
         break;
+      case 'anchorMeasured':
       case 'piece':
         kgPiece = v('kgpiece');
-        unitArea = v('pieceArea');
+        unitArea = shape == 'anchorMeasured' ? 0 : v('pieceArea');
         break;
       case 'bulk':
         if (inputUnit != 'kg') {
@@ -269,9 +298,14 @@ class SteelCalculator {
           v('coat') /
           1000;
     }
-    final discrete = shape == 'mesh' || shape == 'piece';
+    if (shape == 'anchor') kgm += v('extraKg') / lengthPerPiece;
+    final discrete = ['mesh', 'piece', 'anchorMeasured'].contains(shape);
     double kg = 0, metres = 0, pieces = 0, area = 0;
     if (discrete) {
+      if (inputUnit == 'm2' && unitArea <= 0) {
+        throw const FormatException(
+            'برای بولت/انکر مساحت تعریف نشده؛ تعداد یا وزن انتخاب کنید.');
+      }
       if (inputUnit == 'm') {
         throw const FormatException(
             'برای این کالا تعداد، مساحت یا وزن انتخاب کنید.');

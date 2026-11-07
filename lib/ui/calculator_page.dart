@@ -94,7 +94,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
           density: advanced ? read(density) : 7850,
           inputUnit: advanced ? inputUnit : 'piece',
           quantity: read(quantity),
-          lengthPerPiece: read(length),
+          lengthPerPiece: shape == 'anchorMeasured' ? 1 : read(length),
           wastePercent: advanced ? read(waste) : 0);
       final p = price.text.trim().isEmpty ? null : read(price);
       final cost = p == null
@@ -182,6 +182,9 @@ class _CalculatorPageState extends State<CalculatorPage> {
               {
                 'round': 'میلگرد',
                 'plate': 'ورق',
+                'flat': 'تسمه فولادی',
+                'anchor': 'بولت / انکربولت خام — نظری',
+                'anchorMeasured': 'انکر / ست کامل — وزن واقعی',
                 'rhs': 'قوطی / پروفیل',
                 'pipe': 'لوله',
                 'catalog': 'تیرآهن، نبشی یا ناودانی — با وزن فروشنده'
@@ -189,17 +192,21 @@ class _CalculatorPageState extends State<CalculatorPage> {
               (v) => setState(() {
                     shape = v;
                     quantity.text = '۱';
-                    length.text = v == 'plate'
-                        ? '۲'
-                        : v == 'round' || v == 'catalog'
-                            ? '۱۲'
-                            : '۶';
+                    length.text = v.startsWith('anchor')
+                        ? '۰٫۵'
+                        : v == 'plate'
+                            ? '۲'
+                            : v == 'round' || v == 'catalog'
+                                ? '۱۲'
+                                : '۶';
                     resetFields();
                   })),
           const SizedBox(height: 16),
           const Text('۲. اندازه و تعداد را وارد کن',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
+          if (['flat', 'anchor', 'anchorMeasured'].contains(shape))
+            infoBox('شرایط تخصصی کالا', spec.note),
           if (shape == 'catalog')
             infoBox('وزن را از فروشنده بپرس',
                 'برای هر سایز و کارخانه وزن جداست. وزن یک شاخه را از فروشنده یا فاکتور بگیر؛ نمره تیرآهن به‌تنهایی وزن دقیق را مشخص نمی‌کند.'),
@@ -211,19 +218,28 @@ class _CalculatorPageState extends State<CalculatorPage> {
                         ? 'وزن یک شاخه طبق فروشنده (کیلوگرم)'
                         : f.label,
                 values[f.key]!),
+          if (shape != 'anchorMeasured')
+            numeric(
+                shape == 'anchor'
+                    ? 'طول بازشده هر بولت روی محور میله (متر)'
+                    : shape == 'plate'
+                        ? 'طول ورق به متر — مثلاً ۲'
+                        : 'طول یک شاخه به متر — طول واقعی',
+                length),
           numeric(
-              shape == 'plate'
-                  ? 'طول ورق به متر — مثلاً ۲'
-                  : 'طول یک شاخه به متر — طول واقعی',
-              length),
-          numeric(
-              shape == 'plate' ? 'چند برگ ورق می‌خواهی؟' : 'چند شاخه می‌خواهی؟',
+              shape.startsWith('anchor')
+                  ? 'تعداد بولت / انکر / ست کامل'
+                  : shape == 'plate'
+                      ? 'چند برگ ورق می‌خواهی؟'
+                      : 'چند شاخه می‌خواهی؟',
               quantity),
           infoBox(
               'واحدها روشن‌اند',
               shape == 'plate'
                   ? 'عرض و طول را به متر و ضخامت را به میلی‌متر وارد کن. نمونه: عرض ۱، طول ۲، ضخامت ۲، تعداد ۱ → ۳۱٫۴ کیلوگرم.'
-                  : 'اندازه مقطع به میلی‌متر است. طول شاخه به متر و تعداد، عدد صحیح است. نتیجه، وزن مجموع شاخه‌هاست.'),
+                  : shape.startsWith('anchor')
+                      ? 'تعداد، عدد صحیح است؛ وزن بر حسب کیلوگرم. در روش نظری، طول بازشده بر حسب متر است. نرخ هر عدد با هر کیلو فقط با وزن معتبر همان کالا قابل مقایسه است.'
+                      : 'اندازه مقطع به میلی‌متر است. طول شاخه به متر و تعداد، عدد صحیح است. نتیجه، وزن مجموع شاخه‌هاست.'),
           ExpansionTile(
               tilePadding: EdgeInsets.zero,
               title: const Text('۳. هزینه هم حساب شود؟ (اختیاری)'),
@@ -234,7 +250,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
                     priceUnit,
                     {
                       'kg': 'هر کیلوگرم',
-                      'piece': shape == 'plate' ? 'هر برگ ورق' : 'هر شاخه'
+                      'piece': shape.startsWith('anchor')
+                          ? 'هر عدد / ست کامل'
+                          : shape == 'plate'
+                              ? 'هر برگ ورق'
+                              : 'هر شاخه'
                     },
                     (v) => setState(() {
                           priceUnit = v;
@@ -251,9 +271,10 @@ class _CalculatorPageState extends State<CalculatorPage> {
               {for (final s in shapes) s.id: s.label},
               (v) => setState(() {
                     shape = v;
+                    if (v.startsWith('anchor')) length.text = '۰٫۵';
                     inputUnit = v == 'bulk'
                         ? 'kg'
-                        : v == 'piece' || v == 'mesh'
+                        : v == 'piece' || v == 'mesh' || v.startsWith('anchor')
                             ? 'piece'
                             : 'm';
                     resetFields();
@@ -292,8 +313,12 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   })),
           const SizedBox(height: 14),
           numeric('مقدار مورد نیاز', quantity),
-          if (!['bulk', 'mesh', 'piece'].contains(shape))
-            numeric('طول هر شاخه / قطعه (متر)', length),
+          if (!['bulk', 'mesh', 'piece', 'anchorMeasured'].contains(shape))
+            numeric(
+                shape == 'anchor'
+                    ? 'طول بازشده هر بولت روی محور میله (متر)'
+                    : 'طول هر شاخه / قطعه (متر)',
+                length),
           numeric('پرت یا اضافه سفارش (%)', waste),
           const Divider(height: 30),
           const Text('برآورد هزینه — اختیاری',

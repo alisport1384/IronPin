@@ -1,0 +1,45 @@
+00:00 +0: loading /home/user/IronPin/test/release_v072_test.dart
+00:00 +0: bolt canonical vocabulary: بولت M20
+00:00 +1: bolt canonical vocabulary: انکر بولت M20
+00:00 +2: bolt canonical vocabulary: انکربولت M20
+00:00 +3: bolt canonical vocabulary: رول بولت M20
+00:00 +4: bolt canonical vocabulary: Anchor bolt M20
+00:00 +5: billet is not mistaken for bolt
+00:00 +6: flat and bolt schemas expose dedicated technical fields
+00:00 +7: flat 50x5mm x6m gives 11.775kg
+00:00 +8: flat mass-to-length round trip and count
+00:00 +9: bolt M20 500mm uses developed length, not chart guesses
+00:00 +10: bolt measured accessories added once per piece
+00:00 +11: custom density applies to body, not already weighed accessories
+00:00 +12: measured complete anchor set never gets cylindrical weight
+00:00 +13: measured anchor kg converts to equivalent pieces
+00:00 +14: measured set rejects unsupported m
+00:00 +15: measured set rejects unsupported m2
+00:00 +16: bolt rejects fractional quantity and negative accessories
+00:00 +17: flat rejects zero/negative/nonfinite dimensions
+00:00 +18: set count and kg/ton price reconcile without double conversion
+00:00 +19: quote unit number is explicit and has no theoretical kg conversion
+00:00 +20: explicit bolt text extracts diameter, grade and count unit
+00:00 +21: unknown technical bolt specs remain listed, not numerically pooled
+00:00 +22: complete technically identical rods compare across sellers
+00:00 +23: technical change separates bolt ranges: نوع
+00:00 +24: technical change separates bolt ranges: سایز
+00:00 +25: technical change separates bolt ranges: طول
+00:00 +26: technical change separates bolt ranges: طول رزوه
+00:00 +27: technical change separates bolt ranges: گام رزوه
+00:00 +28: technical change separates bolt ranges: گرید
+00:00 +29: technical change separates bolt ranges: پوشش
+00:00 +30: technical change separates bolt ranges: شمول
+00:00 +31: technical change separates bolt ranges: واحد ابعاد
+00:00 +32: mechanical/chemical anchors require exact model and embedment
+00:00 +33: 8 endpoints added without reordering or duplicate URLs
+00:00 +34: inline price unit/currency wins over toggle label; nominal package weight not injected
+00:00 +35: rahsakht subsection h3 preserves declared price date only within section
+00:00 +36: missing currency is not inferred from site or amount
+00:00 +37: missing inline unit remains unknown; header unit-mabna is not a real unit
+00:00 +38: yearless or absent date never gets fetchedAt as marketAt
+00:00 +39: inquiry and conflicting currencies are not numeric rates
+00:00 +40: unit and preceding date never leak across a new main product section
+00:00 +41: generic public parser does not inherit rahsakht inline-unit policy
+00:00 +42: beginner selector exposes independent flat and both bolt methods
+00:02 +43: All tests passed!

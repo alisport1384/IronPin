@@ -18,7 +18,7 @@ class ProductText {
   }
 
   static final product = RegExp(
-      r'میلگرد(?:\s+بستر)?|تیر\s*آهن|تیراهن|هاش|ناودانی|نبشی|پروفیل|قوطی|لوله|ورق|پلیت|صفحه\s+(?:فولادی|آهنی|فلزی)|شیت|\b(?:plate|sheet)\b|چهارپهلو|مفتول|تسمه|سپری|رابیتس|توری|مش\s+جوشی|شمش|قراضه',
+      r'انکر\s*بولت|انکربولت|رول\s*بولت|بولت|\banchor\s+bolt\b|میلگرد(?:\s+بستر)?|تیر\s*آهن|تیراهن|هاش|ناودانی|نبشی|پروفیل|قوطی|لوله|ورق|پلیت|صفحه\s+(?:فولادی|آهنی|فلزی)|شیت|\b(?:plate|sheet)\b|چهارپهلو|مفتول|تسمه|سپری|رابیتس|توری|مش\s+جوشی|شمش|قراضه',
       caseSensitive: false);
   static String category(String text) {
     final s = product.firstMatch(normalize(text))?[0] ?? '';
@@ -27,6 +27,7 @@ class ProductText {
         .hasMatch(s)) {
       return 'ورق';
     }
+    if (RegExp(r'بولت|anchor', caseSensitive: false).hasMatch(s)) return 'بولت';
     if (s == 'قوطی') return 'پروفیل';
     return s;
   }
@@ -86,6 +87,11 @@ class ProductText {
     var size =
         RegExp('(?:سایز|نمره|قطر)\\s*[:：]?\\s*($measure)').firstMatch(s)?[1] ??
             '';
+    if (size.isEmpty && cat == 'بولت') {
+      size = RegExp(r'\bM\s*(\d+(?:\.\d+)?)', caseSensitive: false)
+              .firstMatch(s)?[1] ??
+          '';
+    }
     if (size.isEmpty && cat != 'ورق') {
       size =
           RegExp('(?:میلگرد(?: بستر)?|تیر\\s*آهن|تیراهن|نبشی|ناودانی|مفتول|چهارپهلو|سپری|حرارتی)\\s*($measure)')

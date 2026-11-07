@@ -85,5 +85,25 @@
     "sources": [
       "https://bikochar.com/blog/weight-wire-lath/"
     ]
+  },
+  {
+    "title": "بولت و انکربولت؛ وزن نظری بدنه و وزن واقعی ست",
+    "formula": "rod_kg = pi/4 * d_mm^2 * developed_length_m * rho / 1e6; total_kg = count * (rod_kg + measured_accessories_kg)",
+    "note": "طول بازشده روی محور شامل قوس خم است؛ ارتفاع نصب یا عمق کاشت نیست. رزوه از مدل استوانه اسمی کسر نشده است. برای انکر مکانیکی و شیمیایی از وزن واقعی مدل استفاده شود. قطر، طول، نوع، گرید، گام رزوه، پوشش و شمول متعلقات باید روشن باشند. چگالی۷۸۵۰ فقط فولاد کربنی است؛ این حسابگر طراحی ظرفیت، حداقل لبه، عمق کاشت، گشتاور و زمان عمل‌آوری را انجام نمی‌دهد. F1554 گریدهای۳۶/۵۵/۱۰۵ با رده متریک۸٫۸ یکسان فرض نمی‌شوند؛ شرایط جوش و مهره/واشر نیازمند گواهی و دستور سازنده است.",
+    "sources": [
+      "https://eshaji.in/calculator.php",
+      "https://www.f1554anchorbolts.com/grades/",
+      "https://www.f1554anchorbolts.com/compatibility/",
+      "https://productdata.hilti.com/APQ_HC_RAW/ASSET_DOC_5412122.pdf"
+    ]
+  },
+  {
+    "title": "تسمه فولادی — مستقل از ورق",
+    "formula": "kg/m = width_mm * thickness_mm * rho / 1e6; steel at rho=7850: kg/m = width_mm * thickness_mm * 0.00785",
+    "note": "عرض، ضخامت، طول، روش تولید فابریک/نوردی/برشی، گرید و تلرانس باید یکسان باشند. مثال تسمه۵۰×۵طول۶متر=۱۱٫۷۷۵کیلوگرم نظری. کیلو، تن، متر و شاخه فقط با وزن/طول معتبر به هم تبدیل شوند؛ وزن نظری خودکار به قیمت منبع تزریق نمی‌شود.",
+    "sources": [
+      "https://www.manifestalloys.com/ms-flat-weight-calculator.html",
+      "https://polad.ir/metals/pricing/steel-flat-bar"
+    ]
   }
 ]

@@ -209,6 +209,9 @@ class _RangePageState extends State<RangePage> {
         const Text(
             'پیش‌فرض حداقلی است؛ فقط فیلدهایی را که می‌خواهید محدود شوند تکمیل کنید. مشخصات خالی شامل همه انواع و کارخانه‌هاست.',
             style: TextStyle(fontSize: 12)),
+        if (family == 'بولت')
+          infoBox('مقایسه تخصصی بولت و انکربولت',
+              'مشخصات ناقص در اعلام‌ها می‌ماند ولی وارد میانگین نمی‌شود. نوع، قطر، طول، طول و گام رزوه، جنس، گرید، پوشش و شمول متعلقات لازم است؛ انکر مکانیکی/شیمیایی به مدل و عمق کاشت صریح هم نیاز دارد. اختلاف مشخصات در گروه‌های جدا محاسبه می‌شود. این رنج، ظرفیت باربری یا مجوز جایگزینی انکرها نیست.'),
         for (final key in entries.take(3)) input(key),
         if (entries.length > 3)
           ExpansionTile(
@@ -222,7 +225,7 @@ class _RangePageState extends State<RangePage> {
               'kg': 'کیلوگرم',
               'ton': 'تن',
               'sheet': 'برگ',
-              'piece': 'شاخه',
+              'piece': family == 'بولت' ? 'عدد / ست' : 'شاخه',
               'roll': 'رول',
               'm': 'متر',
               'm2': 'مترمربع'
@@ -279,7 +282,7 @@ class _RangePageState extends State<RangePage> {
                             'mean': 'میانگین قیمت'
                           }[mode]!),
                           Text(
-                              '${fmt(range.rate(mode), decimals: mode == 'mean' ? 0 : 2)} تومان / ${unitLabel(range.basis)}',
+                              '${fmt(range.rate(mode), decimals: mode == 'mean' ? 0 : 2)} تومان / ${range.example.unitName(range.basis)}',
                               style: const TextStyle(
                                   fontSize: 21,
                                   fontWeight: FontWeight.bold,
@@ -289,7 +292,7 @@ class _RangePageState extends State<RangePage> {
                               style: const TextStyle(fontSize: 11)),
                           ExpansionTile(
                               title: Text(
-                                  'محاسبه هزینه • ${unitLabel(range.basis)}'),
+                                  'محاسبه هزینه • ${range.example.unitName(range.basis)}'),
                               children: [
                                 RangeCost(
                                     key: ValueKey(
@@ -312,7 +315,7 @@ class _RangePageState extends State<RangePage> {
                 dense: true,
                 title: Text(faDigits(q.title)),
                 subtitle: Text(
-                    '${q.amount == null ? (q.details['مبلغ استخراج‌شده'] ?? 'تماس / مبلغ نامعلوم') : fmt(toman(q.amount, q.currency) ?? q.amount, decimals: 2)} ${toman(q.amount, q.currency) == null ? q.currency : 'تومان'} / ${unitLabel(q.unit)}\n${faDigits(q.specificationLabel)}\n${dateLabel(q.marketAt)} • ${faDigits(q.seller)}\n${faDigits(q.tax)} • ${faDigits(q.terms)}',
+                    '${q.amount == null ? (q.details['مبلغ استخراج‌شده'] ?? 'تماس / مبلغ نامعلوم') : fmt(toman(q.amount, q.currency) ?? q.amount, decimals: 2)} ${toman(q.amount, q.currency) == null ? q.currency : 'تومان'} / ${q.unitName(q.unit)}\n${faDigits(q.specificationLabel)}\n${dateLabel(q.marketAt)} • ${faDigits(q.seller)}\n${faDigits(q.tax)} • ${faDigits(q.terms)}',
                     style: const TextStyle(fontSize: 11)),
                 onTap: q.sourceUrl.isEmpty
                     ? null
@@ -400,7 +403,9 @@ class _RangeCostState extends State<RangeCost> {
     if (q.material != 'فولاد کربنی') density.clear();
     shape = switch (q.category) {
       'میلگرد' || 'مفتول' => 'round',
-      'ورق' || 'تسمه' => 'plate',
+      'ورق' => 'plate',
+      'تسمه' => 'flat',
+      'بولت' || 'انکربولت' || 'انکر بولت' => 'anchorMeasured',
       'لوله' => 'pipe',
       'پروفیل' => 'rhs',
       'نبشی' => 'angle',
@@ -430,7 +435,7 @@ class _RangeCostState extends State<RangeCost> {
         q.lengthM! > 0) {
       fields['kgm']!.text = fmt(q.pieceKg! / q.lengthM!, decimals: 6);
     }
-    if (shape == 'piece' && q.pieceKg != null) {
+    if (['piece', 'anchorMeasured'].contains(shape) && q.pieceKg != null) {
       fields['kgpiece']!.text = fmt(q.pieceKg, decimals: 6);
     }
     if (shape == 'piece' && q.areaM2 != null) {
@@ -509,7 +514,9 @@ class _RangeCostState extends State<RangeCost> {
             inputUnit: inputUnit,
             quantity: amount,
             lengthPerPiece:
-                ['bulk', 'piece', 'mesh'].contains(shape) ? 1 : read(length));
+                ['bulk', 'piece', 'mesh', 'anchorMeasured'].contains(shape)
+                    ? 1
+                    : read(length));
         cost = SteelCalculator.cost(
             r,
             ['sheet', 'roll'].contains(widget.range.basis)
@@ -573,13 +580,15 @@ class _RangeCostState extends State<RangeCost> {
           if (shape != 'bulk') ...[
             field('چگالی جنس (کیلوگرم بر مترمکعب؛ فولاد کربنی ۷۸۵۰)', density),
             for (final f in spec.fields) field(f.label, fields[f.key]!),
-            if (shape != 'piece') field('طول هر شاخه/برگ/قطعه (متر)', length),
+            if (!['piece', 'anchorMeasured'].contains(shape))
+              field('طول هر شاخه/برگ/قطعه (متر)', length),
             selectField(
                 'واحد مقدار درخواستی',
                 inputUnit,
                 {
                   'kg': 'کیلوگرم',
-                  if (shape != 'piece') 'm': 'متر طول',
+                  if (!['piece', 'anchorMeasured'].contains(shape))
+                    'm': 'متر طول',
                   'piece': 'تعداد شاخه / برگ / قطعه',
                   if (['plate', 'piece'].contains(shape)) 'm2': 'مترمربع'
                 },
@@ -601,7 +610,7 @@ class _RangeCostState extends State<RangeCost> {
         ],
         field(
             geometry
-                ? 'مقدار مورد نیاز (${unitLabel(inputUnit)})'
+                ? 'مقدار مورد نیاز (${widget.range.example.unitName(inputUnit)})'
                 : 'مقدار مورد نیاز (${widget.range.example.unitName(widget.range.basis)})',
             quantity),
         FilledButton.icon(

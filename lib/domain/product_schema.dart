@@ -15,6 +15,14 @@ const productFields = <String, Map<String, String>>{
     'dimensions': 'ابعاد',
     'dimUnit': 'واحد ابعاد'
   },
+  'میلگرد بستر': {
+    'width': 'عرض بستر',
+    'size': 'قطر مفتول',
+    'length': 'طول',
+    'material': 'جنس',
+    'coating': 'پوشش',
+    'dimUnit': 'واحد ابعاد',
+  },
   'میلگرد': {
     'size': 'قطر اسمی',
     'grade': 'گرید / آنالیز',
@@ -74,7 +82,22 @@ const productFields = <String, Map<String, String>>{
     'grade': 'گرید',
     'dimUnit': 'واحد قطر / ابعاد'
   },
+  'بولت': {
+    'kind': 'نوع بولت / انکر (خام، L/J/U، مکانیکی، شیمیایی)',
+    'size': 'قطر اسمی',
+    'length': 'طول طبق منبع',
+    'threadLength': 'طول رزوه',
+    'pitch': 'گام رزوه',
+    'grade': 'گرید / رده مقاومتی',
+    'material': 'جنس',
+    'coating': 'پوشش',
+    'accessories': 'شمول مهره، واشر، چسب / ست',
+    'model': 'مدل / تأییدیه سیستم',
+    'embedment': 'عمق کاشت مؤثر',
+    'dimUnit': 'واحد ابعاد',
+  },
   'تسمه': {
+    'form': 'فابریک / نوردی / برشی',
     'width': 'عرض',
     'thickness': 'ضخامت',
     'length': 'طول',
@@ -159,6 +182,13 @@ class ProductFacts {
           '';
       if (kind == 'گرم') kind = 'سیاه';
       if (kind == 'سرد') kind = 'روغنی';
+    } else if (family == 'بولت') {
+      kind = field(r'^نوع').isNotEmpty
+          ? field(r'^نوع')
+          : RegExp(r'مکانیکی|شیمیایی|خام|(?<![A-Za-z])[LJU](?![A-Za-z])',
+                      caseSensitive: false)
+                  .firstMatch(context)?[0] ??
+              '';
     } else if (family == 'میلگرد') {
       kind = RegExp(r'آجدار|ساده|کلاف|بستر').firstMatch(context)?[0] ?? '';
     } else if (family == 'پروفیل') {
@@ -190,12 +220,62 @@ class ProductFacts {
             '';
     // Numeric values without declared units remain in source units. No silent
     // metres/mm equivalence, pipe nominal-to-OD, or three-number reordering.
+    String boltMeasure(String label) =>
+        RegExp('$label\\s*[:：]?\\s*(${ProductText.n})(?:\\s*(میلی\\s*متر|میلیمتر|سانتی\\s*متر|متر|mm|cm|m))?',
+                caseSensitive: false)
+            .firstMatch(title)
+            ?.group(0)
+            ?.replaceFirst(RegExp('^$label\\s*[:：]?\\s*'), '') ??
+        '';
+    String technicalValue(String key, String label) {
+      final explicit = field(label);
+      if (explicit.isNotEmpty) return explicit;
+      switch (key) {
+        case 'coating':
+          return RegExp(r'گالوانیزه گرم|گالوانیزه سرد|بدون پوشش|داکرومات')
+                  .firstMatch(title)?[0] ??
+              '';
+        case 'accessories':
+          return RegExp(
+                      r'(?:با|بدون)\s+(?:مهره|واشر|چسب)(?:\s+و\s+(?:مهره|واشر|چسب))*|ست کامل|میله تنها')
+                  .firstMatch(title)?[0] ??
+              '';
+        case 'threadLength':
+          return boltMeasure('طول رزوه');
+        case 'pitch':
+          return boltMeasure('گام رزوه');
+        default:
+          return '';
+      }
+    }
+
     final values = <String, String>{
       'kind': kind,
-      'size': q.sizeLabel,
+      'size': q.sizeLabel.isNotEmpty
+          ? q.sizeLabel
+          : family == 'بولت'
+              ? ProductText.spec(title).size
+              : '',
       'thickness': q.thicknessLabel,
       'dimensions': q.dimensionsLabel,
-      'grade': q.gradeLabel,
+      'grade': family == 'بولت'
+          ? (field(r'گرید|رده مقاومتی').isNotEmpty
+              ? field(r'گرید|رده مقاومتی')
+              : RegExp(r'\b(?:[45689]\.[468]|10\.9|12\.9|F1554(?:\s*[-/:]?\s*(?:36|55|105))?)\b',
+                          caseSensitive: false)
+                      .firstMatch(title)?[0] ??
+                  q.gradeLabel)
+          : q.gradeLabel,
+      if (family == 'بولت' || family == 'میلگرد بستر')
+        for (final entry in const {
+          'threadLength': 'طول رزوه',
+          'pitch': 'گام رزوه',
+          'coating': 'پوشش',
+          'accessories': 'شمول|متعلقات',
+          'model': 'مدل|تأییدیه',
+          'embedment': 'عمق کاشت'
+        }.entries)
+          entry.key: technicalValue(entry.key, entry.value),
       // Legacy Quote defaults are not evidence for a selected material.
       'material': field(r'^(?:جنس|متریال)$').isNotEmpty
           ? field(r'^(?:جنس|متریال)$')
@@ -207,11 +287,15 @@ class ProductFacts {
       'width': field(r'^عرض(?:\s|\(|$)').isNotEmpty
           ? field(r'^عرض(?:\s|\(|$)')
           : capture('عرض'),
-      'length': field(r'^طول(?:\s|\(|$)').isNotEmpty
-          ? field(r'^طول(?:\s|\(|$)')
-          : (capture('طول').isNotEmpty
-              ? capture('طول')
-              : q.lengthM?.toString() ?? ''),
+      'length': family == 'بولت'
+          ? (field(r'^طول(?:\s*\([^)]*\))?$').isNotEmpty
+              ? field(r'^طول(?:\s*\([^)]*\))?$')
+              : boltMeasure('طول'))
+          : field(r'^طول(?:\s|\(|$)').isNotEmpty
+              ? field(r'^طول(?:\s|\(|$)')
+              : (capture('طول').isNotEmpty
+                  ? capture('طول')
+                  : q.lengthM?.toString() ?? ''),
       'form': form,
       'dimUnit': dimUnit,
       'schedule': field('رده').isNotEmpty ? field('رده') : capture('رده'),
