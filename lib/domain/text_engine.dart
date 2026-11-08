@@ -71,11 +71,19 @@ class TextPriceEngine {
 
   static String priceUnit(String text) {
     final s = latin(text);
-    if (RegExp(r'کیلویی|کیلویی|تومانی?\s*[/\\]\s*کیلو|ریال\s*[/\\]\s*کیلو')
+    if (RegExp(r'کیلویی|تومانی?\s*[/\\]\s*کیلو|ریال\s*[/\\]\s*کیلو')
         .hasMatch(s)) return 'kg';
+    // The basis is written either before the amount ("هر کیلو ۱۲۵,۰۰۰") or after
+    // the currency ("۱۲۵,۰۰۰ تومان کیلو"). Both are the source stating a basis;
+    // neither may be treated as a guess.
     final m = RegExp(
-            r'(?:هر\s+|[/\\]\s*|مبنای\s+|واحد\s*[:：]?\s*|به\s*ازای\s+)(کیلوگرم|کیلو|متر\s*مربع|مترمربع|شاخه|عدد|برگ|رول|تن|متر)')
-        .firstMatch(s);
+            r'(?:هر\s+|[/\\]\s*|مبنای\s+|بر\s*مبنای\s+|بر\s*اساس\s+|واحد\s*[:：]?\s*|به\s*ازای\s+|قیمت\s+)(کیلوگرم|کیلو|متر\s*مربع|مترمربع|شاخه|عدد|برگ|رول|تن|متر)(?![\p{L}])',
+            unicode: true)
+        .firstMatch(s) ??
+        RegExp(
+                r'(?:تومان|ریال)\s*(?:[/|،,]\s*)?(کیلوگرم|کیلو|شاخه|عدد|برگ|رول|تن|متر\s*مربع|مترمربع|متر)(?![\p{L}])',
+                unicode: true)
+            .firstMatch(s);
     return m == null ? 'unknown' : parseUnit(m[1]!);
   }
 

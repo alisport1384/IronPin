@@ -219,6 +219,11 @@ class _RangePageState extends State<RangePage> {
             .where((p) => p.searchText.contains(needle))
             .toList() ??
         <CatalogueItem>[];
+    // Rows this scope holds that carry no amount at all: not candidates, but
+    // counted here so a shorter list is explained instead of silent.
+    final unpriced = (selection?.catalog ?? <CatalogueItem>[])
+        .where((p) => p.example.amount == null)
+        .length;
     return ListView(padding: const EdgeInsets.all(14), children: [
       const Text('رنج‌گیری ۴۸ ساعت',
           style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
@@ -373,10 +378,9 @@ class _RangePageState extends State<RangePage> {
                 'اعلامی مطابق این جستجو/مشخصات در ۴۸ ساعت گذشته موجود نیست.'),
           ExpansionTile(
             title: Text('کاندیدهای همان کالا • ${fmt(catalog.length)} مورد'),
-            subtitle: Text(catalog.length == catalogVisible
-                ? 'فقط اعلام دارای تاریخ معتبر در بازه و قیمت قابل‌مقایسه؛ '
-                    'ردیف‌های بی‌تاریخ یا بی‌قیمت اصلاً کاندید نیستند'
-                : 'فقط تاریخ‌دار و قیمت‌دار؛ ${fmt(catalog.length)} مورد در این بازه'),
+            subtitle: Text(faDigits(
+                '${catalog.length == catalogVisible ? 'فقط اعلام دارای تاریخ معتبر در بازه و قیمت قابل‌مقایسه' : 'فقط تاریخ‌دار و قیمت‌دار؛ ${fmt(catalog.length)} مورد در این بازه'}'
+                '${unpriced == 0 ? '' : ' • ${fmt(unpriced)} ردیف بی‌قیمت نمایش داده نمی‌شود'}')),
             children: [
               for (final p in catalog.take(catalogVisible))
                 ListTile(

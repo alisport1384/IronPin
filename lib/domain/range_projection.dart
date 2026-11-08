@@ -134,8 +134,23 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
     }
     final index = rows.length;
     rows.add({...item.value.wire, 'source': item.value.source});
-    final price = item.value.price;
-    final unit = basis.isEmpty ? item.row.unit : basis;
+    // The same basis decision as `calculateProductRange`: a user-chosen unit,
+    // then the row's own unit, then whatever the row's own conversion table
+    // supports. Keeping the two paths identical is what makes the tab's numbers
+    // match the domain's.
+    final unit = basis.isNotEmpty
+        ? basis
+        : (resolvedRowBasis(item.row.prices, item.row.unit) ?? unpricedBasis);
+    final price = unit == unpricedBasis
+        ? null
+        : (rows[index]['prices'] is Map
+            ? ((rows[index]['prices'] as Map)[unit] as num?)?.toDouble()
+            : item.value.price);
+    if (unit == unpricedBasis) {
+      const reason = 'واحد قیمت در منبع مشخص نیست؛ مبلغ دیده می‌شود ولی در میانگین نیست';
+      excluded[reason] = (excluded[reason] ?? 0) + 1;
+      continue;
+    }
     if (price == null ||
         !price.isFinite ||
         price <= 0 ||
@@ -192,7 +207,13 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
       counted.add(i as int);
     }
   }
-  final allCandidates = [for (var i = 0; i < rows.length; i++) i];
+  // A row with no price is not a candidate at all: it produced an entry the tab
+  // could not put a number on. Rows are only kept when they carry an amount; the
+  // UI still counts and states how many were withheld.
+  final allCandidates = [
+    for (var i = 0; i < rows.length; i++)
+      if (rows[i]['amount'] is num) i
+  ];
   final countedCandidates = [
     for (var i = 0; i < rows.length; i++)
       if (counted.contains(i)) i

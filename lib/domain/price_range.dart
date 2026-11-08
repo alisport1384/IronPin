@@ -50,6 +50,39 @@ String? exactProductKey(Quote q) {
 }
 
 String rangeBasis(Quote q) => q.priceFor('kg') != null ? 'kg' : q.unit;
+
+/// Units a price can be compared in.
+const comparableUnits = ['kg', 'ton', 'sheet', 'piece', 'roll', 'm', 'm2'];
+
+/// The basis a row is shown under when nothing at all identifies one.
+///
+/// A price with no unit word and no mass cannot be converted, so it may not enter
+/// a statistical comparison. It stays visible in the announcements with this
+/// label and a stated reason — no conversion, no average and no guess.
+const unpricedBasis = 'نامشخص';
+
+/// The basis a quote can be compared on when the source did not state one.
+///
+/// The trade quotes steel per kilogram and per branch, so a row whose unit is
+/// unknown is still comparable *if* a mass lets the domain convert it. The order
+/// is fixed — kilograms first, then a whole piece — so two different readings of
+/// the same offer never both enter the statistics.
+String? resolvedBasis(Quote q) {
+  if (q.unit != 'unknown' && comparableUnits.contains(q.unit)) return q.unit;
+  if (q.priceFor('kg') != null) return 'kg';
+  if (q.priceFor('piece') != null) return 'piece';
+  return null;
+}
+
+/// The same decision for one already-derived index row.
+///
+/// [prices] is the row's own conversion table, so nothing is parsed or re-read.
+String? resolvedRowBasis(Map<String, Object?> prices, String unit) {
+  if (unit != 'unknown' && comparableUnits.contains(unit)) return unit;
+  if (prices['kg'] is num) return 'kg';
+  if (prices['piece'] is num) return 'piece';
+  return null;
+}
 String? rangeGroupKey(Quote q) {
   final product = exactProductKey(q);
   return product == null ? null : jsonEncode([product, rangeBasis(q)]);
@@ -138,6 +171,14 @@ class RangeProduct {
         'شرایط: ${example.terms}'
       ].where((s) => s.isNotEmpty).join(' • ');
   late final String searchText = preparedSearch ?? latin(label).toLowerCase();
+
+  /// True when this entry carries a money amount the tab can display.
+  ///
+  /// A row with no amount is not offered as a candidate: it only produced an
+  /// entry with nothing to compare. It is counted as withheld by the UI, so the
+  /// number of hidden rows is stated instead of the rows being shown.
+  bool get priced =>
+      example.amount != null && example.amount!.isFinite && example.amount! > 0;
 }
 
 String catalogueKey(Quote q) =>
@@ -288,10 +329,20 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
     ..sort((a, b) => b.marketAt!.compareTo(a.marketAt!));
   final grouped = <String, List<Quote>>{};
   for (final q in announcements) {
-    final basis = query.basis.isEmpty ? q.unit : query.basis;
+    // A user-chosen unit wins; otherwise the row's own unit, and when the source
+    // named none, the basis the domain can actually convert (kg, then piece).
+    final basis = query.basis.isNotEmpty
+        ? query.basis
+        : (resolvedBasis(q) ?? unpricedBasis);
     final price = toman(q.priceFor(basis), q.currency);
+    // A row whose basis cannot be identified is not a candidate for comparison:
+    // it stays in the announcements, excluded, with a reason that says so.
+    if (basis == unpricedBasis) {
+      reject('واحد قیمت در منبع مشخص نیست؛ مبلغ دیده می‌شود ولی در میانگین نیست');
+      continue;
+    }
     if (!productFields.containsKey(query.family) ||
-        !['kg', 'ton', 'sheet', 'piece', 'roll', 'm', 'm2'].contains(basis) ||
+        !comparableUnits.contains(basis) ||
         price == null ||
         !price.isFinite ||
         price <= 0 ||
@@ -309,10 +360,15 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
         query.family == 'بولت' ? jsonEncode([basis, technicalKey]) : basis;
     (grouped[grouping] ??= []).add(q);
   }
-  final ranges = [
+  final ranges = <PriceRange>[
     for (final e in grouped.entries)
-      PriceRange(e.key, query.basis.isEmpty ? e.value.first.unit : query.basis,
-          e.value.first, e.value)
+      PriceRange(
+          e.key,
+          query.basis.isEmpty
+              ? (resolvedBasis(e.value.first) ?? e.value.first.unit)
+              : query.basis,
+          e.value.first,
+          e.value)
   ];
   return ProductRangeResult(announcements, ranges, excluded, now);
 }

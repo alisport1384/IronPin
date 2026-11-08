@@ -501,6 +501,36 @@ class MarketController extends ChangeNotifier {
     _notify();
   }
 
+  DateTime? _publishedAt;
+  bool _publishing = false;
+  bool _indexStale = false;
+
+  /// Publishes received prices without letting 82 sources each pay for a whole
+  /// archive decode.
+  ///
+  /// `reload()` decodes every stored row on a fresh isolate and rebuilds the
+  /// range index. Doing that once per source is linear per call but quadratic
+  /// per refresh, which is what makes a long refresh crawl on a large archive.
+  /// The work is coalesced: the first source publishes immediately, so the tab
+  /// never waits for the slowest source, and later sources publish at most once
+  /// per window. The final state is always published by `refresh()` itself.
+  Future<void> _publishProgress({bool force = false}) async {
+    if (_publishing) return;
+    final now = DateTime.now();
+    if (!force &&
+        _publishedAt != null &&
+        now.difference(_publishedAt!) < const Duration(milliseconds: 2500)) {
+      return;
+    }
+    _publishing = true;
+    try {
+      _publishedAt = now;
+      await reload();
+    } finally {
+      _publishing = false;
+    }
+  }
+
   Future<void> refresh() async {
     if (busy || transferring || disposed) return;
     busy = true;
@@ -520,13 +550,14 @@ class MarketController extends ChangeNotifier {
           await store.saveSnapshot(e.id, data,
               replaceMissing: client.complete[e.id] ?? true);
           // Fresh rows are derived at write time; drop the previous answers.
-          rangeSession.invalidate();
+          // The index itself is rebuilt by the coalesced publish, not per source.
+          _indexStale = true;
           await rememberSources(client.discoveries[e.id] ?? []);
           historyRevision++;
           endpointRevisions.update(e.id, (n) => n + 1, ifAbsent: () => 1);
           // Publish successful sources immediately; all-ON must not wait for
           // the slowest source before showing the first received prices.
-          await reload();
+          await _publishProgress(force: finished == 0);
         } catch (error, stack) {
           AppLogger.instance.capture(error, stack, section: 'source');
           await store.failure(
@@ -536,8 +567,9 @@ class MarketController extends ChangeNotifier {
                   : 'خطا در اتصال/مهلت دریافت؛ داده قبلی حفظ شد.');
         }
         finished++;
-        states = await store.syncStates();
-        _notify();
+        // The publish above already refreshed `states`; a source that was
+        // throttled still needs its own status shown.
+        if (_publishing) _notify();
         // Low concurrency, no login/CAPTCHA bypass or aggressive retries.
         await Future<void>.delayed(const Duration(milliseconds: 450));
       }
@@ -549,6 +581,10 @@ class MarketController extends ChangeNotifier {
           'lastRefresh', DateTime.now().toUtc().toIso8601String());
     } finally {
       busy = false;
+      if (_indexStale) {
+        rangeSession.invalidate();
+        _indexStale = false;
+      }
       await reload();
       unawaited(AppLogger.instance.record('network', 'refresh_complete',
           {'completed': finished, 'cachedRows': quotes.length}));
