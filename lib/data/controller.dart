@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../domain/market.dart';
+import 'range_session.dart';
 import 'sources.dart';
 import 'store.dart';
 import 'app_logger.dart';
@@ -67,6 +68,8 @@ class MarketController extends ChangeNotifier {
   String get selectedCity => filter.city;
   bool loggingEnabled = false;
   Future<void> setCity(String city) async {
+    // A different city is a different query; derived answers never cross it.
+    rangeSession.invalidate();
     filter.city = city.trim();
     filter.cityKind = 'all';
     _filtered = [];
@@ -86,6 +89,8 @@ class MarketController extends ChangeNotifier {
   void historyChanged() {
     historyRevision++;
     historyEpoch++;
+    // The archive changed: nothing derived from the old one may be served.
+    rangeSession.invalidate();
     _notify();
   }
 
@@ -95,6 +100,10 @@ class MarketController extends ChangeNotifier {
   int historyEpoch = 0;
   MarketController(this.store, {SourceClient? client})
       : client = client ?? SourceClient();
+
+  /// In-memory index of the archive and its confirmed answers. Purely additive:
+  /// every answer is derived from the stored payloads, and any write drops it.
+  late final RangeSession rangeSession = RangeSession(store);
   Future<void> init() async {
     filter.city = await store.setting('selectedCity') ?? '';
     filter.cityKind = 'all';
@@ -180,6 +189,25 @@ class MarketController extends ChangeNotifier {
     _notify();
   }
 
+  /// Every stored offer that has a real price in the chart basis, deduplicated
+  /// by id, with the current feed rows first. Selecting one never invents a
+  /// price: a row without a comparable amount stays out.
+  List<Quote> get chartOptions {
+    final basis = filter.basis;
+    final seen = <String>{};
+    final options = <Quote>[];
+    void add(Iterable<Quote> source) {
+      for (final q in source) {
+        if (q.tomanFor(basis) == null) continue;
+        if (seen.add(q.id)) options.add(q);
+      }
+    }
+
+    add(filtered);
+    add(quotes);
+    return options;
+  }
+
   List<Quote> _filtered = [];
   String _filterKey = '', _filteredCity = '';
   bool filtering = false;
@@ -244,6 +272,7 @@ class MarketController extends ChangeNotifier {
   }
 
   Future<void> imported() async {
+    rangeSession.invalidate();
     discoveredSources.clear();
     await init();
     historyChanged();
@@ -284,6 +313,8 @@ class MarketController extends ChangeNotifier {
           final data = await client.fetch(e);
           await store.saveSnapshot(e.id, data,
               replaceMissing: client.complete[e.id] ?? true);
+          // Fresh rows are derived at write time; drop the previous answers.
+          rangeSession.invalidate();
           await rememberSources(client.discoveries[e.id] ?? []);
           historyRevision++;
           endpointRevisions.update(e.id, (n) => n + 1, ifAbsent: () => 1);

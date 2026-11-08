@@ -6,6 +6,27 @@ import 'package:path/path.dart' as path;
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:sqflite/sqflite.dart';
 import '../domain/market.dart';
+import '../domain/row_facts.dart';
+
+/// Derived, payload-addressed index of the local archive (schema 4).
+///
+/// Deliberately not part of the backup: it is reproducible from the payloads and
+/// a restore rebuilds it on first read (verified in the backup tests). Keeping it
+/// out of the backup also keeps `schema: 3` backups readable.
+const _rangeIndexSchema = [
+  'CREATE TABLE IF NOT EXISTS range_index (payload TEXT PRIMARY KEY, '
+      'family TEXT NOT NULL, facts TEXT NOT NULL, prices TEXT NOT NULL, '
+      'announce_key TEXT NOT NULL, product_key TEXT, seller_norm TEXT NOT NULL, '
+      'id TEXT NOT NULL, endpoint TEXT NOT NULL, title TEXT NOT NULL, '
+      'category TEXT NOT NULL, seller TEXT NOT NULL, seller_city TEXT NOT NULL, '
+      'unit TEXT NOT NULL, brand TEXT NOT NULL, material TEXT NOT NULL, '
+      'tax TEXT NOT NULL, terms TEXT NOT NULL, status TEXT NOT NULL, '
+      'specification TEXT NOT NULL, search TEXT NOT NULL, source_url TEXT NOT NULL, '
+      'haystack TEXT NOT NULL, '
+      'amount REAL, currency TEXT NOT NULL, market_at INTEGER, '
+      'fetched_at INTEGER NOT NULL)',
+  'CREATE INDEX IF NOT EXISTS range_index_family ON range_index(family, market_at)',
+];
 
 class MarketStore {
   final Database db;
@@ -16,7 +37,7 @@ class MarketStore {
     final p = dbPath ?? path.join(await getDatabasesPath(), 'ironpin.db');
     final db = await f.openDatabase(p,
         options: OpenDatabaseOptions(
-            version: 3,
+            version: 4,
             onCreate: (db, version) async {
               await db.execute(
                   'CREATE TABLE latest (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)');
@@ -32,6 +53,9 @@ class MarketStore {
                   'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
               await db.execute(
                   'CREATE TABLE sync (endpoint TEXT PRIMARY KEY, attempted_at TEXT NOT NULL, success_at TEXT, message TEXT NOT NULL)');
+              for (final sql in _rangeIndexSchema) {
+                await db.execute(sql);
+              }
             },
             onUpgrade: (db, oldVersion, newVersion) async {
               if (oldVersion < 2) {
@@ -65,6 +89,13 @@ class MarketStore {
                 }
                 await db.execute(
                     'CREATE INDEX IF NOT EXISTS history_market_time ON history(market_at)');
+              }
+              if (oldVersion < 4) {
+                // Only the index table is added. Rows are derived lazily from the
+                // payloads that are already stored, so no history is rewritten.
+                for (final sql in _rangeIndexSchema) {
+                  await db.execute(sql);
+                }
               }
             }));
     return MarketStore(db);
@@ -157,6 +188,17 @@ class MarketStore {
         }
       }
       await batch.commit(noResult: true);
+      // Derive the range index now, inside the same transaction: the heavy work
+      // happens once per received row, at write time, so reading the archive for
+      // a range confirmation never parses payloads again.
+      await _indexPayloads(tx, [
+        for (final item in plan)
+          if (item['payload'] is String)
+            (
+              payload: item['payload'] as String,
+              hash: payloadFingerprint(item['payload'] as String)
+            )
+      ]);
       final now = DateTime.now().toUtc().toIso8601String();
       await tx.insert(
           'sync',
@@ -197,6 +239,80 @@ class MarketStore {
           now.toUtc().toIso8601String()
         ]);
     return rows.map((r) => r['payload'] as String).toList();
+  }
+
+  /// Index rows of the current archive, derived **at write time**.
+  ///
+  /// `latest`/`history` stay the only source of truth for money; this table only
+  /// removes repeated parsing. Each row is keyed by the fingerprint of the
+  /// payload it was derived from, so a rewritten payload is re-derived and an
+  /// untouched one is never parsed again — even after a restart.
+  Future<void> _indexPayloads(
+      DatabaseExecutor tx, Iterable<({String payload, String hash})> rows) async {
+    final seen = <String>{};
+    for (final item in rows) {
+      if (!seen.add(item.hash)) continue;
+      final existing = await tx.query('range_index',
+          columns: ['family'],
+          where: 'payload=?',
+          whereArgs: [item.hash],
+          limit: 1);
+      if (existing.isNotEmpty) continue;
+      final RowFacts facts;
+      try {
+        facts = RowFacts.ofPayload(item.payload);
+      } catch (_) {
+        // A payload that cannot be parsed is simply not indexed; the fallback
+        // path still reads it, so no row is lost. A storage error, in contrast,
+        // must surface instead of silently leaving the index incomplete.
+        continue;
+      }
+      await tx.insert('range_index', facts.toRow(item.hash),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+  }
+
+  /// Index rows for the same selection `rangePayloads` returns, as the minimum
+  /// the range engine needs: no payload parsing, no `Quote` construction.
+  Future<List<Map<String, Object?>>> rangeIndexRows(DateTime now) async {
+    final rows = await rangePayloads(now);
+    final wanted = <String, String>{};
+    for (final payload in rows) {
+      wanted[payloadFingerprint(payload)] = payload;
+    }
+    final indexed = <String, Map<String, Object?>>{};
+    final hashes = wanted.keys.toList();
+    for (var start = 0; start < hashes.length; start += 400) {
+      final chunk = hashes.sublist(start, (start + 400).clamp(0, hashes.length));
+      final found = await db.query('range_index',
+          where: 'payload IN (${List.filled(chunk.length, '?').join(',')})',
+          whereArgs: chunk);
+      for (final row in found) {
+        indexed[row['payload'] as String] = row;
+      }
+    }
+    final missing = [
+      for (final e in wanted.entries)
+        if (!indexed.containsKey(e.key)) (payload: e.value, hash: e.key)
+    ];
+    if (missing.isNotEmpty) {
+      // First run after an upgrade (or a payload not yet indexed): derive now and
+      // store, so the next read is instant and nothing is recomputed again.
+      await db.transaction((tx) => _indexPayloads(tx, missing));
+      final hashes = missing.map((m) => m.hash).toList();
+      for (var start = 0; start < hashes.length; start += 400) {
+        final chunk = hashes.sublist(start, (start + 400).clamp(0, hashes.length));
+        final found = await db.query('range_index',
+            where: 'payload IN (${List.filled(chunk.length, '?').join(',')})',
+            whereArgs: chunk);
+        for (final row in found) {
+          indexed[row['payload'] as String] = row;
+        }
+      }
+    }
+    return [
+      for (final payload in rows) indexed[payloadFingerprint(payload)] ?? const {}
+    ].where((row) => row.isNotEmpty).toList();
   }
 
   Future<RangeReport> rangeReport(DateTime now) async {

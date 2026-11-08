@@ -1,8 +1,9 @@
 import 'dart:async';
-import '../domain/range_task.dart';
 import 'package:flutter/material.dart';
 import '../data/app_logger.dart';
 import '../data/controller.dart';
+import '../domain/range_projection.dart';
+import '../domain/range_worker.dart';
 import '../domain/calculator.dart';
 import '../domain/market.dart';
 import '../domain/money.dart';
@@ -25,8 +26,10 @@ class RangePage extends StatefulWidget {
 
 class _RangePageState extends State<RangePage> {
   int revision = -1, generation = 0, visible = 40, catalogVisible = 40;
-  RangeTask? task;
-  RangeSelection? selection;
+
+  /// Answer of the confirmed scope. Built from the persisted index, so a second
+  /// question costs one pass over derived rows instead of a full re-read.
+  RangeAnswer? selection;
   String scopeCity = '', stage = '';
   int processed = 0, totalRows = 0;
   @override
@@ -44,7 +47,6 @@ class _RangePageState extends State<RangePage> {
   @override
   void dispose() {
     generation++;
-    task?.cancel();
     for (final c in [...fields.values, search]) {
       c.dispose();
     }
@@ -53,8 +55,6 @@ class _RangePageState extends State<RangePage> {
 
   void invalidate() {
     generation++;
-    task?.cancel();
-    task = null;
     selection = null;
     result = null;
     calculating = false;
@@ -78,69 +78,108 @@ class _RangePageState extends State<RangePage> {
   }
 
   Future<void> confirm() async {
-    task?.cancel();
     final token = ++generation;
     final at = DateTime.now().toUtc();
     revision = widget.c.historyRevision;
     final city = widget.c.selectedCity;
-    final constraints = fields.map((k, v) => MapEntry(k, v.text.trim()));
+    final constraints = {
+      for (final e in fields.entries) e.key: e.value.text.trim()
+    };
+    // The same scope of the same snapshot is answered from memory: no spinner,
+    // no recomputation, and nothing is guessed — it is the answer already shown.
+    final session = widget.c.rangeSession;
+    final key = session.scopeKey(
+        family: family!, fields: constraints, basis: basis, city: city);
+    final cached = session.cached(key, at);
     setState(() {
-      calculating = true;
+      calculating = cached == null;
       error = '';
-      result = null;
-      selection = null;
+      result = cached?.result;
+      selection = cached;
       visible = 40;
       catalogVisible = 40;
-      stage = 'خواندن snapshot محلی';
+      stage = cached != null ? '' : 'آماده‌سازی فهرست محلی';
       processed = 0;
-      totalRows = 0;
+      totalRows = cached?.inputRows ?? 0;
     });
+    if (cached != null) {
+      unawaited(AppLogger.instance
+          .record('range', 'served_from_memory', {'kept': cached.keptRows}));
+      return;
+    }
     try {
-      final payloads =
-          await widget.c.store.rangePayloads(at).timeout(widget.readTimeout);
-      if (!mounted || token != generation) return;
-      final job = RangeTask();
-      task = job;
-      final next = await job.run({
-        'payloads': payloads,
-        'family': family!,
-        'fields': constraints,
-        'basis': basis,
-        'city': city,
-        'now': at.millisecondsSinceEpoch,
-      }, timeout: widget.taskTimeout, onProgress: (label, count, total) {
-        if (mounted && token == generation) {
-          setState(() {
-            stage = label;
-            processed = count;
-            totalRows = total;
-          });
+      // The index is handed to a persistent worker once per snapshot; afterwards
+      // a new product/city/unit question is answered inside it without another
+      // read or copy. Any worker problem falls back to the exact same computation
+      // on a one-shot isolate, so the answer never depends on the fast path.
+      final worker = RangeWorker.shared;
+      RangeAnswer answer;
+      try {
+        await session.ensureIndex(at);
+        if (worker.isLoaded && !worker.holdsToken(session.dataToken)) {
+          worker.dispose();
         }
-      });
-      if (mounted && token == generation) {
-        setState(() {
-          selection = next;
-          result = next.result;
-          calculating = false;
-          task = null;
+        await worker.load(session.dataToken, session.indexRowsSnapshot,
+            onProgress: (done, total) {
+          if (mounted && token == generation) {
+            setState(() {
+              stage = 'بارگذاری فهرست محلی در حافظه';
+              processed = done;
+              totalRows = total;
+            });
+          }
         });
+        if (!mounted || token != generation) return;
+        final message = await worker.run(
+            token: session.dataToken,
+            family: family!,
+            fields: constraints,
+            basis: basis,
+            city: city,
+            nowMs: at.millisecondsSinceEpoch,
+            timeout: widget.taskTimeout * 6);
+        if (!mounted || token != generation) return;
+        answer = session.answerFromWorker(message['answer'] as RangeAnswer,
+            family: family!,
+            fields: constraints,
+            basis: basis,
+            city: city);
+      } catch (workerFailure) {
+        if (workerFailure is TimeoutException) rethrow;
+        AppLogger.instance.capture(workerFailure, StackTrace.current,
+            section: 'range_worker');
+        worker.dispose();
+        if (!mounted || token != generation) return;
+        answer = await session.confirm(
+            family: family!,
+            fields: constraints,
+            basis: basis,
+            city: city,
+            at: at,
+            timeout: widget.taskTimeout * 6);
       }
-    } on RangeCancelled {
-      // The user/changed parameters already invalidated this generation.
+      if (!mounted || token != generation) return;
+      setState(() {
+        selection = answer;
+        result = answer.result;
+        calculating = false;
+        stage = '';
+        processed = answer.keptRows;
+        totalRows = answer.inputRows;
+      });
     } on TimeoutException {
       if (mounted && token == generation) {
         setState(() {
           calculating = false;
-          task = null;
-          error =
-              'مهلت محاسبه تمام شد؛ داده حذف نشده است. دوباره تأیید کنید یا مشخصات را محدودتر کنید.';
+          error = 'محاسبه بیش از حد طول کشید؛ داده حذف نشده است. '
+              'دوباره تأیید کنید یا مشخصات را محدودتر کنید.';
         });
       }
-    } catch (_) {
+    } catch (failure, stack) {
+      AppLogger.instance.capture(failure, stack, section: 'range');
       if (mounted && token == generation) {
         setState(() {
           calculating = false;
-          task = null;
           error = 'محاسبه کامل نشد؛ داده قبلی حفظ شد. دوباره تلاش کنید.';
         });
       }
@@ -176,7 +215,7 @@ class _RangePageState extends State<RangePage> {
     final catalog = selection?.catalog
             .where((p) => p.searchText.contains(needle))
             .toList() ??
-        <RangeProduct>[];
+        <CatalogueItem>[];
     return ListView(padding: const EdgeInsets.all(14), children: [
       const Text('رنج‌گیری ۴۸ ساعت',
           style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
@@ -338,14 +377,14 @@ class _RangePageState extends State<RangePage> {
                 ListTile(
                   title: Text(faDigits(p.example.title)),
                   subtitle: Text(faDigits(
-                      '${p.example.specificationLabel} • ${p.example.seller}\n${rangeUnavailableReasons(p.example, result!.at).join('؛ ')}')),
+                      '${p.example.specificationLabel} • ${p.example.seller}\n${p.unavailableReasons.join('؛ ')}')),
                   onTap: () => showDialog<void>(
                       context: context,
                       builder: (context) => AlertDialog(
                             title: Text(faDigits(p.example.title)),
                             content: SingleChildScrollView(
                                 child: Text(faDigits(
-                                    '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ انتخاب آن نرخ قدیمی یا نامعتبر را وارد آمار نمی‌کند.'))),
+                                    '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${p.unavailableReasons.join('؛ ')}\nاین نمایش از آرشیو محلی است؛ انتخاب آن نرخ قدیمی یا نامعتبر را وارد آمار نمی‌کند.'))),
                             actions: [
                               TextButton(
                                   onPressed: () => Navigator.pop(context),

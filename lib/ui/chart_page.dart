@@ -59,9 +59,9 @@ class _ChartPageState extends State<ChartPage> {
 
   @override
   Widget build(BuildContext context) {
-    final options = widget.c.filtered
-        .where((q) => q.tomanFor(widget.c.filter.basis) != null)
-        .toList();
+    // Every stored offer with a real price in the chart basis, not only the rows
+    // of the current feed window: an older product keeps a chart.
+    final options = widget.c.chartOptions;
     if (options.isEmpty) {
       return Column(children: [
         Padding(

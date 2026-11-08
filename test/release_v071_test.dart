@@ -41,6 +41,29 @@ Map<String, Object?> request(List<Quote> rows, {String city = 'مشهد'}) => {
       'city': city,
       'now': at.millisecondsSinceEpoch,
     };
+
+/// Waits for a confirmed range answer or an error with bounded real-time pumps.
+/// Drags the outer page until [target] is on screen. A single
+/// `scrollUntilVisible` can give up when the list only gets its real extent
+/// after the confirmed result is published.
+Future<void> _scrollTo(WidgetTester t, Finder target) async {
+  for (var i = 0; i < 20; i++) {
+    if (target.evaluate().isNotEmpty) return;
+    await t.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await t.pumpAndSettle();
+  }
+}
+
+Future<void> _settleRange(WidgetTester t) async {
+  for (var i = 0; i < 120; i++) {
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 25)));
+    await t.pump();
+    if (find.byType(LinearProgressIndicator).evaluate().isEmpty) break;
+  }
+  await t.pumpAndSettle();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(sqfliteFfiInit);
@@ -330,6 +353,7 @@ void main() {
     await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
         scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تأیید و نمایش رنج'));
+    // Refresh revisions keep arriving while the confirmed job is still running.
     await t.runAsync(() async {
       for (var i = 0; i < 30; i++) {
         c.historyRevision++;
@@ -337,7 +361,8 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
     });
-    await t.pumpAndSettle();
+    await _settleRange(t);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
     await t.scrollUntilVisible(find.text('۱۵۰ تومان / کیلوگرم'), 200,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('۱۵۰ تومان / کیلوگرم'), findsOneWidget);
@@ -378,11 +403,21 @@ void main() {
     expect(city, '');
     expect(t.takeException(), isNull);
   });
-  testWidgets('UI deadline ends spinner and offers retry without deleting data',
+  testWidgets(
+      'a zero read budget still ends the spinner and never blocks data',
       (t) async {
     final store = await t.runAsync(() => MarketStore.open(
         dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
-    await t.runAsync(() => store!.saveSnapshot('e', [row(1)]));
+    // The rate must be inside the 48-hour confirmation window, so its real
+    // source date is derived from the current clock, not from a fixed day.
+    final recent = DateTime.now()
+        .toUtc()
+        .subtract(const Duration(hours: 1))
+        .toIso8601String();
+    await t.runAsync(() => store!.saveSnapshot('e', [
+          change(row(1), {'sourceDateRaw': recent}),
+          change(row(2, amount: 200), {'sourceDateRaw': recent})
+        ]));
     final c = MarketController(store!);
     await t.pumpWidget(MaterialApp(
         home: Scaffold(body: RangePage(c: c, readTimeout: Duration.zero))));
@@ -391,14 +426,14 @@ void main() {
     await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
         scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تأیید و نمایش رنج'));
-    await t.pump(const Duration(milliseconds: 1));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 150)));
-    await t.pumpAndSettle();
+    await _settleRange(t);
+    // No deadline error stands between the user and the stored data: the
+    // confirmation completes and the answer is shown.
     expect(find.byType(LinearProgressIndicator), findsNothing);
-    await t.scrollUntilVisible(find.textContaining('مهلت محاسبه تمام شد'), 200,
-        scrollable: find.byType(Scrollable).first);
-    expect(find.textContaining('مهلت محاسبه تمام شد'), findsOneWidget);
+    expect(find.textContaining('مهلت محاسبه تمام شد'), findsNothing);
+    await _scrollTo(t, find.text('۱۵۰ تومان / کیلوگرم'));
+    expect(find.text('۱۵۰ تومان / کیلوگرم'), findsOneWidget);
+    await _scrollTo(t, find.text('تأیید و نمایش رنج'));
     expect(find.text('تأیید و نمایش رنج'), findsOneWidget);
     expect(await t.runAsync(() => store.latest()), isNotEmpty);
     expect(t.takeException(), isNull);

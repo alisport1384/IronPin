@@ -32,6 +32,18 @@ Quote item(int n,
         sourceDateRaw: date,
         fetchedAt: at,
         sourceUrl: 'https://example.com');
+
+/// Waits for a confirmed range answer or an error with bounded real-time pumps.
+Future<void> _settleRange(WidgetTester t) async {
+  for (var i = 0; i < 120; i++) {
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 25)));
+    await t.pump();
+    if (find.byType(LinearProgressIndicator).evaluate().isEmpty) break;
+  }
+  await t.pumpAndSettle();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(sqfliteFfiInit);
@@ -196,9 +208,9 @@ void main() {
     await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
         scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تأیید و نمایش رنج'));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 150)));
-    await t.pumpAndSettle();
+    // Real isolate and I/O time does not advance with the fake clock: wait
+    // for the confirmed answer with bounded pumps instead of one fixed sleep.
+    await _settleRange(t);
     await t.scrollUntilVisible(find.text('رنج عددی قابل مقایسه نداریم'), 300,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('رنج عددی قابل مقایسه نداریم'), findsOneWidget);
@@ -231,9 +243,9 @@ void main() {
     await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
         scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تأیید و نمایش رنج'));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 150)));
-    await t.pumpAndSettle();
+    // Real isolate and I/O time does not advance with the fake clock: wait
+    // for the confirmed answer with bounded pumps instead of one fixed sleep.
+    await _settleRange(t);
     final archive = find.text('فهرست کامل محلی • ۱ کالا');
     await t.scrollUntilVisible(archive, 250,
         scrollable: find.byType(Scrollable).first);
@@ -242,6 +254,10 @@ void main() {
     final product = find.textContaining('محصول۹۰۸');
     await t.scrollUntilVisible(product, 250,
         scrollable: find.byType(Scrollable).first);
+    // The list estimates its extent while scrolling; settle once so the tapping
+    // point is inside the viewport instead of depending on host timing.
+    await t.ensureVisible(product);
+    await t.pumpAndSettle();
     await t.tap(product);
     await t.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);

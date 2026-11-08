@@ -192,7 +192,8 @@ void main() {
     final store =
         await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
     try {
-      expect(await store.db.getVersion(), 3);
+      // Schema 4 adds the derived range index on top of the schema-3 backfill.
+      expect(await store.db.getVersion(), 4);
       expect(await store.historyCount(), 1);
       final row = (await store.db.query('history')).single;
       expect(row['payload'], payload);
