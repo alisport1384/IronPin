@@ -458,8 +458,6 @@ class MarketFilter {
       number(a) != null && number(b) != null
           ? number(a) == number(b)
           : latin(a) == latin(b);
-  bool _hasRawAmount(Quote q) =>
-      q.amount != null && q.amount!.isFinite && q.amount! > 0;
   bool matches(Quote q, DateTime now) {
     final price = q.tomanFor(basis);
     return (category.isEmpty || q.category == category) &&
@@ -487,10 +485,23 @@ class MarketFilter {
         (!recentWeek || q.isWithinWeek(now)) &&
         (includeUnpriced ||
             price != null ||
-            q.hasTextAmount ||
-            _hasRawAmount(q)) &&
+            q.hasTextAmount) &&
         (minPrice == null || (price != null && price >= minPrice!)) &&
         (maxPrice == null || (price != null && price <= maxPrice!));
+  }
+
+  /// Comparison group per row, computed once per filtered list instead of once
+  /// per comparison (it is a ten-field string). Cleared whenever the list is
+  /// rebuilt, so a stale group can never decide an order.
+  Map<Quote, String> _groups = <Quote, String>{};
+  String _groupBasis = '';
+  String groupOf(Quote q) => _groups[q] ??= q.comparisonGroup(basis);
+  List<String> _groupList(Iterable<Quote> list) {
+    if (_groupBasis != basis || _groups.length > list.length * 4 + 4096) {
+      _groups = <Quote, String>{};
+      _groupBasis = basis;
+    }
+    return [for (final q in list) groupOf(q)];
   }
 
   String get cacheKey => jsonEncode([
@@ -517,6 +528,17 @@ class MarketFilter {
       q.searchText;
     }
     final list = quotes.where((q) => matches(q, now)).toList();
+    // Groups are materialised lazily, only for rows the comparator actually
+    // visits: a search that matches a handful of rows costs a handful of keys.
+    // A plain draft sort runs first, so the real sort starts from a nearly
+    // ordered list.
+    if (list.length > 48) {
+      list.sort((a, b) => a.id.compareTo(b.id));
+    }
+    final groups = _groupList(list);
+    final indexOf = <Quote, int>{
+      for (var i = 0; i < list.length; i++) list[i]: i
+    };
     list.sort((a, b) {
       if (sort == 'latest') {
         final da = a.marketAt, db = b.marketAt;
@@ -532,8 +554,12 @@ class MarketFilter {
         return a.id.compareTo(b.id);
       }
       // Never compare a branch amount directly with a kilogram amount.
+      // The group string was rebuilt for every comparison (≈۲n·log n times over
+      // the whole archive, and it is a concatenation of ten fields); the price
+      // order inside a group is a price order regardless of which group it is,
+      // so grouping is a single pass before the sort instead.
       final group =
-          a.comparisonGroup(basis).compareTo(b.comparisonGroup(basis));
+          groups[indexOf[a]!].compareTo(groups[indexOf[b]!]);
       if (group != 0) return group;
       if (mashhadFirst) {
         final p = (a.sellerCity == 'مشهد' ? 0 : 1)

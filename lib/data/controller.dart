@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../domain/market.dart';
+import '../domain/range_projection.dart';
+import '../domain/range_worker.dart';
+import 'range_session.dart';
 import 'sources.dart';
 import 'store.dart';
 import 'app_logger.dart';
@@ -67,13 +70,18 @@ class MarketController extends ChangeNotifier {
   String get selectedCity => filter.city;
   bool loggingEnabled = false;
   Future<void> setCity(String city) async {
+    // A different city is a different query; derived answers never cross it.
+    rangeSession.invalidate();
     filter.city = city.trim();
     filter.cityKind = 'all';
     _filtered = [];
     _filteredCity = selectedCity;
     _filterKey = '';
+    candidates = null;
+    _candidateKey = '';
     await store.setSetting('selectedCity', selectedCity);
     _notify();
+    unawaited(prepareCandidates());
   }
 
   Future<void> setLogging(bool value) async {
@@ -86,7 +94,12 @@ class MarketController extends ChangeNotifier {
   void historyChanged() {
     historyRevision++;
     historyEpoch++;
+    // The archive changed: nothing derived from the old one may be served.
+    rangeSession.invalidate();
+    candidates = null;
+    _candidateKey = '';
     _notify();
+    unawaited(prepareCandidates());
   }
 
   String? startupError;
@@ -95,6 +108,32 @@ class MarketController extends ChangeNotifier {
   int historyEpoch = 0;
   MarketController(this.store, {SourceClient? client})
       : client = client ?? SourceClient();
+
+  /// In-memory index of the archive and its confirmed answers. Purely additive:
+  /// every answer is derived from the stored payloads, and any write drops it.
+  late final RangeSession rangeSession = RangeSession(store);
+  /// Hands the derived index to the standing range worker as soon as the
+  /// archive is loaded, so the first confirmation has nothing left to prepare.
+  /// It never blocks anything: a failure only means the confirm does it later.
+  Future<void> warmRangeIndex() async {
+    if (disposed) return;
+    try {
+      final at = DateTime.now().toUtc();
+      final session = rangeSession;
+      await session.ensureIndex(at);
+      if (disposed) return;
+      // The worker holds rows, so a token it no longer matches must start from a
+      // clean worker: a stale token would answer with another archive's rows.
+      final worker = RangeWorker.shared;
+      if (worker.isLoaded && !worker.holdsToken(session.dataToken)) {
+        worker.dispose();
+      }
+      await worker.load(session.dataToken, session.indexRowsSnapshot);
+    } catch (e, stack) {
+      AppLogger.instance.capture(e, stack, section: 'range_worker');
+    }
+  }
+
   Future<void> init() async {
     filter.city = await store.setting('selectedCity') ?? '';
     filter.cityKind = 'all';
@@ -160,6 +199,7 @@ class MarketController extends ChangeNotifier {
     await store.setSetting('autoRefresh', 'false');
     await reload();
     ready = true;
+    unawaited(prepareCandidates());
     unawaited(AppLogger.instance.record('lifecycle', 'market_ready',
         {'cachedRows': quotes.length, 'enabled': enabled.length}));
     _notify();
@@ -177,7 +217,195 @@ class MarketController extends ChangeNotifier {
       'thickness': filter.thickness,
       'queryLength': filter.query.length
     }));
+    // A changed scope is a changed candidate list; a changed sort or a price
+    // bound is only a re-sort and needs no new selection.
+    if (_candidateKey != _currentCandidateKey && !disposed) {
+      unawaited(prepareCandidates());
+    }
     _notify();
+  }
+
+  /// Every stored offer that has a real price in the chart basis, deduplicated
+  /// by id, with the current feed rows first. Selecting one never invents a
+  /// price: a row without a comparable amount stays out.
+  List<Quote> get chartOptions {
+    final basis = filter.basis;
+    final seen = <String>{};
+    final options = <Quote>[];
+    void add(Iterable<Quote> source) {
+      for (final q in source) {
+        if (q.tomanFor(basis) == null) continue;
+        if (seen.add(q.id)) options.add(q);
+      }
+    }
+
+    add(filtered);
+    add(quotes);
+    return options;
+  }
+
+  /// Candidate rows of the prices tab, prepared from the stored archive as soon
+  /// as it is loaded, so nothing has to be "prepared" when the tab is opened.
+  CandidateSet? candidates;
+  String _candidateKey = '';
+
+  /// The rows the prices tab shows: the prepared candidate set when it is ready
+  /// and still matches the current basis/search, otherwise the classic filter
+  /// (used for selections, price bounds and sorting, which the index path does
+  /// not replace). If the index path fails, this is the same answer the app has
+  /// always given — it is the fallback, not a different result.
+  List<Quote>? _rowCache;
+  String _rowCacheKey = '';
+
+  /// True while the prepared list has rows that were not built yet.
+  bool get moreCandidates => (candidates?.total ?? 0) > candidateRows.length;
+
+  /// Builds one more page and tells the tab to draw it.
+  void showMoreCandidates() {
+    final c = candidates;
+    if (c == null || !moreCandidates) return;
+    c.extend();
+    _rowCacheKey = '';
+    _notify();
+  }
+
+  List<Quote> get candidateRows {
+    final c = candidates;
+    if (c == null || _candidateKey != _currentCandidateKey) return filtered;
+    // Building and sorting thousands of rows is done once per scope and sort,
+    // never once per frame.
+    final key = '$_candidateKey\u0001${c.total}\u0001${c.quotes.length}'
+        '\u0001${filter.sort}'
+        '\u0001${filter.mashhadFirst}\u0001${filter.minPrice}'
+        '\u0001${filter.maxPrice}\u0001${filter.onlyFresh}';
+    final cached = _rowCache;
+    if (cached != null && key == _rowCacheKey) return cached;
+    // A newest-first order is a date order, and the selection is already in that
+    // order, so a page is enough. A price order is not: the cheapest offer of the
+    // scope may be the last row of it, so the whole selection is built once before
+    // it is sorted — the only case where the tab builds every row.
+    if (filter.sort != 'latest') c.extend(c.total);
+    final now = DateTime.now();
+    final list = _sortCandidates(c.quotes, now);
+    final f = filter;
+    // The classic filter has already been applied to the selection, so only the
+    // fields it owns alone (the bounds and the freshness switch) are re-run here.
+    final rows = f.minPrice == null && f.maxPrice == null && !f.onlyFresh
+        ? list
+        : f.apply(list, now);
+    _rowCache = rows;
+    _rowCacheKey = key;
+    return rows;
+  }
+
+  /// The number of offers the scope really has, ready ones or not.
+  int get candidateCount => candidates?.total ?? filtered.length;
+
+  String get _currentCandidateKey => [
+        filter.basis,
+        filter.query,
+        filter.city,
+        filter.cityKind,
+        filter.category,
+        filter.material,
+        filter.size,
+        filter.thickness,
+        filter.grade,
+        filter.unit,
+        filter.recentWeek,
+        filter.includeUnpriced,
+        quotes.length,
+        identityHashCode(quotes),
+        historyRevision,
+      ].join('\u0001');
+
+  List<Quote> _sortCandidates(List<Quote> rows, DateTime now) {
+    final list = rows.toList();
+    final f = filter;
+    if (f.sort == 'latest') {
+      list.sort((a, b) {
+        final byDate = (b.marketAt?.millisecondsSinceEpoch ?? 0)
+            .compareTo(a.marketAt?.millisecondsSinceEpoch ?? 0);
+        if (byDate != 0) return byDate;
+        if (f.mashhadFirst) {
+          final city = (a.sellerCity == 'مشهد' ? 0 : 1)
+              .compareTo(b.sellerCity == 'مشهد' ? 0 : 1);
+          if (city != 0) return city;
+        }
+        return a.id.compareTo(b.id);
+      });
+      return list;
+    }
+    final keys = [for (final q in list) q.comparisonGroup(f.basis)];
+    final index = <Quote, int>{for (var i = 0; i < list.length; i++) list[i]: i};
+    list.sort((a, b) {
+      final group = keys[index[a]!].compareTo(keys[index[b]!]);
+      if (group != 0) return group;
+      if (f.mashhadFirst) {
+        final p = (a.sellerCity == 'مشهد' ? 0 : 1)
+            .compareTo(b.sellerCity == 'مشهد' ? 0 : 1);
+        if (p != 0) return p;
+      }
+      final pa = a.tomanFor(f.basis), pb = b.tomanFor(f.basis);
+      if (pa == null && pb == null) return a.title.compareTo(b.title);
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      final c = pa.compareTo(pb);
+      return (f.sort == 'desc' ? -c : c) != 0
+          ? (f.sort == 'desc' ? -c : c)
+          : a.id.compareTo(b.id);
+    });
+    return list;
+  }
+
+  /// The current scope, expressed so the stored index can decide it.
+  CandidateScope candidateScope() => CandidateScope(
+        basis: filter.basis,
+        query: filter.query,
+        maxAgeDays: filter.recentWeek ? 7 : 3650,
+        category: filter.category,
+        material: filter.material,
+        city: filter.city,
+        unit: filter.unit,
+        size: filter.size,
+        thickness: filter.thickness,
+        grade: filter.grade,
+        cityKind: filter.cityKind,
+        onlyFresh: filter.onlyFresh,
+        includeUnpriced: filter.includeUnpriced,
+        minPrice: filter.minPrice,
+        maxPrice: filter.maxPrice,
+      );
+
+  /// Prepares the candidate set from the index. Called after the archive is
+  /// loaded and whenever the basis/search/city changes — never from `build`.
+  Future<void> prepareCandidates() async {
+    if (disposed) return;
+    final key = _currentCandidateKey;
+    if (key == _candidateKey && candidates != null) return;
+    try {
+      // An index already in memory is filtered synchronously: no await, so a
+      // test clock (or the first frame) cannot observe a half-done state.
+      // The scope is the whole filter, not a part of it: the fast path must
+      // answer exactly what the classic path would, or it is not the same list.
+      final scope = candidateScope();
+      if (rangeSession.hasIndex) {
+        candidates = rangeSession.candidatesNow(scope: scope, at: DateTime.now());
+        _candidateKey = key;
+        _notify();
+        return;
+      }
+      final set = await rangeSession.candidates(scope: scope, at: DateTime.now());
+      if (disposed) return;
+      // A newer question may have been asked while this one was being answered.
+      if (key != _currentCandidateKey) return;
+      candidates = set;
+      _candidateKey = key;
+      _notify();
+    } catch (e, stack) {
+      // The classic filter still answers; a fast path is never a hard failure.
+      AppLogger.instance.capture(e, stack, section: 'candidates');
+    }
   }
 
   List<Quote> _filtered = [];
@@ -236,6 +464,12 @@ class MarketController extends ChangeNotifier {
     quotes = await store.latest();
     states = await store.syncStates();
     _notify();
+    // Only after startup is complete: the index read must never sit in front of
+    // the first prices on screen (both share one SQLite connection).
+    if (ready) {
+      unawaited(prepareCandidates());
+      unawaited(warmRangeIndex());
+    }
   }
 
   void transferState(bool value) {
@@ -244,6 +478,7 @@ class MarketController extends ChangeNotifier {
   }
 
   Future<void> imported() async {
+    rangeSession.invalidate();
     discoveredSources.clear();
     await init();
     historyChanged();
@@ -284,6 +519,8 @@ class MarketController extends ChangeNotifier {
           final data = await client.fetch(e);
           await store.saveSnapshot(e.id, data,
               replaceMissing: client.complete[e.id] ?? true);
+          // Fresh rows are derived at write time; drop the previous answers.
+          rangeSession.invalidate();
           await rememberSources(client.discoveries[e.id] ?? []);
           historyRevision++;
           endpointRevisions.update(e.id, (n) => n + 1, ifAbsent: () => 1);

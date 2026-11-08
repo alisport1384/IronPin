@@ -192,7 +192,9 @@ void main() {
     final store =
         await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
     try {
-      expect(await store.db.getVersion(), 3);
+      // Schema 5 adds the derived range index on top of the schema-3 backfill,
+      // and the derivation columns the prices tab filters on.
+      expect(await store.db.getVersion(), 5);
       expect(await store.historyCount(), 1);
       final row = (await store.db.query('history')).single;
       expect(row['payload'], payload);

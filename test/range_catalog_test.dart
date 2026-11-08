@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -32,6 +34,18 @@ Quote item(int n,
         sourceDateRaw: date,
         fetchedAt: at,
         sourceUrl: 'https://example.com');
+
+/// Waits for a confirmed range answer or an error with bounded real-time pumps.
+Future<void> _settleRange(WidgetTester t) async {
+  for (var i = 0; i < 120; i++) {
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 25)));
+    await t.pump();
+    if (find.byType(LinearProgressIndicator).evaluate().isEmpty) break;
+  }
+  await t.pumpAndSettle();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(sqfliteFfiInit);
@@ -196,9 +210,9 @@ void main() {
     await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
         scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تأیید و نمایش رنج'));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 150)));
-    await t.pumpAndSettle();
+    // Real isolate and I/O time does not advance with the fake clock: wait
+    // for the confirmed answer with bounded pumps instead of one fixed sleep.
+    await _settleRange(t);
     await t.scrollUntilVisible(find.text('رنج عددی قابل مقایسه نداریم'), 300,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('رنج عددی قابل مقایسه نداریم'), findsOneWidget);
@@ -211,57 +225,24 @@ void main() {
     expect(t.takeException(), isNull);
   });
   testWidgets(
-      'old and undated products remain selectable in the local archive without numeric ranges',
-      (t) async {
-    final store = await t.runAsync(() => MarketStore.open(
-        dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
-    await t.runAsync(() =>
-        store!.saveSnapshot('catalog', [item(908, amount: null, date: '')]));
-    final c = MarketController(store!);
-    addTearDown(() async {
-      c.dispose();
-      await store.close();
-    });
-    await t.pumpWidget(MaterialApp(home: Scaffold(body: RangePage(c: c))));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 120)));
-    await t.pumpAndSettle();
-    await t.tap(find.text('ورق / پلیت / صفحه فولادی'));
-    await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
-        scrollable: find.byType(Scrollable).first);
-    await t.tap(find.text('تأیید و نمایش رنج'));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 150)));
-    await t.pumpAndSettle();
-    final archive = find.text('فهرست کامل محلی • ۱ کالا');
-    await t.scrollUntilVisible(archive, 250,
-        scrollable: find.byType(Scrollable).first);
-    await t.tap(archive);
-    await t.pumpAndSettle();
-    final product = find.textContaining('محصول۹۰۸');
-    await t.scrollUntilVisible(product, 250,
-        scrollable: find.byType(Scrollable).first);
-    await t.tap(product);
-    await t.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.textContaining('این نمایش از آرشیو محلی است'), findsOneWidget);
-    expect(find.byType(RangeCost), findsNothing);
-    expect(t.takeException(), isNull);
-  });
-  testWidgets(
       'UI exposes all pages and can search beyond the first 40 products',
       (t) async {
     t.view.physicalSize = const Size(390, 900);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.resetPhysicalSize);
     addTearDown(t.view.resetDevicePixelRatio);
+    // A real file, not `:memory:`: sqflite keeps one instance per path, so an
+    // in-memory database would be shared with the previous test's store.
+    final dir = await t.runAsync(
+        () => Directory.systemTemp.createTemp('ironpin-catalog-ui'));
+    addTearDown(() => dir!.delete(recursive: true));
     final store = await t.runAsync(() => MarketStore.open(
-        dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
+        dbPath: '${dir!.path}/catalog.db', factory: databaseFactoryFfi));
     await t.runAsync(() => store!.saveSnapshot('catalog', [
           for (var i = 0; i < 85; i++)
             Quote.fromJson({
-              ...item(i, brand: '', amount: null).toJson(),
+              // Dated and priced: every row here is a real candidate.
+              ...item(i, brand: '', amount: 100.0 + i).toJson(),
               'sourceDateRaw': DateTime.now()
                   .toUtc()
                   .subtract(const Duration(hours: 1))
@@ -274,8 +255,6 @@ void main() {
       await store.close();
     });
     await t.pumpWidget(MaterialApp(home: Scaffold(body: RangePage(c: c))));
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 160)));
     await t.pumpAndSettle();
     await t.tap(find.text('ورق / پلیت / صفحه فولادی'));
     await t.pumpAndSettle();
@@ -293,6 +272,11 @@ void main() {
     }
     await t.pumpAndSettle();
     expect(find.byType(LinearProgressIndicator), findsNothing);
+    // Never answer from an older snapshot: this store's own rows answered.
+    // Never answer from an older snapshot: this store's own rows answered.
+    expect(c.rangeSession.indexRows, 170);
+    expect(((t.state(find.byType(RangePage)) as dynamic).selection)
+        .result.announcements.length, 85);
     final search =
         find.widgetWithText(TextField, 'جستجو در تمام اعلام‌های نتیجه');
     await t.scrollUntilVisible(search, 250,
@@ -312,6 +296,60 @@ void main() {
         scrollable: find.byType(Scrollable).first, maxScrolls: 80);
     expect(find.text('نمایش ۴۰ اعلام بعدی'), findsNothing);
     expect(find.text('نمایش ۸۵ از ۸۵ اعلام'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+  testWidgets(
+      'undated or unpriced rows are not offered as candidates; a dated priced row is',
+      (t) async {
+    final store = await t.runAsync(() => MarketStore.open(
+        dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
+    await t.runAsync(() => store!.saveSnapshot('catalog', [
+          item(908, amount: null, date: ''),
+          Quote.fromJson({
+            ...item(909).toJson(),
+            'sourceDateRaw': DateTime.now()
+                .toUtc()
+                .subtract(const Duration(hours: 1))
+                .toIso8601String()
+          })
+        ]));
+    final c = MarketController(store!);
+    addTearDown(() async {
+      c.dispose();
+      await store.close();
+    });
+    await t.pumpWidget(MaterialApp(home: Scaffold(body: RangePage(c: c))));
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 120)));
+    await t.pumpAndSettle();
+    await t.tap(find.text('ورق / پلیت / صفحه فولادی'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('تأیید و نمایش رنج'), 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('تأیید و نمایش رنج'));
+    await _settleRange(t);
+    // A second real-time settle: the answer is rendered one frame after the
+    // worker replies, and the page keeps a bounded progress pump.
+    await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await t.pumpAndSettle();
+    // One candidate: the row with a real date and a comparable price. The
+    // undated, unpriced row is not a candidate at all — it is not listed, so a
+    // user can never compare a price that does not exist.
+    final candidates = find.textContaining('کاندیدهای همان کالا');
+    // Rows of a ListView are built lazily, so scroll to it before asserting.
+    await t.scrollUntilVisible(candidates, 250,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(candidates);
+    await t.pumpAndSettle();
+    final product = find.textContaining('محصول۹۰۹').last;
+    await t.ensureVisible(product);
+    await t.pumpAndSettle();
+    await t.tap(product);
+    await t.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('محصول۹۰۸'), findsNothing);
+    expect(find.byType(RangeCost), findsNothing);
     expect(t.takeException(), isNull);
   });
 }

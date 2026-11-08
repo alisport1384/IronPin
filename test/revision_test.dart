@@ -155,7 +155,8 @@ void main() {
       await store.close();
       store = await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
       expect((await store.latest()).single.thicknessLabel, '8');
-      expect(await store.db.getVersion(), 3);
+      // Schema 4 adds the derived range index; every earlier upgrade still runs.
+      expect(await store.db.getVersion(), 5);
       final c = MarketController(store);
       await c.init();
       expect(c.quotes.single.id, 'row-1');

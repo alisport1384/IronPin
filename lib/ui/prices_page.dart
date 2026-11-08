@@ -12,7 +12,12 @@ class PricesPage extends StatelessWidget {
   const PricesPage({super.key, required this.c, required this.onChart});
   @override
   Widget build(BuildContext context) {
-    final list = c.filtered;
+    // Rows come from the prepared index-backed candidate set; the classic
+    // filter remains the fallback and still owns price bounds and sorting.
+    final list = c.candidateRows;
+    // The count is the whole scope; the list may hold only the rows built so far.
+    final total = c.candidateCount;
+    final hasMore = c.moreCandidates;
     final intent = c.filter.intent;
     final interpreted = [
       if (intent.spec.category.isNotEmpty) intent.spec.category,
@@ -50,7 +55,8 @@ class PricesPage extends StatelessWidget {
           child: Row(children: [
             Expanded(
                 child: Text(
-                    '${fmt(list.length)} پیشنهاد${c.filter.recentWeek ? ' • هفته اخیر' : ''}',
+                    '${fmt(total)} پیشنهاد${c.filter.recentWeek ? ' • هفته اخیر' : ''}'
+                    '${hasMore ? ' • ${fmt(list.length)} مورد آماده نمایش' : ''}',
                     style: const TextStyle(fontSize: 10, color: muted),
                     overflow: TextOverflow.ellipsis)),
             PopupMenuButton<String>(
@@ -92,7 +98,7 @@ class PricesPage extends StatelessWidget {
                   children: [
                       const SizedBox(height: 45),
                       emptyState(
-                          c.filtering
+                          c.candidates == null && c.filtering
                               ? 'در حال آماده‌سازی پیشنهادها'
                               : c.quotes.isEmpty
                                   ? 'هنوز قیمتی دریافت نشده'
@@ -103,8 +109,18 @@ class PricesPage extends StatelessWidget {
                     ])
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
-                  itemCount: list.length,
+                  // One extra slot for the «more» button while rows are pending:
+                  // the rest of the scope is built as the user asks for it.
+                  itemCount: list.length + (hasMore ? 1 : 0),
                   itemBuilder: (ctx, i) {
+                    if (i >= list.length) {
+                      return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: OutlinedButton(
+                              onPressed: c.showMoreCandidates,
+                              child: Text(
+                                  'نمایش ۶۰ پیشنهاد بعدی • ${fmt(list.length)} از ${fmt(total)}')));
+                    }
                     final q = list[i];
                     String day(Quote q) => q.marketAt == null
                         ? 'تاریخ نامشخص'

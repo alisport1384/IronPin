@@ -216,13 +216,22 @@ class ProductQuery {
         return false;
       }
     }
+    if (words.isEmpty) return true;
+    // Normalising/copying the haystack was done per row; the digits branch
+    // compiled a fresh RegExp per row. Both now happen at most once per call.
+    final RegExp? digits = words.any(
+            (w) => RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w))
+        ? RegExp(r'(?<![\d.])(?:' +
+                words
+                    .where((w) => RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w))
+                    .map(RegExp.escape)
+                    .join('|') +
+                r')(?![\d.])')
+        : null;
+    if (digits != null && !digits.hasMatch(hay)) return false;
     for (final word in words) {
-      if (RegExp(r'^\d+(?:\.\d+)?$').hasMatch(word)) {
-        if (!RegExp('(?<![\\d.])${RegExp.escape(word)}(?![\\d.])')
-            .hasMatch(hay)) return false;
-      } else if (!hay.contains(word)) {
-        return false;
-      }
+      if (RegExp(r'^\d+(?:\.\d+)?$').hasMatch(word)) continue;
+      if (!hay.contains(word)) return false;
     }
     return true;
   }

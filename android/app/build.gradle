@@ -10,6 +10,22 @@ android {
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
+    // A stable key keeps a new build installable over the previous one, so the
+    // local archive is never lost to an uninstall. Supplied through the
+    // environment (see tool/sign_env.sh); without it the debug key is used, as
+    // before, and nothing machine-specific is stored in the source.
+    def releaseStore = System.getenv('IRONPIN_KEYSTORE')
+    signingConfigs {
+        if (releaseStore != null) {
+            release {
+                storeFile file(releaseStore)
+                storePassword System.getenv('IRONPIN_STORE_PASSWORD')
+                keyAlias System.getenv('IRONPIN_KEY_ALIAS')
+                keyPassword System.getenv('IRONPIN_KEY_PASSWORD')
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -32,9 +48,9 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig = releaseStore != null
+                ? signingConfigs.release
+                : signingConfigs.debug
         }
     }
 }

@@ -371,9 +371,9 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: () => showLicensePage(
               context: context,
               applicationName: 'IronPin',
-              applicationVersion: '0.7.2'),
+              applicationVersion: '0.7.5'),
           child: const Text('مجوزهای نرم‌افزار و داده')),
-      const Text('IronPin 0.7.2 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
+      const Text('IronPin 0.7.5 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: muted)),
       const SizedBox(height: 18),
