@@ -149,7 +149,6 @@ class MarketController extends ChangeNotifier {
     _notify();
     if (ready) {
       unawaited(prepareCandidates());
-      unawaited(warmRangeIndex());
     }
   }
 
@@ -174,16 +173,17 @@ class MarketController extends ChangeNotifier {
   /// In-memory index of the archive and its confirmed answers. Purely additive:
   /// every answer is derived from the stored payloads, and any write drops it.
   late final RangeSession rangeSession = RangeSession(store);
+
   /// Hands the derived index to the standing range worker as soon as the
-  /// archive is loaded, so the first confirmation has nothing left to prepare.
-  /// It never blocks anything: a failure only means the confirm does it later.
+  /// archive is loaded. This is now explicit opt-in only: automatically warming
+  /// it alongside prices duplicates the full index at the refresh memory peak.
   Future<void> warmRangeIndex() async {
-    if (disposed) return;
+    if (disposed || busy) return;
     try {
       final at = DateTime.now().toUtc();
       final session = rangeSession;
       await session.ensureIndex(at, windowDays: rangeWindow);
-      if (disposed) return;
+      if (disposed || busy) return;
       // The worker holds rows, so a token it no longer matches must start from a
       // clean worker: a stale token would answer with another archive's rows.
       final worker = RangeWorker.shared;
@@ -197,14 +197,18 @@ class MarketController extends ChangeNotifier {
   }
 
   Future<void> init() async {
+    await AppLogger.instance.checkpoint('startup');
     filter.city = await store.setting('selectedCity') ?? '';
     filter.cityKind = 'all';
-    discoveryDays =
-        int.tryParse(await store.setting('windowDays') ?? '') ?? defaultWindowDays;
+    discoveryDays = int.tryParse(await store.setting('windowDays') ?? '') ??
+        defaultWindowDays;
     if (discoveryDays < 0) discoveryDays = defaultWindowDays;
-    pricesDays = int.tryParse(await store.setting('windowDays:prices') ?? '') ?? -1;
-    rangeDays = int.tryParse(await store.setting('windowDays:range') ?? '') ?? -1;
-    chartDays = int.tryParse(await store.setting('windowDays:chart') ?? '') ?? -1;
+    pricesDays =
+        int.tryParse(await store.setting('windowDays:prices') ?? '') ?? -1;
+    rangeDays =
+        int.tryParse(await store.setting('windowDays:range') ?? '') ?? -1;
+    chartDays =
+        int.tryParse(await store.setting('windowDays:chart') ?? '') ?? -1;
     filter.windowDays = pricesWindow;
     loggingEnabled = await store.setting('loggingEnabled') == 'true';
     await AppLogger.instance.setEnabled(loggingEnabled);
@@ -268,6 +272,8 @@ class MarketController extends ChangeNotifier {
     await store.setSetting('autoRefresh', 'false');
     await reload();
     ready = true;
+    await AppLogger.instance
+        .checkpoint('startup_prices_ready', rows: quotes.length);
     unawaited(prepareCandidates());
     unawaited(AppLogger.instance.record('lifecycle', 'market_ready',
         {'cachedRows': quotes.length, 'enabled': enabled.length}));
@@ -321,6 +327,7 @@ class MarketController extends ChangeNotifier {
   /// as it is loaded, so nothing has to be "prepared" when the tab is opened.
   CandidateSet? candidates;
   String _candidateKey = '';
+  String _preparingCandidateKey = '';
 
   /// The rows the prices tab shows: the prepared candidate set when it is ready
   /// and still matches the current basis/search, otherwise the classic filter
@@ -411,7 +418,9 @@ class MarketController extends ChangeNotifier {
       return list;
     }
     final keys = [for (final q in list) q.comparisonGroup(f.basis)];
-    final index = <Quote, int>{for (var i = 0; i < list.length; i++) list[i]: i};
+    final index = <Quote, int>{
+      for (var i = 0; i < list.length; i++) list[i]: i
+    };
     list.sort((a, b) {
       final group = keys[index[a]!].compareTo(keys[index[b]!]);
       if (group != 0) return group;
@@ -463,7 +472,7 @@ class MarketController extends ChangeNotifier {
     // index built now would describe a half-written archive — and holding it
     // means two full representations of the archive in memory at once (the
     // decoded rows *and* the wide index rows) for the whole refresh, which is
-    // what pushed a large archive into an out-of-memory crash. The classic
+    // a possible source of peak memory pressure. The classic
     // filter over the rows already in memory answers meanwhile; the index is
     // built once, when the refresh finishes.
     if (busy) {
@@ -473,28 +482,39 @@ class MarketController extends ChangeNotifier {
     }
     final key = _currentCandidateKey;
     if (key == _candidateKey && candidates != null) return;
+    if (_preparingCandidateKey == key) return;
+    _preparingCandidateKey = key;
     try {
       // An index already in memory is filtered synchronously: no await, so a
       // test clock (or the first frame) cannot observe a half-done state.
       // The scope is the whole filter, not a part of it: the fast path must
       // answer exactly what the classic path would, or it is not the same list.
       final scope = candidateScope();
-      if (rangeSession.hasIndex) {
-        candidates = rangeSession.candidatesNow(scope: scope, at: DateTime.now());
+      if (rangeSession.hasIndexFor(pricesWindow)) {
+        candidates =
+            rangeSession.candidatesNow(scope: scope, at: DateTime.now());
         _candidateKey = key;
         _notify();
         return;
       }
-      final set = await rangeSession.candidates(scope: scope, at: DateTime.now());
-      if (disposed) return;
+      await AppLogger.instance
+          .checkpoint('candidate_index_start', rows: quotes.length);
+      if (disposed || busy || key != _currentCandidateKey) return;
+      final set = await rangeSession.candidates(
+          scope: scope, at: DateTime.now(), windowDays: pricesWindow);
+      if (disposed || busy) return;
       // A newer question may have been asked while this one was being answered.
       if (key != _currentCandidateKey) return;
       candidates = set;
       _candidateKey = key;
+      await AppLogger.instance
+          .checkpoint('candidate_index_ready', rows: set.total);
       _notify();
     } catch (e, stack) {
       // The classic filter still answers; a fast path is never a hard failure.
       AppLogger.instance.capture(e, stack, section: 'candidates');
+    } finally {
+      if (_preparingCandidateKey == key) _preparingCandidateKey = '';
     }
   }
 
@@ -550,8 +570,11 @@ class MarketController extends ChangeNotifier {
     }
   }
 
+  bool _quotesLoaded = false;
+
   Future<void> reload() async {
     quotes = await store.latest();
+    _quotesLoaded = true;
     states = await store.syncStates();
     _notify();
     // Only after startup is complete: the index read must never sit in front of
@@ -559,7 +582,6 @@ class MarketController extends ChangeNotifier {
     // in progress defers both — see `prepareCandidates`.
     if (ready && !busy) {
       unawaited(prepareCandidates());
-      unawaited(warmRangeIndex());
     }
   }
 
@@ -592,7 +614,8 @@ class MarketController extends ChangeNotifier {
     _notify();
   }
 
-  bool _publishing = false;
+  Future<void> _publishTail = Future<void>.value();
+  bool _publishFailed = false;
   bool _indexStale = false;
 
   /// Publishes one received source without re-decoding the archive.
@@ -601,10 +624,10 @@ class MarketController extends ChangeNotifier {
   /// memory; every other row is already decoded and is left alone. This is what
   /// keeps a refresh of many sources against a large archive from allocating a
   /// fresh copy of every stored row once per publish.
-  Future<void> _publishEndpoint(String endpoint) async {
-    if (_publishing) return;
-    _publishing = true;
-    try {
+  Future<void> _publishEndpoint(String endpoint) {
+    // Serialize publications, not downloads. Never drop a completed source
+    // just because the other network worker is publishing at the same time.
+    final next = _publishTail.then((_) async {
       final rows = await store.latestFor(endpoint);
       if (disposed) return;
       quotes = [
@@ -614,14 +637,29 @@ class MarketController extends ChangeNotifier {
       ];
       states = await store.syncStates();
       _notify();
-    } finally {
-      _publishing = false;
-    }
+    });
+    // A failed publication must not poison the queue. Reconcile from disk at
+    // the end instead; callers still receive the original error.
+    _publishTail = next.then<void>((_) {}, onError: (Object e, StackTrace s) {
+      _publishFailed = true;
+    });
+    return next;
   }
 
   Future<void> refresh() async {
     if (busy || transferring || disposed) return;
     busy = true;
+    // Drop retained answers and worker copies BEFORE allocating the next
+    // archive. A refresh must not hold the old and new indices concurrently.
+    rangeSession.invalidate();
+    RangeWorker.shared.dispose();
+    candidates = null;
+    _candidateKey = '';
+    _rowCache = null;
+    _rowCacheKey = '';
+    _filtered = [];
+    _filterKey = '';
+    _publishFailed = false;
     historyRevision++;
     unawaited(AppLogger.instance
         .record('network', 'refresh_started', {'sources': enabled.length}));
@@ -656,16 +694,19 @@ class MarketController extends ChangeNotifier {
                   : 'خطا در اتصال/مهلت دریافت؛ داده قبلی حفظ شد.');
         }
         finished++;
-        // The publish above already refreshed `states`; a source that was
-        // throttled still needs its own status shown.
-        if (_publishing) _notify();
+        _notify();
         // Low concurrency, no login/CAPTCHA bypass or aggressive retries.
         await Future<void>.delayed(const Duration(milliseconds: 450));
       }
     }
 
     try {
+      // A direct refresh before init must preserve untouched cached sources too.
+      if (!_quotesLoaded) await reload();
+      await AppLogger.instance.checkpoint('refresh_fetch', rows: quotes.length);
       await Future.wait([worker(), worker()]);
+      await AppLogger.instance
+          .checkpoint('refresh_sources_saved', rows: quotes.length);
       await store.setSetting(
           'lastRefresh', DateTime.now().toUtc().toIso8601String());
     } finally {
@@ -674,11 +715,20 @@ class MarketController extends ChangeNotifier {
         rangeSession.invalidate();
         _indexStale = false;
       }
-      await reload();
+      await _publishTail;
+      if (_publishFailed || !_quotesLoaded) {
+        await reload();
+      } else {
+        // Every successful source is already decoded; do not allocate another
+        // full archive just to publish the final status (including failures).
+        states = await store.syncStates();
+        _notify();
+      }
       // The refresh is over, so the derived index is built once against the
       // finished archive instead of once per published source.
+      await AppLogger.instance
+          .checkpoint('refresh_publish_complete', rows: quotes.length);
       unawaited(prepareCandidates());
-      unawaited(warmRangeIndex());
       unawaited(AppLogger.instance.record('network', 'refresh_complete',
           {'completed': finished, 'cachedRows': quotes.length}));
     }
@@ -688,6 +738,8 @@ class MarketController extends ChangeNotifier {
   void dispose() {
     disposed = true;
 
+    rangeSession.invalidate();
+    RangeWorker.shared.dispose();
     client.close();
     super.dispose();
   }

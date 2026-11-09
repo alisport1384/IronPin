@@ -1,0 +1,697 @@
+diff --git a/docs/TEST_REPORT.v0.8.4.fa.md b/docs/TEST_REPORT.v0.8.4.fa.md
+new file mode 100644
+index 0000000..ae2c3a2
+--- /dev/null
++++ b/docs/TEST_REPORT.v0.8.4.fa.md
+@@ -0,0 +1,99 @@
++# آیرون‌پین ۰.۸.۴ — کاهش کار اضافی هنگام خواندن آرشیو
++
++## مبنا و دامنه
++
++- ریپوی عمومی: https://github.com/alisport1384/IronPin
++- کامیت مبنا: `03b4f04c6d97f83311fa907bb90356dd9e82e5cc`، نسخهٔ ۰.۸.۳.
++- نسخهٔ جدید: `0.8.4+20`؛ versionCode خروجی split APK برابر `1020` است.
++- تغییرها محلی‌اند؛ هیچ push یا انتشار GitHub انجام نشده است.
++- بررسی متمرکز روی مسیر ذخیره/خواندن، کنترلر، ایندکس و آزمون‌های وابسته انجام شد. **این گزارش ادعای خواندن خط‌به‌خط تمام فایل‌ها و تمام اسناد تاریخی ریپو را ندارد.** جستجوی وب هدفمند بود، نه بررسی تمام سطح وب.
++
++## اپ چه کار می‌کند؟
++
++برنامهٔ فارسی اندروید برای دریافت دستی اعلام‌های عمومی بازار آهن و نگهداری محلی آن‌هاست. رابط پنج تب قیمت‌ها، نمودار، رنج، محاسبات و اطلاعات دارد. داده از جدول‌های عمومی و متن کانال‌ها استخراج می‌شود؛ منشأ، تاریخ اعلام، واحد، ارز و مشخصات محصول همراه آن نگهداری می‌شود. `latest` آخرین ردیف‌ها، `history` تاریخچهٔ واقعی و `range_index` اطلاعات مشتقِ بازسازی‌پذیر را نگه می‌دارند. قیمت، ارز یا تاریخ نامعلوم نباید جعل شوند. بکاپ، نمودار و محاسبات به همین قراردادها وابسته‌اند.
++
++## تحقیق پیش از تغییر
++
++مستندات Flutter توصیه می‌کند پردازش سنگین JSON از isolate رابط کاربری جدا شود؛ این پروژه از قبل این کار را در چند مسیر انجام داده بود، پس اضافه‌کردن دوبارهٔ همان الگو کافی نبود.
++
++- [1](https://docs.flutter.dev/cookbook/networking/background-parsing)
++- [2](https://pub.dev/packages/sqflite): batch، `noResult` و حفظ اتمیک‌بودن batchهای درون تراکنش تا پایان تراکنش بیرونی.
++- [3](https://www.sqlite.org/eqp.html): تشخیص SCAN و SEARCH و تأیید استفاده از ایندکس.
++- [4](https://developer.android.com/studio/publish/app-signing): الزام امضای سازگار برای به‌روزرسانی برنامهٔ نصب‌شده.
++
++## تغییرات
++
++### ۱. ایندکس مسیر منبع
++
++`latest(endpoint,active)` اضافه شد. پرس‌وجوی `latestFor` و عملیات snapshot وابسته به endpoint دیگر مجبور نیستند برای یافتن یک منبع همهٔ جدول را جارو کنند. مهاجرت schema از ۶ به ۷ فقط ایندکس اضافه می‌کند؛ payload، مبلغ، تاریخچه یا تنظیمات را بازنویسی نمی‌کند. نصب تازه نیز همین ایندکس را می‌سازد.
++
++### ۲. انتشار ترتیبی، دریافت همچنان دوکارگری
++
++گارد قبلی هنگام انتشار هم‌زمان یک منبع، انتشار منبع دوم را رد می‌کرد. اکنون انتشارها صف Future دارند و هیچ منبع موفق صرفاً به علت مشغول‌بودن انتشار قبلی کنار گذاشته نمی‌شود. دانلودها همچنان با دو کارگر و فاصلهٔ قبلی انجام می‌شوند. خطای یک انتشار صف را مسموم نمی‌کند؛ خطا به فراخواننده می‌رسد و در پایان از دیسک بازخوانی جبرانی انجام می‌شود.
++
++### ۳. حذف decode کامل تکراری در پایان نوسازی عادی
++
++وقتی آخرین ردیف‌های همهٔ منابع موفق قبلاً منتشر شده‌اند، در پایان فقط وضعیت sync خوانده می‌شود. آبجکت‌های منابع دست‌نخورده دوباره ساخته نمی‌شوند. اگر کنترلر هنوز آرشیو اولیه را نخوانده باشد، پیش از دریافت baseline خوانده می‌شود. در خطای انتشار، بازخوانی کامل جبرانی حفظ شده است.
++
++این تغییر حذف کل خواندن آرشیو از برنامه نیست؛ شروع برنامه همچنان داده‌های فعلی را می‌خواند. فقط خواندن اضافی پایان نوسازی موفق حذف شده است.
++
++### ۴. batch واقعاً کرانه‌دار برای درج ایندکس
++
++پیش‌تر compute تکه‌ای بود، اما همهٔ ردیف‌های مشتق‌شده تا پایان در یک batch باقی می‌ماندند. اکنون هر batch حداکثر ۴۰۰ ردیف دارد و پس از هر تکه ارسال می‌شود. تراکنش بیرونی حفظ شده: اگر تکهٔ دوم خطا بدهد، تکهٔ اول و latest/history نیز rollback می‌شوند. این کرانه برای آرگومان‌های batch است، **نه سقف کل حافظهٔ اپ یا کل snapshot**.
++
++### ۵. ستون‌های کمتر در نمودار
++
++`history()` فقط ستون payload را می‌خواند؛ ترتیب، بازه، limit و decode روی isolate قبلی حفظ شده‌اند.
++
++## آزمون و بیلد واقعی
++
++محیط: Linux، Flutter 3.24.5، Dart 3.5.4، Temurin JDK 17، Android compile/target SDK 35.
++
++- `flutter analyze`: بدون ایراد.
++- `flutter test --concurrency=1 --reporter expanded`: **۳۵۶ آزمون موفق**، حدود ۶۶ ثانیه؛ ۳۵۲ آزمون قبلی و ۴ آزمون جدید.
++- دو انتظار شمارهٔ schema در آزمون‌های مهاجرت از ۶ به ۷ به‌روز شدند. سایر assertionهای حفظ داده حذف یا ضعیف نشده‌اند.
++- چهار آزمون جدید: انتشار هر دو کارگر و عدم بازخوانی اضافی، بازیابی از خطای انتشار، ۸۵۰ ردیف چندتکه‌ای و rollback در ردیف ۵۰۰، مهاجرت فایل‌دار نسخهٔ ۶ همراه کنترل payload/history و query plan.
++- `flutter build apk --release --split-per-abi --target-platform android-arm`: موفق.
++- APK با `aapt` بررسی شد: `ir.ironpin.ironpin`، نسخهٔ ۰.۸.۴، minSdk 21، targetSdk 35، تنها ABI برابر `armeabi-v7a`.
++- `apksigner verify --verbose --print-certs`: موفق، امضای v1 و v2.
++- فایل: `IronPin-0.8.4-armeabi-v7a-release.apk`، حدود ۸٫۲ MB.
++
++بیلد نخست با آزمون‌ها هم‌زمان اجرا شد و محیط ۲ GiB را دچار فشار شدید حافظه کرد؛ آن تلاش موفق محسوب نشده است. پس از جداسازی AOT از Gradle و اجرای سریالی، بیلد نهایی موفق شد. لاگ‌های ناموفق/متوقف‌شده نیز برای شفافیت در پوشهٔ verification باقی مانده‌اند؛ `build-final.log` و `tests-passed.log` ملاک نتایج نهایی‌اند.
++
++## بنچمارک قابل تکرار
++
++ابزار: `tool/perf_endpoint_loading.dart`. دادهٔ مصنوعی، دیتابیس فایل‌دار، ۱۲٬۰۰۰ ردیف، ۶۰ منبع، ۲۰۰ ردیف در هر منبع؛ گرم‌کردن هر حالت و ۵ اندازه‌گیری. مقایسه در یک اجرا، همان داده‌ها و همان پرس‌وجو، تنها با حذف/افزودن ایندکس روی دیتابیس موقت ابزار.
++
++| سنجه | بدون ایندکس | با ایندکس |
++|---|---:|---:|
++| میانهٔ مجموع ۶۰ خواندن SQL منبع | ۲۴۹٫۷۶ ms | ۸۳٫۴۶۵ ms |
++| query plan | SCAN latest | SEARCH USING INDEX latest_endpoint_active |
++
++حدود ۳ برابر بهبود **فقط برای این خواندن‌های SQL**. این عدد سرعت کل refresh، سرعت شبکه یا FPS نیست. مسیر نوشتن و هزینهٔ افزودن ایندکس در این بنچمارک مقایسه نشده‌اند.
++
++میانهٔ خواندن و decode کامل ۱۲٬۰۰۰ ردیف: **۲۴۱٫۵۵۴ ms**. این هزینه در پایان نوسازی عادی حذف شده؛ اندازه‌گیری آن به معنی کاهش ثابت همین مقدار روی هر گوشی نیست.
++
++```sh
++flutter test tool/perf_endpoint_loading.dart --concurrency=1 --reporter expanded
++```
++
++## نصب و امضا — هشدار مهم حفظ آرشیو
++
++کلید امضای نسخهٔ قبلی در ریپو موجود نبود. APK تحویلی با کلید محلی تازه ساخته شده است؛ بنابراین امضای آن لزوماً با نسخهٔ نصب‌شده برابر نیست. **برای نصب این فایل، نسخهٔ قبلی را بدون بکاپ حذف نکنید.** نصب روی نسخهٔ قبلی ممکن است با خطای ناسازگاری امضا رد شود. برای آپدیت بدون حذف، باید خروجی با کلید اصلی دوباره امضا/ساخته شود؛ توکن push جای کلید امضا را نمی‌گیرد.
++
++SHA-256 فایل APK:
++
++`7e0f8a0944a35856a7af650772ee3e543d1517125b687d83bbde62f04e1fb401`
++
++SHA-256 گواهی جدید:
++
++`d1198166b1c478cf961f0b1a3df21b2ed8e4f454298d51d5685948585cef33a9`
++
++## محدودیت و تأیید دستگاه
++
++- کرش/فریز گزارش‌شده روی گوشی واقعی بازتولید نشده است؛ رفع قطعی همهٔ OOM/ANRها ادعا نمی‌شود.
++- تست‌ها از sqflite_common_ffi استفاده می‌کنند، نه اجرای Android روی دستگاه کم‌رم ۳۲بیتی.
++- شروع سرد، اوج RSS، FPS و فشار حافظهٔ روی دستگاه اندازه‌گیری نشده‌اند.
++- مدل فعلی همچنان لیست Quote و ایندکس مشتق‌شده را نگه می‌دارد؛ این اصلاح سقف حافظهٔ کل آرشیو را ثابت نمی‌کند.
++- قالب دریافت، قواعد قیمت/واحد/تاریخ، UI، شبکه، بکاپ و محاسبات عمداً تغییر نکرده‌اند؛ مجموعهٔ آزمون‌ها رگرسیون شناخته‌شده‌ای نشان نداد، نه تضمین نبود هر نوع اشکال.
++- پیش از انتشار نهایی: روی همان گوشی و نسخهٔ پشتیبان واقعی، شروع سرد، نوسازی همهٔ منابع، اسکرول، جستجو، نمودار بزرگ، تعویض پنجره و بکاپ/بازیابی آزموده شوند. Logcat در صورت تکرار کرش برای تشخیص OOM/ANR لازم است.
+diff --git a/lib/data/controller.dart b/lib/data/controller.dart
+index 21a352a..75764cc 100644
+--- a/lib/data/controller.dart
++++ b/lib/data/controller.dart
+@@ -174,6 +174,7 @@ class MarketController extends ChangeNotifier {
+   /// In-memory index of the archive and its confirmed answers. Purely additive:
+   /// every answer is derived from the stored payloads, and any write drops it.
+   late final RangeSession rangeSession = RangeSession(store);
++
+   /// Hands the derived index to the standing range worker as soon as the
+   /// archive is loaded, so the first confirmation has nothing left to prepare.
+   /// It never blocks anything: a failure only means the confirm does it later.
+@@ -199,12 +200,15 @@ class MarketController extends ChangeNotifier {
+   Future<void> init() async {
+     filter.city = await store.setting('selectedCity') ?? '';
+     filter.cityKind = 'all';
+-    discoveryDays =
+-        int.tryParse(await store.setting('windowDays') ?? '') ?? defaultWindowDays;
++    discoveryDays = int.tryParse(await store.setting('windowDays') ?? '') ??
++        defaultWindowDays;
+     if (discoveryDays < 0) discoveryDays = defaultWindowDays;
+-    pricesDays = int.tryParse(await store.setting('windowDays:prices') ?? '') ?? -1;
+-    rangeDays = int.tryParse(await store.setting('windowDays:range') ?? '') ?? -1;
+-    chartDays = int.tryParse(await store.setting('windowDays:chart') ?? '') ?? -1;
++    pricesDays =
++        int.tryParse(await store.setting('windowDays:prices') ?? '') ?? -1;
++    rangeDays =
++        int.tryParse(await store.setting('windowDays:range') ?? '') ?? -1;
++    chartDays =
++        int.tryParse(await store.setting('windowDays:chart') ?? '') ?? -1;
+     filter.windowDays = pricesWindow;
+     loggingEnabled = await store.setting('loggingEnabled') == 'true';
+     await AppLogger.instance.setEnabled(loggingEnabled);
+@@ -411,7 +415,9 @@ class MarketController extends ChangeNotifier {
+       return list;
+     }
+     final keys = [for (final q in list) q.comparisonGroup(f.basis)];
+-    final index = <Quote, int>{for (var i = 0; i < list.length; i++) list[i]: i};
++    final index = <Quote, int>{
++      for (var i = 0; i < list.length; i++) list[i]: i
++    };
+     list.sort((a, b) {
+       final group = keys[index[a]!].compareTo(keys[index[b]!]);
+       if (group != 0) return group;
+@@ -480,12 +486,14 @@ class MarketController extends ChangeNotifier {
+       // answer exactly what the classic path would, or it is not the same list.
+       final scope = candidateScope();
+       if (rangeSession.hasIndex) {
+-        candidates = rangeSession.candidatesNow(scope: scope, at: DateTime.now());
++        candidates =
++            rangeSession.candidatesNow(scope: scope, at: DateTime.now());
+         _candidateKey = key;
+         _notify();
+         return;
+       }
+-      final set = await rangeSession.candidates(scope: scope, at: DateTime.now());
++      final set =
++          await rangeSession.candidates(scope: scope, at: DateTime.now());
+       if (disposed) return;
+       // A newer question may have been asked while this one was being answered.
+       if (key != _currentCandidateKey) return;
+@@ -550,8 +558,11 @@ class MarketController extends ChangeNotifier {
+     }
+   }
+ 
++  bool _quotesLoaded = false;
++
+   Future<void> reload() async {
+     quotes = await store.latest();
++    _quotesLoaded = true;
+     states = await store.syncStates();
+     _notify();
+     // Only after startup is complete: the index read must never sit in front of
+@@ -592,7 +603,8 @@ class MarketController extends ChangeNotifier {
+     _notify();
+   }
+ 
+-  bool _publishing = false;
++  Future<void> _publishTail = Future<void>.value();
++  bool _publishFailed = false;
+   bool _indexStale = false;
+ 
+   /// Publishes one received source without re-decoding the archive.
+@@ -601,10 +613,10 @@ class MarketController extends ChangeNotifier {
+   /// memory; every other row is already decoded and is left alone. This is what
+   /// keeps a refresh of many sources against a large archive from allocating a
+   /// fresh copy of every stored row once per publish.
+-  Future<void> _publishEndpoint(String endpoint) async {
+-    if (_publishing) return;
+-    _publishing = true;
+-    try {
++  Future<void> _publishEndpoint(String endpoint) {
++    // Serialize publications, not downloads. Never drop a completed source
++    // just because the other network worker is publishing at the same time.
++    final next = _publishTail.then((_) async {
+       final rows = await store.latestFor(endpoint);
+       if (disposed) return;
+       quotes = [
+@@ -614,14 +626,19 @@ class MarketController extends ChangeNotifier {
+       ];
+       states = await store.syncStates();
+       _notify();
+-    } finally {
+-      _publishing = false;
+-    }
++    });
++    // A failed publication must not poison the queue. Reconcile from disk at
++    // the end instead; callers still receive the original error.
++    _publishTail = next.then<void>((_) {}, onError: (Object e, StackTrace s) {
++      _publishFailed = true;
++    });
++    return next;
+   }
+ 
+   Future<void> refresh() async {
+     if (busy || transferring || disposed) return;
+     busy = true;
++    _publishFailed = false;
+     historyRevision++;
+     unawaited(AppLogger.instance
+         .record('network', 'refresh_started', {'sources': enabled.length}));
+@@ -656,15 +673,15 @@ class MarketController extends ChangeNotifier {
+                   : 'خطا در اتصال/مهلت دریافت؛ داده قبلی حفظ شد.');
+         }
+         finished++;
+-        // The publish above already refreshed `states`; a source that was
+-        // throttled still needs its own status shown.
+-        if (_publishing) _notify();
++        _notify();
+         // Low concurrency, no login/CAPTCHA bypass or aggressive retries.
+         await Future<void>.delayed(const Duration(milliseconds: 450));
+       }
+     }
+ 
+     try {
++      // A direct refresh before init must preserve untouched cached sources too.
++      if (!_quotesLoaded) await reload();
+       await Future.wait([worker(), worker()]);
+       await store.setSetting(
+           'lastRefresh', DateTime.now().toUtc().toIso8601String());
+@@ -674,7 +691,15 @@ class MarketController extends ChangeNotifier {
+         rangeSession.invalidate();
+         _indexStale = false;
+       }
+-      await reload();
++      await _publishTail;
++      if (_publishFailed || !_quotesLoaded) {
++        await reload();
++      } else {
++        // Every successful source is already decoded; do not allocate another
++        // full archive just to publish the final status (including failures).
++        states = await store.syncStates();
++        _notify();
++      }
+       // The refresh is over, so the derived index is built once against the
+       // finished archive instead of once per published source.
+       unawaited(prepareCandidates());
+diff --git a/lib/data/store.dart b/lib/data/store.dart
+index 99028c8..315a201 100644
+--- a/lib/data/store.dart
++++ b/lib/data/store.dart
+@@ -35,7 +35,6 @@ const _rangeIndexSchema = [
+   // The prices tab filters on these columns, so they are indexed rather than
+   // tested row by row; the window is a range on `market_at`, so it goes last.
+   'CREATE INDEX IF NOT EXISTS range_index_category ON range_index(category, market_at)',
+-
+ ];
+ 
+ class MarketStore {
+@@ -47,10 +46,12 @@ class MarketStore {
+     final p = dbPath ?? path.join(await getDatabasesPath(), 'ironpin.db');
+     final db = await f.openDatabase(p,
+         options: OpenDatabaseOptions(
+-            version: 6,
++            version: 7,
+             onCreate: (db, version) async {
+               await db.execute(
+                   'CREATE TABLE latest (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)');
++              await db.execute(
++                  'CREATE INDEX latest_endpoint_active ON latest(endpoint,active)');
+               await db.execute(
+                   'CREATE TABLE history (seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL, captured_at TEXT NOT NULL, signature TEXT NOT NULL, payload TEXT NOT NULL, market_at TEXT)');
+               await db.execute(
+@@ -68,6 +69,10 @@ class MarketStore {
+               }
+             },
+             onUpgrade: (db, oldVersion, newVersion) async {
++              if (oldVersion < 7) {
++                await db.execute(
++                    'CREATE INDEX IF NOT EXISTS latest_endpoint_active ON latest(endpoint,active)');
++              }
+               if (oldVersion < 2) {
+                 await db.execute(
+                     'CREATE INDEX IF NOT EXISTS history_id_seq ON history(id,seq)');
+@@ -104,7 +109,8 @@ class MarketStore {
+                 // Schema 5 only adds the two derivation columns. Existing rows
+                 // keep their payload key and are re-derived lazily, once, by the
+                 // reader — no history row is touched and no payload is rewritten.
+-                final columns = await db.rawQuery('PRAGMA table_info(range_index)');
++                final columns =
++                    await db.rawQuery('PRAGMA table_info(range_index)');
+                 // `labels` is left behind by the first form of these columns; it is
+                 // no longer read, and dropping it would rewrite every row.
+                 for (final column in [
+@@ -148,9 +154,9 @@ class MarketStore {
+                 final columns =
+                     await db.rawQuery('PRAGMA table_info(range_index)');
+                 if (!columns.any((r) => r['name'] == 'amount_raw')) {
+-                  await db.execute(
+-                      "ALTER TABLE range_index ADD COLUMN amount_raw "
+-                      "TEXT NOT NULL DEFAULT ''");
++                  await db
++                      .execute("ALTER TABLE range_index ADD COLUMN amount_raw "
++                          "TEXT NOT NULL DEFAULT ''");
+                 }
+               }
+             }));
+@@ -182,6 +188,7 @@ class MarketStore {
+           .toList());
+   Future<List<Quote>> history(String id, {DateTime? since, int? limit}) async {
+     final rows = await db.query('history',
++        columns: ['payload'],
+         where: since == null ? 'id=?' : 'id=? AND captured_at>=?',
+         whereArgs: since == null ? [id] : [id, since.toUtc().toIso8601String()],
+         orderBy: 'captured_at DESC, seq DESC',
+@@ -323,8 +330,8 @@ class MarketStore {
+   /// removes repeated parsing. Each row is keyed by the fingerprint of the
+   /// payload it was derived from, so a rewritten payload is re-derived and an
+   /// untouched one is never parsed again — even after a restart.
+-  Future<void> _indexPayloads(
+-      DatabaseExecutor tx, Iterable<({String payload, String hash})> rows) async {
++  Future<void> _indexPayloads(DatabaseExecutor tx,
++      Iterable<({String payload, String hash})> rows) async {
+     // One entry per payload key: the same payload can reach here from more than
+     // one row of one snapshot, and deriving it twice would only rewrite itself.
+     final unique = <String, String>{};
+@@ -362,15 +369,16 @@ class MarketStore {
+     // Deriving a row parses its payload, extracts its spec and builds its keys.
+     // That is CPU work belonging to the archive, not to the frame being drawn,
+     // so it runs on a worker isolate and only the finished rows come back.
+-    final batch = tx.batch();
+     for (final chunk in _chunks(todo)) {
++      // Bound native-channel arguments and derived maps to one chunk. The
++      // enclosing transaction still makes all chunks atomic.
++      final batch = tx.batch();
+       for (final row in await compute(_deriveIndexRows, chunk)) {
+         batch.insert('range_index', row,
+             conflictAlgorithm: ConflictAlgorithm.replace);
+       }
++      await batch.commit(noResult: true);
+     }
+-    // One commit: per-row inserts measured 2.6 s against 0.12 s batched.
+-    await batch.commit(noResult: true);
+   }
+ 
+   /// Index rows for the same selection `rangePayloads` returns, as the minimum
+@@ -432,9 +440,9 @@ class MarketStore {
+     // The payload strings are no longer reachable from here, so they can be
+     // collected before the caller keeps the index rows.
+     wanted.clear();
+-    return [
+-      for (final hash in orderedHashes) indexed[hash] ?? const {}
+-    ].where((row) => row.isNotEmpty).toList();
++    return [for (final hash in orderedHashes) indexed[hash] ?? const {}]
++        .where((row) => row.isNotEmpty)
++        .toList();
+   }
+ 
+   Future<RangeReport> rangeReport(DateTime now) async {
+@@ -534,8 +542,7 @@ List<Map<String, Object?>> _deriveIndexRows(List<String> payloads) {
+   final out = <Map<String, Object?>>[];
+   for (final payload in payloads) {
+     try {
+-      out.add(RowFacts.ofPayload(payload)
+-          .toRow(payloadFingerprint(payload)));
++      out.add(RowFacts.ofPayload(payload).toRow(payloadFingerprint(payload)));
+     } catch (_) {
+       continue;
+     }
+diff --git a/pubspec.yaml b/pubspec.yaml
+index 426901b..cf68ca5 100644
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -1,7 +1,7 @@
+ name: ironpin
+ description: Persian iron market monitor with on-device source refresh and history.
+ publish_to: none
+-version: 0.8.3+19
++version: 0.8.4+20
+ environment:
+   sdk: '>=3.5.0 <4.0.0'
+ dependencies:
+diff --git a/test/archive_loading_test.dart b/test/archive_loading_test.dart
+new file mode 100644
+index 0000000..0b8fe4b
+--- /dev/null
++++ b/test/archive_loading_test.dart
+@@ -0,0 +1,163 @@
++import 'dart:io';
++
++import 'package:flutter_test/flutter_test.dart';
++import 'package:ironpin/data/controller.dart';
++import 'package:ironpin/data/sources.dart';
++import 'package:ironpin/data/store.dart';
++import 'package:ironpin/domain/market.dart';
++import 'package:sqflite_common_ffi/sqflite_ffi.dart';
++
++Quote offer(String endpoint, int n) => Quote(
++      id: '$endpoint:$n',
++      endpoint: endpoint,
++      seller: 'test',
++      title: 'میلگرد',
++      category: 'میلگرد',
++      unit: 'kg',
++      amount: 100 + n.toDouble(),
++      currency: 'تومان',
++      sourceUrl: 'https://example.com/$n',
++      sourceDateRaw: '2026-11-09T08:00:00Z',
++      fetchedAt: DateTime.utc(2026, 11, 9, 9),
++    );
++
++class LocalClient extends SourceClient {
++  @override
++  Future<List<Quote>> fetch(SourceEndpoint endpoint,
++          {int windowDays = 30}) async =>
++      [offer(endpoint.id, 1)];
++}
++
++class ObservedStore extends MarketStore {
++  ObservedStore(super.db);
++  int fullReads = 0;
++  bool failOnce = false;
++  @override
++  Future<List<Quote>> latest() {
++    fullReads++;
++    return super.latest();
++  }
++
++  @override
++  Future<List<Quote>> latestFor(String endpoint) async {
++    // Keep one publication pending while the other network worker finishes.
++    await Future<void>.delayed(const Duration(milliseconds: 80));
++    if (failOnce) {
++      failOnce = false;
++      throw StateError('simulated publication failure');
++    }
++    return super.latestFor(endpoint);
++  }
++}
++
++void main() {
++  setUpAll(() {
++    TestWidgetsFlutterBinding.ensureInitialized();
++    sqfliteFfiInit();
++  });
++
++  test('refresh publishes both workers without rereading unchanged archive',
++      () async {
++    final opened = await MarketStore.open(
++        dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi);
++    final store = ObservedStore(opened.db);
++    await store.saveSnapshot('untouched', [offer('untouched', 1)]);
++    final c = MarketController(store, client: LocalClient());
++    c.enabled = {'melal-rebar', 'melal-sheet'};
++    final seen = <String>{};
++    c.addListener(() {
++      if (c.busy) seen.addAll(c.quotes.map((q) => q.endpoint));
++    });
++    try {
++      await c.reload();
++      final original = c.quotes.single;
++      await c.refresh();
++      expect(store.fullReads, 1);
++      expect(seen, containsAll(c.enabled));
++      expect(c.quotes.map((q) => q.id).toSet(),
++          (await opened.latest()).map((q) => q.id).toSet());
++      expect(
++          identical(
++              c.quotes.firstWhere((q) => q.endpoint == 'untouched'), original),
++          isTrue);
++      // Drain background index work before closing its database.
++      await c.rangeSession
++          .ensureIndex(DateTime.now(), windowDays: c.rangeWindow);
++    } finally {
++      c.dispose();
++      await store.close();
++    }
++  });
++
++  test('publication failure reconciles disk and does not poison next refresh',
++      () async {
++    final opened = await MarketStore.open(
++        dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi);
++    final store = ObservedStore(opened.db)..failOnce = true;
++    final c = MarketController(store, client: LocalClient());
++    c.enabled = {'melal-rebar', 'melal-sheet'};
++    try {
++      await c.refresh();
++      expect(store.fullReads, 2); // initial baseline + failure reconciliation
++      expect(c.quotes.length, 2);
++      await c.refresh();
++      expect(store.fullReads, 2);
++      expect(c.quotes.length, 2);
++      await c.rangeSession
++          .ensureIndex(DateTime.now(), windowDays: c.rangeWindow);
++    } finally {
++      c.dispose();
++      await store.close();
++    }
++  });
++
++  test('multiple index chunks persist all rows and roll back together on error',
++      () async {
++    final store = await MarketStore.open(
++        dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi);
++    try {
++      await store.saveSnapshot(
++          'large', [for (var i = 0; i < 850; i++) offer('large', i)]);
++      expect((await store.latestFor('large')).length, 850);
++      expect(await store.historyCount(), 850);
++      expect((await store.db.query('range_index')).length, 850);
++      await store.db.execute('''CREATE TRIGGER reject_later_chunk
++        BEFORE INSERT ON range_index WHEN NEW.id='broken:500'
++        BEGIN SELECT RAISE(ABORT, 'test rollback'); END''');
++      await expectLater(
++          store.saveSnapshot(
++              'broken', [for (var i = 0; i < 850; i++) offer('broken', i)]),
++          throwsA(isA<DatabaseException>()));
++      expect(await store.latestFor('broken'), isEmpty);
++      expect(await store.historyCount(), 850);
++      expect((await store.db.query('range_index')).length, 850);
++    } finally {
++      await store.close();
++    }
++  });
++
++  test('v6 upgrade adds endpoint index without rewriting prices or history',
++      () async {
++    final dir = await Directory.systemTemp.createTemp('ironpin-migration-');
++    final path = '${dir.path}/market.db';
++    var store =
++        await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
++    try {
++      await store.saveSnapshot('e', [offer('e', 1)]);
++      final payload = (await store.db.query('latest')).single['payload'];
++      await store.db.execute('DROP INDEX latest_endpoint_active');
++      await store.db.execute('PRAGMA user_version=6');
++      await store.close();
++      store = await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
++      expect((await store.db.query('latest')).single['payload'], payload);
++      expect(await store.historyCount(), 1);
++      final plan = await store.db.rawQuery(
++          'EXPLAIN QUERY PLAN SELECT payload FROM latest WHERE endpoint=? AND active=1',
++          ['e']);
++      expect(plan.toString(), contains('latest_endpoint_active'));
++    } finally {
++      await store.close();
++      await dir.delete(recursive: true);
++    }
++  });
++}
+diff --git a/test/manual_history_test.dart b/test/manual_history_test.dart
+index a3c853f..3b4829a 100644
+--- a/test/manual_history_test.dart
++++ b/test/manual_history_test.dart
+@@ -195,7 +195,8 @@ void main() {
+       // Schema 5 adds the derived range index on top of the schema-3 backfill,
+       // and the derivation columns the prices tab filters on; schema 6 adds the
+       // `amount_raw` column that keeps the source's own amount on a rebuilt card.
+-      expect(await store.db.getVersion(), 6);
++      // Schema 7 adds the endpoint/active lookup index without touching payloads.
++      expect(await store.db.getVersion(), 7);
+       expect(
+           (await store.db.rawQuery('PRAGMA table_info(range_index)'))
+               .any((r) => r['name'] == 'amount_raw'),
+diff --git a/test/revision_test.dart b/test/revision_test.dart
+index 6de7f4c..3e17c06 100644
+--- a/test/revision_test.dart
++++ b/test/revision_test.dart
+@@ -156,8 +156,8 @@ void main() {
+       store = await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
+       expect((await store.latest()).single.thicknessLabel, '8');
+       // Schema 4 adds the derived range index and schema 6 its `amount_raw`
+-      // column; every earlier upgrade still runs.
+-      expect(await store.db.getVersion(), 6);
++      // column; schema 7 adds the endpoint lookup index. Earlier upgrades run.
++      expect(await store.db.getVersion(), 7);
+       final c = MarketController(store);
+       await c.init();
+       expect(c.quotes.single.id, 'row-1');
+diff --git a/tool/perf_endpoint_loading.dart b/tool/perf_endpoint_loading.dart
+new file mode 100644
+index 0000000..9f7256f
+--- /dev/null
++++ b/tool/perf_endpoint_loading.dart
+@@ -0,0 +1,96 @@
++// ignore_for_file: avoid_print
++// Synthetic local benchmark, not a device FPS/ANR or network benchmark.
++import 'dart:convert';
++import 'dart:io';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sqflite_common_ffi/sqflite_ffi.dart';
++import 'package:ironpin/data/store.dart';
++import 'perf_archive.dart' as fixture;
++
++Future<int> timed(Future<void> Function() action) async {
++  final watch = Stopwatch()..start();
++  await action();
++  return watch.elapsedMicroseconds;
++}
++
++int median(List<int> values) => (values..sort())[values.length ~/ 2];
++
++void main() {
++  setUpAll(sqfliteFfiInit);
++  test('measure endpoint SQL reads on the same 12000-row archive', () async {
++    final dir = await Directory.systemTemp.createTemp('ironpin-endpoint-perf-');
++    final store = await MarketStore.open(
++        dbPath: '${dir.path}/market.db', factory: databaseFactoryFfi);
++    try {
++      await store.db.transaction((tx) async {
++        for (var source = 0; source < 60; source++) {
++          final batch = tx.batch();
++          for (var n = 0; n < 200; n++) {
++            final q = fixture.row('ep$source', n);
++            batch.insert('latest', {
++              'id': q.id,
++              'endpoint': q.endpoint,
++              'active': 1,
++              'payload': jsonEncode(q.toJson())
++            });
++          }
++          await batch.commit(noResult: true);
++        }
++      });
++      Future<void> readEndpoints() async {
++        for (var source = 0; source < 60; source++) {
++          final rows = await store.db.query('latest',
++              columns: ['payload'],
++              where: 'endpoint=? AND active=1',
++              whereArgs: ['ep$source']);
++          expect(rows.length, 200);
++        }
++      }
++
++      // Warm each configuration before five paired-size measurement rounds.
++      await store.db.execute('DROP INDEX latest_endpoint_active');
++      final scanPlan = await store.db.rawQuery(
++          'EXPLAIN QUERY PLAN SELECT payload FROM latest WHERE endpoint=? AND active=1',
++          ['ep1']);
++      await readEndpoints();
++      final scan = [for (var n = 0; n < 5; n++) await timed(readEndpoints)];
++      await store.db.execute(
++          'CREATE INDEX latest_endpoint_active ON latest(endpoint,active)');
++      final indexPlan = await store.db.rawQuery(
++          'EXPLAIN QUERY PLAN SELECT payload FROM latest WHERE endpoint=? AND active=1',
++          ['ep1']);
++      await readEndpoints();
++      final indexed = [for (var n = 0; n < 5; n++) await timed(readEndpoints)];
++      final decode = <int>[];
++      for (var n = 0; n < 5; n++) {
++        decode.add(await timed(() async {
++          expect((await store.latest()).length, 12000);
++        }));
++      }
++      final report = {
++        'environment': 'Linux sqflite_common_ffi; synthetic, not Android',
++        'rows': 12000,
++        'sources': 60,
++        'scanPlan': scanPlan,
++        'indexPlan': indexPlan,
++        'all60EndpointReadsScanUs': scan,
++        'all60EndpointReadsIndexUs': indexed,
++        'scanMedianUs': median(scan),
++        'indexMedianUs': median(indexed),
++        'fullArchiveDecodeUs': decode,
++        'fullArchiveDecodeMedianUs': median(decode),
++        'note': 'Normal refresh no longer needs the final full-archive decode. '
++            'This measures that removed operation, not whole-refresh speedup.'
++      };
++      final output = Platform.environment['IRONPIN_PERF_OUTPUT'];
++      if (output != null) {
++        await File(output).writeAsString(
++            '${const JsonEncoder.withIndent('  ').convert(report)}\n');
++      }
++      print(const JsonEncoder.withIndent('  ').convert(report));
++    } finally {
++      await store.close();
++      await dir.delete(recursive: true);
++    }
++  });
++}

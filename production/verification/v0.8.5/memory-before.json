@@ -1,0 +1,12 @@
+{
+  "environment": "Linux sqflite_common_ffi; synthetic, no network",
+  "rows": 6000,
+  "indexRows": 12000,
+  "candidateCount": 6000,
+  "beforeRefreshRssMiB": 259.6640625,
+  "sampledFinalizationPeakMiB": 274.32421875,
+  "processMaxRssMiB": 289.38671875,
+  "workerLoaded": true,
+  "finalizationReadyMs": 674,
+  "note": "One run; RSS sampling can miss short peaks. Not Android heap/FPS."
+}

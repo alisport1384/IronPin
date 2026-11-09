@@ -1,0 +1,20 @@
+{
+  "before": {
+    "beforeColdReadMiB": 130.89453125,
+    "afterColdReadMiB": 202.99609375,
+    "coldReadMs": 341,
+    "sampledColdReadAndFinalizationPeakMiB": 287.4296875,
+    "processMaxRssMiB": 290.12890625,
+    "finalizationReadyMs": 1074
+  },
+  "after": {
+    "beforeColdReadMiB": 130.75,
+    "afterColdReadMiB": 178.67578125,
+    "coldReadMs": 372,
+    "sampledColdReadAndFinalizationPeakMiB": 201.95703125,
+    "processMaxRssMiB": 212.59765625,
+    "finalizationReadyMs": 859
+  },
+  "sampledPeakReductionPercent": 29.736892174716644,
+  "scope": "Three fresh processes per version; same 6000-row synthetic SQLite database. No network or Android device. Includes cold read and finalization."
+}

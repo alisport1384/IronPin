@@ -195,7 +195,8 @@ void main() {
       // Schema 5 adds the derived range index on top of the schema-3 backfill,
       // and the derivation columns the prices tab filters on; schema 6 adds the
       // `amount_raw` column that keeps the source's own amount on a rebuilt card.
-      expect(await store.db.getVersion(), 6);
+      // Schema 7 adds the endpoint/active lookup index without touching payloads.
+      expect(await store.db.getVersion(), 7);
       expect(
           (await store.db.rawQuery('PRAGMA table_info(range_index)'))
               .any((r) => r['name'] == 'amount_raw'),

@@ -39,7 +39,8 @@ class AppLogger {
       // New retention policy applies to owned diagnostic files only. Prices,
       // source cache, backups and unrelated user files are never removed.
       for (final f in await _ownedFiles()) {
-        if (!f.uri.pathSegments.last.startsWith('IronPin-products-') ||
+        if ((!f.uri.pathSegments.last.startsWith('IronPin-products-') &&
+                f.uri.pathSegments.last != 'IronPin-runtime.md') ||
             await f.length() > fileBytes) await f.delete();
       }
       await _budget();
@@ -142,7 +143,7 @@ class AppLogger {
     _pending = _pending.then((_) async {
       if (!enabled) return;
       try {
-        const header = '# IronPin — session log | 0.8.1\n';
+        const header = '# IronPin — session log | 0.8.5\n';
         final newFile = _active == null ||
             !await _active!.exists() ||
             await _active!.length() + bytes.length > fileBytes;
@@ -182,10 +183,48 @@ class AppLogger {
   }
 
   static String _line(String s) => s.replaceAll(RegExp(r'[\r\n`|]'), ' ');
+
   /// Opens the log directory once, whatever the switch says: the export button
   /// and every later record then have a real place to write to.
   Future<void> ensureReady() async {
     if (_directory == null) await initialize();
+  }
+
+  String? _previousCheckpoint;
+  bool _checkpointRead = false;
+
+  /// A single small, overwritten file. No prices, URLs, device identifiers or
+  /// unlimited logs. It survives a process kill and needs no ADB to export.
+  /// RSS is the whole process, NOT the Java heap or a diagnosis of OOM.
+  Future<void> checkpoint(String stage, {int rows = 0}) async {
+    try {
+      await ensureReady();
+      if (_directory == null) return;
+      final file = File('${_directory!.path}/IronPin-runtime.md');
+      if (!_checkpointRead) {
+        _checkpointRead = true;
+        if (await file.exists() && await file.length() < 4096) {
+          _previousCheckpoint = await file.readAsString();
+        }
+      }
+      final text = '# IronPin runtime | 0.8.5\n${jsonEncode({
+            'at': DateTime.now().toUtc().toIso8601String(),
+            'stage': stage,
+            'rows': rows,
+            'rssBytes': ProcessInfo.currentRss,
+            'maxRssBytes': ProcessInfo.maxRss,
+          })}\n';
+      _pending = _pending.then((_) async {
+        try {
+          await file.writeAsString(text, flush: true);
+        } catch (e) {
+          lastError = '$e';
+        }
+      });
+      await _pending;
+    } catch (e) {
+      lastError = '$e';
+    }
   }
 
   Future<void> flush() => _pending;
@@ -213,9 +252,9 @@ class AppLogger {
     if (_directory == null) {
       throw FileSystemException('پوشه لاگ باز نشد: ${lastError ?? 'نامشخص'}');
     }
-    if (await files().then((f) => f.isEmpty)) {
-      await _writeSummary(summary);
-    }
+    // Existing product logs do not contain the error ring. Always include a
+    // bounded diagnostic summary, even when normal source logs already exist.
+    await _writeSummary(summary);
     final all = await files();
     final result = await platform.invokeMethod<String>(
         'exportLogs', {'paths': all.map((f) => f.path).toList()});
@@ -224,15 +263,18 @@ class AppLogger {
 
   /// One small file describing this run, written whatever the switch says.
   Future<void> _writeSummary(Map<String, Object?> summary) async {
-    final file = File(
-        '${_directory!.path}/IronPin-session-'
+    final file = File('${_directory!.path}/IronPin-session-'
         '${DateTime.now().microsecondsSinceEpoch}-${_serial++}.md');
-    final buffer = StringBuffer('# IronPin — session summary\n')
+    final buffer = StringBuffer('# IronPin — session summary | 0.8.5\n')
       ..writeln('generated: ${DateTime.now().toUtc().toIso8601String()}')
       ..writeln('log switch: ${enabled ? 'on' : 'off'}')
       ..writeln('directory: ${_directory!.path}');
     for (final e in summary.entries) {
       buffer.writeln('${e.key}: ${_safe(e.value)}');
+    }
+    if (_previousCheckpoint != null) {
+      buffer.writeln(
+          '\n## checkpoint from previous process\n$_previousCheckpoint');
     }
     if (_recentErrors.isNotEmpty) {
       buffer.writeln('\n## recent errors');
@@ -255,9 +297,11 @@ class AppLogger {
     // Kept in memory only: the persistent log keeps its documented scope, and
     // the export writes this ring into a summary file even when the switch is
     // off, so a failure is never lost and never leaks UI/raw content.
+    final trace = stack.toString().split('\n').take(20).join('\n');
     final line = '${DateTime.now().toUtc().toIso8601String()} | '
-        '$section | ${error.runtimeType}: $error';
-    _recentErrors.add(_line(line));
+        '$section | ${error.runtimeType}: $error\n$trace';
+    _recentErrors
+        .add(_line(line.length > 4000 ? line.substring(0, 4000) : line));
     if (_recentErrors.length > 100) _recentErrors.removeAt(0);
     lastError = '$error';
     unawaited(record(

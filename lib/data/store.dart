@@ -35,7 +35,6 @@ const _rangeIndexSchema = [
   // The prices tab filters on these columns, so they are indexed rather than
   // tested row by row; the window is a range on `market_at`, so it goes last.
   'CREATE INDEX IF NOT EXISTS range_index_category ON range_index(category, market_at)',
-
 ];
 
 class MarketStore {
@@ -47,10 +46,12 @@ class MarketStore {
     final p = dbPath ?? path.join(await getDatabasesPath(), 'ironpin.db');
     final db = await f.openDatabase(p,
         options: OpenDatabaseOptions(
-            version: 6,
+            version: 7,
             onCreate: (db, version) async {
               await db.execute(
                   'CREATE TABLE latest (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)');
+              await db.execute(
+                  'CREATE INDEX latest_endpoint_active ON latest(endpoint,active)');
               await db.execute(
                   'CREATE TABLE history (seq INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL, captured_at TEXT NOT NULL, signature TEXT NOT NULL, payload TEXT NOT NULL, market_at TEXT)');
               await db.execute(
@@ -68,6 +69,10 @@ class MarketStore {
               }
             },
             onUpgrade: (db, oldVersion, newVersion) async {
+              if (oldVersion < 7) {
+                await db.execute(
+                    'CREATE INDEX IF NOT EXISTS latest_endpoint_active ON latest(endpoint,active)');
+              }
               if (oldVersion < 2) {
                 await db.execute(
                     'CREATE INDEX IF NOT EXISTS history_id_seq ON history(id,seq)');
@@ -104,7 +109,8 @@ class MarketStore {
                 // Schema 5 only adds the two derivation columns. Existing rows
                 // keep their payload key and are re-derived lazily, once, by the
                 // reader — no history row is touched and no payload is rewritten.
-                final columns = await db.rawQuery('PRAGMA table_info(range_index)');
+                final columns =
+                    await db.rawQuery('PRAGMA table_info(range_index)');
                 // `labels` is left behind by the first form of these columns; it is
                 // no longer read, and dropping it would rewrite every row.
                 for (final column in [
@@ -148,40 +154,44 @@ class MarketStore {
                 final columns =
                     await db.rawQuery('PRAGMA table_info(range_index)');
                 if (!columns.any((r) => r['name'] == 'amount_raw')) {
-                  await db.execute(
-                      "ALTER TABLE range_index ADD COLUMN amount_raw "
-                      "TEXT NOT NULL DEFAULT ''");
+                  await db
+                      .execute("ALTER TABLE range_index ADD COLUMN amount_raw "
+                          "TEXT NOT NULL DEFAULT ''");
                 }
               }
             }));
     return MarketStore(db);
   }
 
-  Future<List<Quote>> latest() async => compute(
-      _decodeQuotes,
-      // Only the payload column: the other three were read into a map per row
-      // and dropped again, on the largest read the app does.
-      (await db.query('latest', columns: ['payload'], where: 'active=1'))
-          .map((r) => r['payload'] as String)
-          .toList());
+  Future<List<Quote>> latest() => _readLatest();
 
-  /// The active rows of one endpoint, decoded.
-  ///
-  /// A refresh receives one source at a time. Publishing that source by
-  /// re-decoding the whole archive is linear per call and quadratic per
-  /// refresh: on a large archive every publish allocates a fresh copy of every
-  /// stored row, which is the allocation churn behind the refresh crash. This
-  /// decodes only the rows that actually changed.
-  Future<List<Quote>> latestFor(String endpoint) async => compute(
-      _decodeQuotes,
-      (await db.query('latest',
-              columns: ['payload'],
-              where: 'endpoint=? AND active=1',
-              whereArgs: [endpoint]))
-          .map((r) => r['payload'] as String)
-          .toList());
+  /// Decode bounded pages inside one consistent SQLite snapshot. A large
+  /// archive no longer crosses the platform channel as one giant JSON list.
+  Future<List<Quote>> _readLatest({String? endpoint}) =>
+      db.transaction((tx) async {
+        final result = <Quote>[];
+        var after = 0;
+        while (true) {
+          final rows = await tx.query('latest',
+              columns: ['rowid', 'payload'],
+              where:
+                  'rowid>? AND active=1${endpoint == null ? '' : ' AND endpoint=?'}',
+              whereArgs: [after, if (endpoint != null) endpoint],
+              orderBy: 'rowid',
+              limit: _indexChunk);
+          if (rows.isEmpty) break;
+          result.addAll(await compute(_decodeQuotes,
+              [for (final row in rows) row['payload'] as String]));
+          after = rows.last['rowid'] as int;
+        }
+        return result;
+      });
+
+  Future<List<Quote>> latestFor(String endpoint) =>
+      _readLatest(endpoint: endpoint);
   Future<List<Quote>> history(String id, {DateTime? since, int? limit}) async {
     final rows = await db.query('history',
+        columns: ['payload'],
         where: since == null ? 'id=?' : 'id=? AND captured_at>=?',
         whereArgs: since == null ? [id] : [id, since.toUtc().toIso8601String()],
         orderBy: 'captured_at DESC, seq DESC',
@@ -323,8 +333,8 @@ class MarketStore {
   /// removes repeated parsing. Each row is keyed by the fingerprint of the
   /// payload it was derived from, so a rewritten payload is re-derived and an
   /// untouched one is never parsed again — even after a restart.
-  Future<void> _indexPayloads(
-      DatabaseExecutor tx, Iterable<({String payload, String hash})> rows) async {
+  Future<void> _indexPayloads(DatabaseExecutor tx,
+      Iterable<({String payload, String hash})> rows) async {
     // One entry per payload key: the same payload can reach here from more than
     // one row of one snapshot, and deriving it twice would only rewrite itself.
     final unique = <String, String>{};
@@ -362,80 +372,96 @@ class MarketStore {
     // Deriving a row parses its payload, extracts its spec and builds its keys.
     // That is CPU work belonging to the archive, not to the frame being drawn,
     // so it runs on a worker isolate and only the finished rows come back.
-    final batch = tx.batch();
     for (final chunk in _chunks(todo)) {
+      // Bound native-channel arguments and derived maps to one chunk. The
+      // enclosing transaction still makes all chunks atomic.
+      final batch = tx.batch();
       for (final row in await compute(_deriveIndexRows, chunk)) {
         batch.insert('range_index', row,
             conflictAlgorithm: ConflictAlgorithm.replace);
       }
+      await batch.commit(noResult: true);
     }
-    // One commit: per-row inserts measured 2.6 s against 0.12 s batched.
-    await batch.commit(noResult: true);
   }
 
   /// Index rows for the same selection `rangePayloads` returns, as the minimum
   /// the range engine needs: no payload parsing, no `Quote` construction.
   Future<List<Map<String, Object?>>> rangeIndexRows(DateTime now,
-      {int windowDays = 0}) async {
-    var payloads = await rangePayloads(now, windowDays: windowDays);
-    final wanted = <String, String>{};
-    // The result is ordered by payload key, so the ordered keys are kept and
-    // the payload strings themselves are only needed for the rows that still
-    // have to be derived. Holding both, for every row of the archive, doubled
-    // the peak of the largest read in the app.
-    final orderedHashes = <String>[];
-    for (final payload in payloads) {
-      final hash = payloadFingerprint(payload);
-      orderedHashes.add(hash);
-      wanted[hash] = payload;
-    }
-    payloads = const [];
-    final indexed = <String, Map<String, Object?>>{};
-    final hashes = wanted.keys.toList();
-    for (final chunk in _chunks(hashes)) {
-      final found = await db.query('range_index',
-          where: 'payload IN (${List.filled(chunk.length, '?').join(',')})',
-          whereArgs: chunk);
-      for (final row in found) {
-        indexed[row['payload'] as String] = row;
-      }
-    }
-    // A row of an older derivation is as good as missing: it lacks the columns
-    // the prices tab filters on, so it is rebuilt once and then reused.
-    final missing = [
-      for (final e in wanted.entries)
-        if (!indexed.containsKey(e.key) ||
-            !RowFacts.isCurrent(indexed[e.key] as Map<String, Object?>))
-          (payload: e.value, hash: e.key)
-    ];
-    if (missing.length < wanted.length) {
-      // Every payload still referenced here stays reachable, so the rows that
-      // are already indexed are dropped now: on a warm archive that is nearly
-      // all of them, and they are the largest thing this read holds.
-      final needed = {for (final m in missing) m.hash};
-      wanted.removeWhere((hash, _) => !needed.contains(hash));
-    }
-    if (missing.isNotEmpty) {
-      // First run after an upgrade (or a payload not yet indexed): derive now and
-      // store, so the next read is instant and nothing is recomputed again.
-      await db.transaction((tx) => _indexPayloads(tx, missing));
-      final hashes = missing.map((m) => m.hash).toList();
-      for (final chunk in _chunks(hashes)) {
-        final found = await db.query('range_index',
-            where: 'payload IN (${List.filled(chunk.length, '?').join(',')})',
-            whereArgs: chunk);
-        for (final row in found) {
-          indexed[row['payload'] as String] = row;
+          {int windowDays = 0}) =>
+      db.transaction((tx) async {
+        // Keep a snapshot of row identifiers in SQLite, NOT every JSON payload in
+        // Dart. A keyset avoids repeated OFFSET scans and bounds each channel read.
+        await tx.execute('CREATE TEMP TABLE ironpin_range_read ('
+            'position INTEGER PRIMARY KEY, kind INTEGER NOT NULL, source_row INTEGER NOT NULL)');
+        try {
+          await tx.rawInsert(
+              'INSERT INTO ironpin_range_read(kind,source_row) '
+              'SELECT 0,seq FROM history WHERE market_at>=? AND market_at<=? '
+              'UNION ALL SELECT 1,rowid FROM latest NOT INDEXED '
+              'UNION ALL SELECT 0,h.seq FROM history h JOIN '
+              '(SELECT MAX(seq) AS seq FROM history '
+              'WHERE id NOT IN (SELECT id FROM latest) GROUP BY id) orphan '
+              'ON h.seq=orphan.seq',
+              [
+                now.toUtc().subtract(windowFor(windowDays)).toIso8601String(),
+                now.toUtc().toIso8601String()
+              ]);
+          final indexed = <String, Map<String, Object?>>{};
+          final result = <Map<String, Object?>>[];
+          var after = 0;
+          while (true) {
+            final page = await tx.rawQuery(
+                'SELECT s.position, CASE WHEN s.kind=0 THEN h.payload ELSE l.payload END AS payload '
+                'FROM ironpin_range_read s '
+                'LEFT JOIN history h ON s.kind=0 AND h.seq=s.source_row '
+                'LEFT JOIN latest l ON s.kind=1 AND l.rowid=s.source_row '
+                'WHERE s.position>? ORDER BY s.position LIMIT ?',
+                [after, _indexChunk]);
+            if (page.isEmpty) break;
+            final ordered = <String>[];
+            final payloads = <String, String>{};
+            for (final row in page) {
+              final payload = row['payload'] as String;
+              final hash = payloadFingerprint(payload);
+              ordered.add(hash);
+              if (!indexed.containsKey(hash)) payloads[hash] = payload;
+            }
+            if (payloads.isNotEmpty) {
+              final hashes = payloads.keys.toList();
+              final marks = List.filled(hashes.length, '?').join(',');
+              var found = await tx.query('range_index',
+                  where: 'payload IN ($marks)', whereArgs: hashes);
+              final missing = payloads.keys.toSet();
+              for (final row in found) {
+                if (RowFacts.isCurrent(row)) {
+                  final hash = row['payload'] as String;
+                  indexed[hash] = row;
+                  missing.remove(hash);
+                }
+              }
+              if (missing.isNotEmpty) {
+                await _indexPayloads(tx, [
+                  for (final hash in missing)
+                    (payload: payloads[hash]!, hash: hash)
+                ]);
+                found = await tx.query('range_index',
+                    where: 'payload IN ($marks)', whereArgs: hashes);
+                for (final row in found) {
+                  indexed.putIfAbsent(row['payload'] as String, () => row);
+                }
+              }
+            }
+            for (final hash in ordered) {
+              final row = indexed[hash];
+              if (row != null) result.add(row);
+            }
+            after = page.last['position'] as int;
+          }
+          return result;
+        } finally {
+          await tx.execute('DROP TABLE IF EXISTS temp.ironpin_range_read');
         }
-      }
-    }
-    // The payload strings are no longer reachable from here, so they can be
-    // collected before the caller keeps the index rows.
-    wanted.clear();
-    return [
-      for (final hash in orderedHashes) indexed[hash] ?? const {}
-    ].where((row) => row.isNotEmpty).toList();
-  }
+      });
 
   Future<RangeReport> rangeReport(DateTime now) async {
     final watch = Stopwatch()..start();
@@ -534,8 +560,7 @@ List<Map<String, Object?>> _deriveIndexRows(List<String> payloads) {
   final out = <Map<String, Object?>>[];
   for (final payload in payloads) {
     try {
-      out.add(RowFacts.ofPayload(payload)
-          .toRow(payloadFingerprint(payload)));
+      out.add(RowFacts.ofPayload(payload).toRow(payloadFingerprint(payload)));
     } catch (_) {
       continue;
     }

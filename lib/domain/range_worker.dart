@@ -18,6 +18,7 @@ class RangeWorker {
 
   Isolate? _isolate;
   ReceivePort? _from;
+  ReceivePort? _errors;
   SendPort? _to;
   StreamSubscription? _subscription;
   final _waiting = <String, Completer<Map<String, Object?>>>{};
@@ -49,15 +50,20 @@ class RangeWorker {
         case 'progress':
           _progress[id]?.call(message['done'] as int, message['total'] as int);
         case 'result':
-          _waiting.remove(id)?.complete(
-              Map<String, Object?>.from(message['data'] as Map));
+          _waiting
+              .remove(id)
+              ?.complete(Map<String, Object?>.from(message['data'] as Map));
         case 'error':
-          _waiting.remove(id)?.completeError(StateError('${message['message']}'));
+          _waiting
+              .remove(id)
+              ?.completeError(StateError('${message['message']}'));
       }
     });
     final errors = ReceivePort();
-    final isolate = await Isolate.spawn<List<Object>>(_workerMain,
-        [from.sendPort, errors.sendPort], onError: errors.sendPort);
+    _errors = errors;
+    final isolate = await Isolate.spawn<List<Object>>(
+        _workerMain, [from.sendPort, errors.sendPort],
+        onError: errors.sendPort);
     errors.listen((message) {
       if (message is! List) return;
       // An isolate crash invalidates the snapshot: everything pending fails and
@@ -68,7 +74,8 @@ class RangeWorker {
       _reset('کارگر رنج متوقف شد؛ دوباره تلاش کنید.');
     });
     _isolate = isolate;
-    _to = await ready.future.timeout(const Duration(seconds: 10), onTimeout: () {
+    _to =
+        await ready.future.timeout(const Duration(seconds: 10), onTimeout: () {
       _reset('کارگر رنج پاسخ نداد');
       throw TimeoutException(
           'Range worker start timed out', const Duration(seconds: 10));
@@ -83,6 +90,8 @@ class RangeWorker {
     _to = null;
     _from?.close();
     _from = null;
+    _errors?.close();
+    _errors = null;
     _loadedToken = null;
     _rows = 0;
     for (final completer in _waiting.values) {
@@ -105,8 +114,8 @@ class RangeWorker {
     }
     _to!.send({'type': 'load', 'id': id, 'token': token, 'rows': rows});
     try {
-      await completer.future
-          .timeout(const Duration(seconds: 60), onTimeout: () {
+      await completer.future.timeout(const Duration(seconds: 60),
+          onTimeout: () {
         _waiting.remove(id);
         throw TimeoutException(
             'بارگذاری فهرست محلی طول کشید', const Duration(seconds: 60));
@@ -169,8 +178,13 @@ Future<void> _workerMain(List<Object> arguments) async {
   final inbox = ReceivePort();
   final pending = <Map>[];
   final cancelled = <String>{};
+  Completer<void>? wake;
   inbox.listen((message) {
-    if (message is Map) pending.add(message);
+    if (message is Map) {
+      pending.add(message);
+      final signal = wake;
+      if (signal != null && !signal.isCompleted) signal.complete();
+    }
   });
   out.send(inbox.sendPort);
   var index = PreparedIndex(const [], const []);
@@ -180,7 +194,11 @@ Future<void> _workerMain(List<Object> arguments) async {
   try {
     while (true) {
       if (pending.isEmpty) {
-        await yieldNow();
+        // Sleep until an actual message arrives, instead of spinning a
+        // zero-delay timer for the entire lifetime of the loaded worker.
+        wake = Completer<void>();
+        await wake.future;
+        wake = null;
         continue;
       }
       final message = pending.removeAt(0);
@@ -192,8 +210,13 @@ Future<void> _workerMain(List<Object> arguments) async {
         case 'load':
           // A new snapshot replaces the old one completely: no row of a previous
           // archive may survive into this worker.
-          index = prepare((message['rows'] as List).cast<Map<String, Object?>>());
-          out.send({'type': 'result', 'id': id, 'data': {'rows': index.length}});
+          index =
+              prepare((message['rows'] as List).cast<Map<String, Object?>>());
+          out.send({
+            'type': 'result',
+            'id': id,
+            'data': {'rows': index.length}
+          });
           continue;
         case 'run':
           break;

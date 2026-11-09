@@ -156,8 +156,8 @@ void main() {
       store = await MarketStore.open(dbPath: path, factory: databaseFactoryFfi);
       expect((await store.latest()).single.thicknessLabel, '8');
       // Schema 4 adds the derived range index and schema 6 its `amount_raw`
-      // column; every earlier upgrade still runs.
-      expect(await store.db.getVersion(), 6);
+      // column; schema 7 adds the endpoint lookup index. Earlier upgrades run.
+      expect(await store.db.getVersion(), 7);
       final c = MarketController(store);
       await c.init();
       expect(c.quotes.single.id, 'row-1');
@@ -213,8 +213,8 @@ void main() {
         await logger.record('source', 'example', {'endpoint': 'test-source'});
         expect(await logger.export(), isNull);
         expect(calls.single.method, 'exportLogs');
-        expect(
-            (calls.single.arguments['paths'] as List).single, endsWith('.md'));
+        expect((calls.single.arguments['paths'] as List),
+            everyElement(endsWith('.md')));
       } finally {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(AppLogger.platform, null);

@@ -1,0 +1,14 @@
+{
+  "environment": "Linux sqflite_common_ffi; synthetic, no network",
+  "rows": 6000,
+  "indexRows": 12000,
+  "candidateCount": 6000,
+  "beforeColdReadMiB": 131.328125,
+  "afterColdReadMiB": 178.67578125,
+  "coldReadMs": 377,
+  "sampledColdReadAndFinalizationPeakMiB": 201.65625,
+  "processMaxRssMiB": 212.59765625,
+  "workerLoaded": false,
+  "finalizationReadyMs": 859,
+  "note": "One run; RSS sampling can miss short peaks. Not Android heap/FPS."
+}

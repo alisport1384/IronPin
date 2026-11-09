@@ -1,0 +1,14 @@
+{
+  "version": "0.8.5+21",
+  "confirmationType": "user_report_after_delivery",
+  "userFeedback": "عالی شد",
+  "deviceAsPreviouslyReported": {
+    "android": "10",
+    "ramGiB": "3 or 4; approximate"
+  },
+  "independentDeviceInstrumentation": false,
+  "allDevicesValidated": false,
+  "runtimeMatchesPreviouslyBuiltApkInputs": true,
+  "runtimeInputReference": "release-metadata.json",
+  "androidApkSha256": "c97c09447d98b4bedbeb907c425935f4fd3be7868a3d4200b5fc37b3a4eb1e28"
+}

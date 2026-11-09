@@ -1,7 +1,7 @@
 name: ironpin
 description: Persian iron market monitor with on-device source refresh and history.
 publish_to: none
-version: 0.8.3+19
+version: 0.8.5+21
 environment:
   sdk: '>=3.5.0 <4.0.0'
 dependencies:
