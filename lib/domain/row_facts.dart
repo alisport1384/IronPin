@@ -32,6 +32,16 @@ class RowFacts {
   /// Real source link of the offer, so a rendered row still opens its origin.
   final String sourceUrl;
 
+  /// The amount exactly as the source wrote it (`مبلغ استخراج‌شده`), kept even
+  /// when it is not a single comparable number.
+  ///
+  /// A range offer ("۴۱,۰۰۰ تا ۴۳,۰۰۰") and an amount whose currency the source
+  /// never stated both have `amount == null`, but the source *did* publish a
+  /// number. Without this column a card rebuilt from the index had nothing to
+  /// print and showed «بدون قیمت» for an offer that carries a price, and it also
+  /// lost `Quote.hasTextAmount`, which the classic prices filter uses.
+  final String amountRaw;
+
   /// Pre-normalised city haystack (seller city + title + search text), so the
   /// city scope is one regular-expression test per row instead of a rebuild.
   final String haystack;
@@ -71,6 +81,7 @@ class RowFacts {
     required this.sourceUrl,
     required this.haystack,
     this.labels = const {},
+    this.amountRaw = '',
     required this.announceKey,
     required this.productKey,
     required this.amount,
@@ -97,11 +108,15 @@ class RowFacts {
   /// Version of the stored derivation. A row written by an older version is
   /// re-derived once and then never again; the fingerprint stays the key, so a
   /// rebuild is a bounded upgrade, not a re-read of the archive.
-  static const derive = 'v4';
+  ///
+  /// `v5` adds `amount_raw`, the amount as the source wrote it.
+  static const derive = 'v5';
 
   /// True when a stored row carries every column this version writes.
   static bool isCurrent(Map<String, Object?> row) =>
-      row['derive'] == derive && (row['source_date_raw'] as String?) != null;
+      row['derive'] == derive &&
+      (row['source_date_raw'] as String?) != null &&
+      (row['amount_raw'] as String?) != null;
 
   static RowFacts ofQuote(Quote q) {
     final facts = ProductFacts.of(q);
@@ -129,6 +144,7 @@ class RowFacts {
       sourceUrl: q.sourceUrl,
       haystack: ProductText.normalize('${q.sellerCity} ${q.title} '
           '${q.specificationLabel} ${q.seller}'),
+      amountRaw: q.details['مبلغ استخراج‌شده'] ?? '',
       labels: {
         'size': q.sizeLabel,
         'thickness': q.thicknessLabel,
@@ -191,6 +207,7 @@ class RowFacts {
         'dimensions_label': labels['dimensions'] ?? '',
         'grade_label': labels['grade'] ?? '',
         'source_date_raw': labels['sourceDate'] ?? '',
+        'amount_raw': amountRaw,
         'amount': amount,
         'currency': currency,
         'market_at': marketAt,
@@ -240,6 +257,7 @@ class RowFacts {
               e.key: e.value as String,
           'sourceDate': row['source_date_raw'] as String? ?? '',
         },
+        amountRaw: row['amount_raw'] as String? ?? '',
         announceKey: row['announce_key'] as String,
         productKey: row['product_key'] as String?,
         amount: (row['amount'] as num?)?.toDouble(),
@@ -277,6 +295,7 @@ class RowFacts {
         'labels': labels,
         'sourceDateRaw': labels['sourceDate'] ?? '',
         'sourceUrl': sourceUrl,
+        'amountRaw': amountRaw,
         'amount': amount,
         'currency': currency,
         'marketAt': marketAt,
@@ -389,6 +408,9 @@ Map<String, Object?> wireFromRow(Map<String, Object?> row) => {
       // rules read to answer "is this rate fresh".
       'sourceDateRaw': row['source_date_raw'] ?? '',
       'sourceUrl': row['source_url'] ?? '',
+      // The source's own amount text travels with the row, so a card rebuilt
+      // from the index prints what the source published instead of «بدون قیمت».
+      'amountRaw': row['amount_raw'] ?? '',
       'amount': row['amount'],
       'currency': row['currency'] ?? '',
       'marketAt': row['market_at'],
@@ -428,12 +450,13 @@ Quote quoteFromWire(Map<String, Object?> wire) => Quote(
       sourceDateRaw: wire['sourceDateRaw'] as String? ?? '',
       // The announcement time the index carries is the one the rules must see;
       // an empty payload would otherwise re-derive "undated" from nothing.
-      details: wire['marketAt'] == null
-          ? const {}
-          : {
-              'زمان انتشار پیام': DateTime.fromMillisecondsSinceEpoch(
-                      wire['marketAt'] as int,
-                      isUtc: true)
-                  .toIso8601String()
-            },
+      details: {
+        if (wire['marketAt'] != null)
+          'زمان انتشار پیام': DateTime.fromMillisecondsSinceEpoch(
+                  wire['marketAt'] as int,
+                  isUtc: true)
+              .toIso8601String(),
+        if ((wire['amountRaw'] as String? ?? '').isNotEmpty)
+          'مبلغ استخراج‌شده': wire['amountRaw'] as String,
+      },
     );

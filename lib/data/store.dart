@@ -27,6 +27,7 @@ const _rangeIndexSchema = [
       "dimensions_label TEXT NOT NULL DEFAULT '', grade_label TEXT NOT NULL DEFAULT '', "
       'size_num REAL, thickness_num REAL, '
       "source_date_raw TEXT NOT NULL DEFAULT '', "
+      "amount_raw TEXT NOT NULL DEFAULT '', "
       "derive TEXT NOT NULL DEFAULT '', amount REAL, currency TEXT NOT NULL, "
       'market_at INTEGER, '
       'fetched_at INTEGER NOT NULL)',
@@ -46,7 +47,7 @@ class MarketStore {
     final p = dbPath ?? path.join(await getDatabasesPath(), 'ironpin.db');
     final db = await f.openDatabase(p,
         options: OpenDatabaseOptions(
-            version: 5,
+            version: 6,
             onCreate: (db, version) async {
               await db.execute(
                   'CREATE TABLE latest (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)');
@@ -133,6 +134,23 @@ class MarketStore {
                 // payloads that are already stored, so no history is rewritten.
                 for (final sql in _rangeIndexSchema) {
                   await db.execute(sql);
+                }
+              }
+              if (oldVersion < 6) {
+                // Schema 6 adds `amount_raw`: the amount exactly as the source
+                // wrote it, so a range/candidate card rebuilt from the index can
+                // print a price for an offer whose currency or single amount the
+                // source never stated. Derived state only — the rows keep their
+                // payload key and are re-derived lazily, once, by the reader.
+                // Runs after the block that creates the table: a pre-4 archive
+                // has no `range_index` yet, so the column is only added once the
+                // table exists.
+                final columns =
+                    await db.rawQuery('PRAGMA table_info(range_index)');
+                if (!columns.any((r) => r['name'] == 'amount_raw')) {
+                  await db.execute(
+                      "ALTER TABLE range_index ADD COLUMN amount_raw "
+                      "TEXT NOT NULL DEFAULT ''");
                 }
               }
             }));
@@ -293,7 +311,7 @@ class MarketStore {
     for (final item in rows) {
       if (!seen.add(item.hash)) continue;
       final existing = await tx.query('range_index',
-          columns: ['derive', 'source_date_raw'],
+          columns: ['derive', 'source_date_raw', 'amount_raw'],
           where: 'payload=?',
           whereArgs: [item.hash],
           limit: 1);

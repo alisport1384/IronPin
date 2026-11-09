@@ -365,7 +365,11 @@ class CandidateScope {
     this.grade = '',
     this.cityKind = 'all',
     this.onlyFresh = false,
-    this.includeUnpriced = true,
+    // The same default as `MarketFilter.includeUnpriced`: a scope that does not
+    // say otherwise hides announcements with no price at all, exactly as the
+    // classic filter does. A row that still carries the amount its source wrote
+    // is kept either way, which is also what the classic filter decides.
+    this.includeUnpriced = false,
     this.minPrice,
     this.maxPrice,
   });
@@ -463,14 +467,26 @@ class CandidateScope {
         (basisKey.isEmpty
             ? toman((raw['amount'] as num?)?.toDouble(), currency)
             : null);
-    if (price == null || !price.isFinite || price <= 0) {
-      unpriced++;
-      held[identity] = 1;
-      continue;
-    }
-    // A price filter is a filter on the same comparable number.
-    if ((scope.minPrice != null && price < scope.minPrice!) ||
+    final comparable = price != null && price.isFinite && price > 0;
+    if (!comparable) {
+      // `MarketFilter.matches` keeps a row that has no comparable price when the
+      // row still carries the amount its source wrote (`hasTextAmount`), or when
+      // the user turned on «نمایش اعلام‌های بدون قیمت معتبر». This path dropped
+      // both, so the prices tab listed fewer offers than the filter it mirrors:
+      // a range offer («۴۱,۰۰۰ تا ۴۳,۰۰۰») or an amount whose currency the
+      // source never stated disappeared instead of being shown with its text.
+      final hasTextAmount = (raw['amount_raw'] as String? ?? '').isNotEmpty;
+      if (!scope.includeUnpriced && !hasTextAmount) {
+        unpriced++;
+        held[identity] = 1;
+        continue;
+      }
+      // A bound is a bound on a comparable number; a row without one can never
+      // satisfy it, exactly as the classic filter decides.
+      if (scope.minPrice != null || scope.maxPrice != null) continue;
+    } else if ((scope.minPrice != null && price < scope.minPrice!) ||
         (scope.maxPrice != null && price > scope.maxPrice!)) {
+      // A price filter is a filter on the same comparable number.
       continue;
     }
     if (scope.category.isNotEmpty && raw['category'] != scope.category) {

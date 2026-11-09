@@ -367,11 +367,23 @@ class TextPriceEngine {
           RegExp(r'سایز|ضخامت|ابعاد|نمره|حرارتی|آجدار|ساده|\d+(?:[.٫]\d+)?\s*میل|A[1-4]|ST(?:37|52)',
                   caseSensitive: false)
               .hasMatch(line);
+      // The owner of a row that names no product of its own: the specification
+      // line still waiting for its amount, or — once that one has been spent —
+      // the group heading the row is listed under.
+      //
+      // A channel lists eight beam sizes under one heading. `pending` used to be
+      // cleared by the first amount, so every later row of the same list had no
+      // owner, produced an empty candidate and was dropped: seven of eight
+      // announced prices never reached the archive, and the one that survived
+      // carried the heading instead of its own row. The heading is evidence the
+      // source itself wrote above the row, so it owns the row; nothing is
+      // inferred from the amount.
+      final owner = pending ?? (heading.isEmpty ? null : heading);
       final candidate = descriptor
           ? line
-          : pending == null
+          : owner == null
               ? ''
-              : '$pending $line';
+              : '$owner $line';
       if (candidate.isEmpty ||
           (cat.isEmpty &&
               contextCategory.isEmpty &&
@@ -380,7 +392,11 @@ class TextPriceEngine {
         continue;
       }
       // A plain number after a model is a candidate, not a verified comparable rate.
-      // More than one unlabelled number is ambiguous; never guess which is the price.
+      // More than one *unlabelled* number is ambiguous; never guess which is the
+      // price. A row that also carries an incidental number (a year, an order
+      // code, a table index) is not ambiguous when exactly one amount bears the
+      // currency word — that word is the source saying which number is the price,
+      // so the row is read instead of being thrown away.
       final labelled = numbers
           .where((m) =>
               RegExp(r'^\s*(?:تومان|ریال)').hasMatch(line.substring(m.end)))
@@ -393,7 +409,7 @@ class TextPriceEngine {
           : labelled.isNotEmpty
               ? labelled
               : numbers;
-      if ((!range && numbers.length != 1) || candidates.isEmpty) {
+      if ((!range && candidates.length != 1) || candidates.isEmpty) {
         pending = null;
         continue;
       }
@@ -424,7 +440,12 @@ class TextPriceEngine {
           : category(candidate).isNotEmpty
               ? category(candidate)
               : contextCategory;
-      var model = (descriptor ? line.substring(0, chosen.start) : pending!)
+      var model = (descriptor
+              ? line.substring(0, chosen.start)
+              // The row's own text before its amount is part of what the source
+              // wrote for this row (its size column, its label), so it travels
+              // with the owner into the title instead of being dropped.
+              : '$owner ${line.substring(0, chosen.start)}')
           .replaceAll(RegExp(r'[:：=⬅️✅🔹▫️💰]+', unicode: true), ' ')
           .trim();
       if (model.isEmpty) model = heading;
