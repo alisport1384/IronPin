@@ -120,6 +120,9 @@ class RowFacts {
 
   static RowFacts ofQuote(Quote q) {
     final facts = ProductFacts.of(q);
+    // Derived once for the whole row: `exactProductKey` and `announcementKey`
+    // (via `rangeGroupKey`) each need it, and each used to re-derive it.
+    final productKey = exactProductKey(q, facts: facts);
     return RowFacts(
       family: facts.family.isEmpty ? 'سایر' : facts.family,
       values: facts.values,
@@ -158,8 +161,11 @@ class RowFacts {
         // date ("only fresh", "this week"), even though the index knows it.
         'sourceDate': q.sourceDateRaw,
       },
-      announceKey: announcementKey(q),
-      productKey: exactProductKey(q),
+      // Both of these derive the product facts, and `announcementKey` reaches
+      // them a third time through `rangeGroupKey`. The facts are derived once
+      // above and handed down, so a stored row is not parsed three times over.
+      announceKey: announcementKey(q, facts: facts, productKey: productKey),
+      productKey: productKey,
       amount: q.amount,
       currency: q.currency,
       marketAt: q.marketAt?.toUtc().millisecondsSinceEpoch,

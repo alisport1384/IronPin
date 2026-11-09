@@ -4,24 +4,33 @@ import 'market.dart';
 import 'money.dart';
 import 'product_schema.dart';
 
-String _norm(String s) => latin(s)
-    .toLowerCase()
-    .trim()
-    .replaceAll(RegExp(r'\s+'), ' ')
-    .replaceAll('×', 'x');
+/// Compiled once. These ran once per stored row, and `ProductFacts.of` runs
+/// three times per row on the archive read (see [exactProductKey]).
+final _normSpace = RegExp(r'\s+');
+final _publicPostPath = RegExp(r'/[A-Za-z0-9_]+/\d+/?$');
+final _plainNumber = RegExp(r'^\d+(?:\.\d+)?$');
+final _boltKindWords = RegExp('مکانیکی|شیمیایی');
+
+String _norm(String s) =>
+    latin(s).toLowerCase().trim().replaceAll(_normSpace, ' ').replaceAll('×', 'x');
 
 /// Conservative identity: different titles or missing brands are not guessed
 /// to denote the same product. Office/loading city does not restrict sellers.
 double? singleSpecNumber(String value) {
   final text = latin(value).trim().replaceAll('٫', '.');
-  if (!RegExp(r'^\d+(?:\.\d+)?$').hasMatch(text)) return null;
+  if (!_plainNumber.hasMatch(text)) return null;
   final n = double.tryParse(text);
   return n != null && n.isFinite && n > 0 ? n : null;
 }
 
 /// Technical grouping only. Origin, brand, title, tax and seller do not gate it.
-String? exactProductKey(Quote q) {
-  final f = ProductFacts.of(q);
+///
+/// [facts] lets a caller that already derived the row's product facts pass them
+/// in. Deriving them costs ~0.4 ms per row, and a caller like `RowFacts.ofQuote`
+/// reaches this through two different paths for the same row; without the
+/// parameter that work happened three times per stored row.
+String? exactProductKey(Quote q, {ProductFacts? facts}) {
+  final f = facts ?? ProductFacts.of(q);
   if (!productFields.containsKey(f.family)) return null;
   // Proprietary anchors and bare rods are not interchangeable by diameter alone.
   if (f.family == 'بولت' &&
@@ -38,7 +47,7 @@ String? exactProductKey(Quote q) {
         'dimUnit'
       ].any((key) => (f.values[key] ?? '').isEmpty)) return null;
   if (f.family == 'بولت' &&
-      RegExp('مکانیکی|شیمیایی').hasMatch(f.values['kind'] ?? '') &&
+      _boltKindWords.hasMatch(f.values['kind'] ?? '') &&
       ['model', 'embedment'].any((key) => (f.values[key] ?? '').isEmpty)) {
     return null;
   }
@@ -83,15 +92,16 @@ String? resolvedRowBasis(Map<String, Object?> prices, String unit) {
   if (prices['piece'] is num) return 'piece';
   return null;
 }
-String? rangeGroupKey(Quote q) {
-  final product = exactProductKey(q);
+String? rangeGroupKey(Quote q,
+    {ProductFacts? facts, String? productKey}) {
+  final product = productKey ?? exactProductKey(q, facts: facts);
   return product == null ? null : jsonEncode([product, rangeBasis(q)]);
 }
 
-String announcementKey(Quote q) {
+String announcementKey(Quote q,
+    {ProductFacts? facts, String? productKey}) {
   final uri = Uri.tryParse(q.sourceUrl);
-  final post =
-      uri != null && RegExp(r'/[A-Za-z0-9_]+/\d+/?$').hasMatch(uri.path);
+  final post = uri != null && _publicPostPath.hasMatch(uri.path);
   // Edited versions of one public message are ONE announcement; newest wins.
   // Day-only tables have no separate publication identifier: identical rates
   // for the same row/date cannot safely be asserted to be distinct events.
@@ -99,7 +109,7 @@ String announcementKey(Quote q) {
     q.endpoint,
     q.id,
     _norm(q.seller),
-    rangeGroupKey(q),
+    rangeGroupKey(q, facts: facts, productKey: productKey),
     post ? '${uri.host}${uri.path}' : q.id,
     q.marketAt?.toUtc().toIso8601String(),
     if (!post)

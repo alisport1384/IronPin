@@ -459,6 +459,18 @@ class MarketController extends ChangeNotifier {
   /// loaded and whenever the basis/search/city changes — never from `build`.
   Future<void> prepareCandidates() async {
     if (disposed) return;
+    // During a refresh the archive is being rewritten source by source, so an
+    // index built now would describe a half-written archive — and holding it
+    // means two full representations of the archive in memory at once (the
+    // decoded rows *and* the wide index rows) for the whole refresh, which is
+    // what pushed a large archive into an out-of-memory crash. The classic
+    // filter over the rows already in memory answers meanwhile; the index is
+    // built once, when the refresh finishes.
+    if (busy) {
+      candidates = null;
+      _candidateKey = '';
+      return;
+    }
     final key = _currentCandidateKey;
     if (key == _candidateKey && candidates != null) return;
     try {
@@ -543,8 +555,9 @@ class MarketController extends ChangeNotifier {
     states = await store.syncStates();
     _notify();
     // Only after startup is complete: the index read must never sit in front of
-    // the first prices on screen (both share one SQLite connection).
-    if (ready) {
+    // the first prices on screen (both share one SQLite connection). A refresh
+    // in progress defers both — see `prepareCandidates`.
+    if (ready && !busy) {
       unawaited(prepareCandidates());
       unawaited(warmRangeIndex());
     }
@@ -579,31 +592,28 @@ class MarketController extends ChangeNotifier {
     _notify();
   }
 
-  DateTime? _publishedAt;
   bool _publishing = false;
   bool _indexStale = false;
 
-  /// Publishes received prices without letting 82 sources each pay for a whole
-  /// archive decode.
+  /// Publishes one received source without re-decoding the archive.
   ///
-  /// `reload()` decodes every stored row on a fresh isolate and rebuilds the
-  /// range index. Doing that once per source is linear per call but quadratic
-  /// per refresh, which is what makes a long refresh crawl on a large archive.
-  /// The work is coalesced: the first source publishes immediately, so the tab
-  /// never waits for the slowest source, and later sources publish at most once
-  /// per window. The final state is always published by `refresh()` itself.
-  Future<void> _publishProgress({bool force = false}) async {
+  /// The rows of the source that just arrived replace that source's rows in
+  /// memory; every other row is already decoded and is left alone. This is what
+  /// keeps a refresh of many sources against a large archive from allocating a
+  /// fresh copy of every stored row once per publish.
+  Future<void> _publishEndpoint(String endpoint) async {
     if (_publishing) return;
-    final now = DateTime.now();
-    if (!force &&
-        _publishedAt != null &&
-        now.difference(_publishedAt!) < const Duration(milliseconds: 2500)) {
-      return;
-    }
     _publishing = true;
     try {
-      _publishedAt = now;
-      await reload();
+      final rows = await store.latestFor(endpoint);
+      if (disposed) return;
+      quotes = [
+        for (final q in quotes)
+          if (q.endpoint != endpoint) q,
+        ...rows,
+      ];
+      states = await store.syncStates();
+      _notify();
     } finally {
       _publishing = false;
     }
@@ -628,14 +638,15 @@ class MarketController extends ChangeNotifier {
           await store.saveSnapshot(e.id, data,
               replaceMissing: client.complete[e.id] ?? true);
           // Fresh rows are derived at write time; drop the previous answers.
-          // The index itself is rebuilt by the coalesced publish, not per source.
+          // The index itself is rebuilt once, when the refresh finishes.
           _indexStale = true;
           await rememberSources(client.discoveries[e.id] ?? []);
           historyRevision++;
           endpointRevisions.update(e.id, (n) => n + 1, ifAbsent: () => 1);
-          // Publish successful sources immediately; all-ON must not wait for
-          // the slowest source before showing the first received prices.
-          await _publishProgress(force: finished == 0);
+          // Publish this source's own rows immediately; all-ON must not wait for
+          // the slowest source before showing the first received prices, and the
+          // rest of the archive is not re-read to do it.
+          await _publishEndpoint(e.id);
         } catch (error, stack) {
           AppLogger.instance.capture(error, stack, section: 'source');
           await store.failure(
@@ -664,6 +675,10 @@ class MarketController extends ChangeNotifier {
         _indexStale = false;
       }
       await reload();
+      // The refresh is over, so the derived index is built once against the
+      // finished archive instead of once per published source.
+      unawaited(prepareCandidates());
+      unawaited(warmRangeIndex());
       unawaited(AppLogger.instance.record('network', 'refresh_complete',
           {'completed': finished, 'cachedRows': quotes.length}));
     }

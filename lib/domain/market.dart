@@ -4,18 +4,35 @@ import 'dart:convert';
 import 'product_text.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 
+/// Memoised, because `latin` is pure and its input vocabulary is tiny.
+///
+/// Every row's `details` uses the same handful of keys («سایز», «ضخامت»,
+/// «حالت», …) and the same short values, and the label and spec paths normalise
+/// each of them several times per row. Measured on a 12,000-row archive this
+/// was the single most repeated piece of work in the read.
+///
+/// The cache is bounded and cleared whole: a large archive must not be able to
+/// grow it without limit, and a cleared cache costs only a recompute.
+final Map<String, String> _latinCache = {};
+const int _latinCacheLimit = 4096;
+
 String latin(String value) {
+  final cached = _latinCache[value];
+  if (cached != null) return cached;
   const fa = '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩';
   var s = value;
   for (var i = 0; i < fa.length; i++) {
     s = s.replaceAll(fa[i], '${i % 10}');
   }
-  return s
+  final result = s
       .replaceAll('ي', 'ی')
       .replaceAll('ك', 'ک')
       .replaceAll('\u200c', ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
+      .replaceAll(_latinWhitespace, ' ')
       .trim();
+  if (_latinCache.length >= _latinCacheLimit) _latinCache.clear();
+  _latinCache[value] = result;
+  return result;
 }
 
 double? number(String s) => double.tryParse(
@@ -112,6 +129,18 @@ String parseUnit(String v) {
   return 'unknown';
 }
 
+/// Compiled once. `Quote`'s labels and search text are derived for every row of
+/// the archive, and a `RegExp` literal in that path was compiled per row (and,
+/// for the details keys, per key of every row).
+final _specKeyPattern = RegExp('عرض|ابعاد|سایز|ضخامت|طول|حالت|گرید|استاندارد');
+final _sizeInTitle =
+    RegExp(r'(?:میلگرد|تیرآهن|ناودانی|نبشی)(?:\s+سایز)?\s*(\d+(?:\.\d+)?)');
+final _dimensionsInTitle =
+    RegExp(r'\d+(?:\.\d+)?\s*[*×x]\s*\d+(?:\.\d+)?', caseSensitive: false);
+final _gradeInTitle =
+    RegExp(r'\b(?:A[1-4]|ST(?:37|52)|CK45|MO40|IPE|HEA|HEB)\b', caseSensitive: false);
+final _latinWhitespace = RegExp(r'\s+');
+
 String materialOf(String s) {
   if (s.contains('استیل')) return 'استنلس استیل';
   if (s.contains('آلومینیوم')) return 'آلومینیوم';
@@ -194,36 +223,48 @@ class Quote {
     dimensionsLabel,
     gradeLabel,
     ...details.entries
-        .where((e) => RegExp('عرض|ابعاد|سایز|ضخامت|طول|حالت|گرید|استاندارد')
-            .hasMatch(e.key))
+        .where((e) => _specKeyPattern.hasMatch(e.key))
         .map((e) => '${e.key} ${e.value}')
   ].join(' '));
   // Legacy payloads are interpreted without changing their stable source IDs.
-  late final String sizeLabel = size ??
-      (_field((k) => k.contains('سایز') || k == 'size').isNotEmpty
-          ? _field((k) => k.contains('سایز') || k == 'size')
-          : RegExp(r'(?:میلگرد|تیرآهن|ناودانی|نبشی)(?:\s+سایز)?\s*(\d+(?:\.\d+)?)')
-                  .firstMatch(latin(title))?[1] ??
-              '');
-  late final String thicknessLabel = (thickness?.isNotEmpty ?? false)
-      ? thickness!
-      : (_field((k) => k.contains('ضخامت')).isNotEmpty
-          ? _field((k) => k.contains('ضخامت'))
-          : ProductText.spec(title, categoryHint: category).thickness);
-  late final String dimensionsLabel = dimensions ??
-      (_field((k) => k.contains('ابعاد')).isNotEmpty
-          ? _field((k) => k.contains('ابعاد'))
-          : RegExp(r'\d+(?:\.\d+)?\s*[*×x]\s*\d+(?:\.\d+)?',
-                      caseSensitive: false)
-                  .firstMatch(latin(title))?[0] ??
-              '');
-  late final String gradeLabel = grade ??
-      (_field((k) => k == 'standard' || k.contains('آنالیز')).isNotEmpty
-          ? _field((k) => k == 'standard' || k.contains('آنالیز'))
-          : RegExp(r'\b(?:A[1-4]|ST(?:37|52)|CK45|MO40|IPE|HEA|HEB)\b',
-                      caseSensitive: false)
-                  .firstMatch(latin(title))?[0] ??
-              '');
+  //
+  // Each of these read `_field` twice for the same predicate: once to test that
+  // the value is not empty and once to return it. `_field` walks `details` and
+  // normalises every key and value, so on an archive read that doubled the
+  // hottest work in the row for no change in result. The value is now read once
+  // and kept.
+  late final String sizeLabel = _sizeLabel();
+  late final String thicknessLabel = _thicknessLabel();
+  late final String dimensionsLabel = _dimensionsLabel();
+  late final String gradeLabel = _gradeLabel();
+
+  String _sizeLabel() {
+    if (size != null) return size!;
+    final fromDetails = _field((k) => k.contains('سایز') || k == 'size');
+    if (fromDetails.isNotEmpty) return fromDetails;
+    return _sizeInTitle.firstMatch(latin(title))?[1] ?? '';
+  }
+
+  String _thicknessLabel() {
+    if (thickness?.isNotEmpty ?? false) return thickness!;
+    final fromDetails = _field((k) => k.contains('ضخامت'));
+    if (fromDetails.isNotEmpty) return fromDetails;
+    return ProductText.spec(title, categoryHint: category).thickness;
+  }
+
+  String _dimensionsLabel() {
+    if (dimensions != null) return dimensions!;
+    final fromDetails = _field((k) => k.contains('ابعاد'));
+    if (fromDetails.isNotEmpty) return fromDetails;
+    return _dimensionsInTitle.firstMatch(latin(title))?[0] ?? '';
+  }
+
+  String _gradeLabel() {
+    if (grade != null) return grade!;
+    final fromDetails = _field((k) => k == 'standard' || k.contains('آنالیز'));
+    if (fromDetails.isNotEmpty) return fromDetails;
+    return _gradeInTitle.firstMatch(latin(title))?[0] ?? '';
+  }
   late final String searchText =
       latin('$title $brand $seller $details').toLowerCase();
   String get specificationLabel => [
