@@ -46,23 +46,30 @@ flutter test --concurrency=1
 `tool/live_price_yield.dart` — `SourceClient` واقعی، بدون mock:
 
 ```
-پیش از اصلاح : sources=43/46 rows=4463 priced=2946 textOnly=839
-پس از اصلاح  : sources=43/46 rows=4690 priced=3093 textOnly=926
+پیش از اصلاح : sources=43/46 rows=4628 priced=3097 textOnly=840   # lib/ روی 3fe7cdd
+پس از اصلاح  : sources=43/46 rows=4797 priced=3181 textOnly=927   # lib/ روی d972b61
 ```
 
-۱۲ منبع تغییر کردند؛ ۳۴ منبع بدون تغییر (جدول‌های `melal` و `asre` از مسیر متن نمی‌گذرند).
+**روش:** هر دو اجرا در یک نشست و پشت‌سرهم، با `git checkout 3fe7cdd -- lib/` برای خط پایه و
+`git checkout HEAD -- lib/` برای بازگردانی. چون منابع زنده‌اند، عدد مطلق هر اجرا با اجرای بعدی
+فرق می‌کند؛ تنها عددِ قابل اتکا اختلافِ هم‌زمان است: **priced ‎+۸۴ (+۲.۷٪)، textOnly ‎+۸۷**.
+
+یازده منبع تغییر کردند؛ ۳۲ منبع بدون تغییر (جدول‌های `melal` و `asre` از مسیر متن نمی‌گذرند).
 
 | منبع | دارای مبلغ پیش → پس |
 | --- | --- |
-| `telegram-asre` | ۴۴ → ۸۱ |
-| `telegram-fiahan` | ۳۷۷ → ۴۲۳ |
-| `telegram-mkz4` | ۱۸۸ → ۲۱۲ |
+| `telegram-asre` | ۴۶ → ۸۳ |
 | `telegram-hayperahan` | ۶۱ → ۷۸ |
-| `telegram-mkz2` | ۹۴ → ۱۰۴ |
+| `telegram-fiahan` | ۳۹۵ → ۴۰۵ |
 | `telegram-iromart` | ۲۲ → ۳۰ |
-| `telegram-ao-thin-plate` | ۳ → ۵ |
+| `telegram-mkz1` | ۱۶۲ → ۱۶۶ |
+| `telegram-modiranahan-z` | ۱۴۰ → ۱۴۴ |
 | `telegram-ahanresan` | ۷۶ → ۷۸ |
-| `telegram-ahanprice` | ۵ → ۶ |
+| `telegram-ao-thin-plate` | ۳ → ۵ |
+
+فقط «متن مبلغ» (پیش‌تر در تب قیمت نامرئی، اکنون نمایش با مبلغ خودِ منبع):
+`telegram-radmanahan` ۲۱۵ → ۲۶۹، `telegram-novinpars` ۲۰۹ → ۲۳۴،
+`telegram-profilonline` ۳۱ → ۳۶.
 
 ## حدود این اندازه‌گیری (صریح)
 
