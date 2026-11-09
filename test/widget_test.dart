@@ -239,10 +239,16 @@ void main() {
     expect(t.takeException(), isNull);
   });
   test(
-      'controller starts with latest-first and recent-week while discovered sources stay opt-in',
+      'controller starts on the one-month window, latest-first, while discovered sources stay opt-in',
       () async {
     final other = MarketController(c.store);
-    expect(other.filter.recentWeek, true);
+    // The primary window is one month and it is the tab's default filter; the
+    // «only this week» switch is a separate, off-by-default narrowing.
+    expect(other.discoveryDays, 30);
+    expect(other.filter.windowDays, 30);
+    expect(other.filter.recentWeek, false);
+    expect(other.pricesDays, -1, reason: 'the tab inherits the parent window');
+    expect(other.pricesWindow, other.discoveryDays);
     expect(other.filter.sort, 'latest');
     final total = other.availableEndpoints.length;
     await other.addPublicSource('https://rubika.ir/TahamtanIron');

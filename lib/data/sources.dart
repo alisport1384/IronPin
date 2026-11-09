@@ -12,9 +12,16 @@ import '../domain/market.dart';
 class SourceEndpoint {
   final String id, name, url, category, parser, sellerCity;
   final bool defaultEnabled;
+
+  /// The currency this source itself declares for its own prices.
+  ///
+  /// Iranian steel channels quote in toman; the value is a statement about the
+  /// source, never a guess from the size of a number, and a row that carries its
+  /// own word overrides it. It is recorded on the row as «ارز اعلامی منبع».
+  final String defaultCurrency;
   const SourceEndpoint(
       this.id, this.name, this.url, this.category, this.parser, this.sellerCity,
-      {this.defaultEnabled = true});
+      {this.defaultEnabled = true, this.defaultCurrency = 'نامشخص'});
 }
 
 const mashhadV072EndpointIds = {
@@ -508,7 +515,8 @@ class SourceParser {
           seller: e.name,
           city: e.sellerCity,
           fetchedAt: fetchedAt,
-          platform: e.parser),
+          platform: e.parser,
+          defaultCurrency: e.defaultCurrency),
       _ => throw const FormatException('مبدل تعریف نشده')
     };
     return rows.map(TextPriceEngine.enrich).toList();
@@ -692,7 +700,8 @@ class SourceParser {
           seller: e.name,
           city: e.sellerCity,
           fetchedAt: fetched,
-          platform: 'telegram');
+          platform: 'telegram',
+          defaultCurrency: e.defaultCurrency);
 }
 
 class SourceClient {
@@ -703,7 +712,12 @@ class SourceClient {
   final int maxChannelPages;
   SourceClient({http.Client? client, this.maxChannelPages = 6})
       : client = client ?? http.Client();
-  Future<List<Quote>> fetch(SourceEndpoint e) async {
+  /// Reads one source.
+  ///
+  /// [windowDays] is used only to stop following older channel pages: once a
+  /// page holds nothing inside the window there is nothing left to register, so
+  /// a long refresh does not crawl history the app is not allowed to show.
+  Future<List<Quote>> fetch(SourceEndpoint e, {int windowDays = 0}) async {
     unawaited(AppLogger.instance
         .record('network', 'fetch_started', {'endpoint': e.id}));
     final channel = ['telegram', 'eitaa', 'bale', 'rubika'].contains(e.parser);
@@ -755,10 +769,10 @@ class SourceClient {
             .map((q) => q.publishedAt ?? q.marketAt)
             .whereType<DateTime>()
             .toList();
+        final reach = Duration(days: windowDays > 0 ? windowDays : 7);
         if (next == null ||
             (dates.isNotEmpty &&
-                dates.every((d) =>
-                    d.isBefore(fetched.subtract(const Duration(days: 7)))))) {
+                dates.every((d) => d.isBefore(fetched.subtract(reach))))) {
           finished = true;
           break;
         }

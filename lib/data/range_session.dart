@@ -79,6 +79,10 @@ class RangeSession {
   List<Map<String, Object?>> _index = const [];
   String _token = 'none';
 
+  /// The window the loaded index was read for (0 = the archive's own window).
+  /// A different window is a different snapshot, so the rows are read again.
+  int _windowDays = -1;
+
   /// Payload of the loaded index; the worker holds the very same rows.
   List<Map<String, Object?>> get indexRowsSnapshot => _index;
   int _epoch = 0;
@@ -94,7 +98,7 @@ class RangeSession {
 
   /// Identity of the snapshot itself; changes only when the archive changes.
   /// The worker is bound to this, so a new clock minute never reloads the rows.
-  String get dataToken => 's$_session.d$_epoch';
+  String get dataToken => 's$_session.d$_epoch.w$_windowDays';
 
   /// Identity of the loaded answers; changes with the archive and the clock.
   String get token => _token;
@@ -107,6 +111,7 @@ class RangeSession {
     _index = const [];
     _answers.clear();
     _bucket = '';
+    _windowDays = -1;
   }
 
   static String _bucketOf(DateTime at) =>
@@ -117,10 +122,12 @@ class RangeSession {
     required Map<String, String> fields,
     required String basis,
     required String city,
+    int windowDays = 0,
   }) =>
       [
         family,
         basis,
+        'w$windowDays',
         city.trim(),
         for (final key in productFields[family]?.keys ?? const <String>[])
           if ((fields[key] ?? '').trim().isNotEmpty)
@@ -131,7 +138,16 @@ class RangeSession {
       _bucket == _bucketOf(at) ? _answers[key] : null;
 
   /// Loads the index once per data revision. Concurrent callers share one read.
-  Future<void> ensureIndex(DateTime at) async {
+  Future<void> ensureIndex(DateTime at, {int windowDays = 0}) async {
+    if (_windowDays != windowDays) {
+      // A different window is a different archive scope: the rows are re-read
+      // instead of being filtered with another rule than the one they were
+      // selected with.
+      _windowDays = windowDays;
+      _token = 'none';
+      _index = const [];
+      _answers.clear();
+    }
     if (_loadingFuture != null) {
       await _loadingFuture;
       _advanceBucket(at);
@@ -145,7 +161,7 @@ class RangeSession {
       return;
     }
     _loading = true;
-    final future = _load(at);
+    final future = _load(at, windowDays);
     _loadingFuture = future;
     try {
       await future;
@@ -157,9 +173,9 @@ class RangeSession {
 
   bool get loading => _loading;
 
-  Future<void> _load(DateTime at) async {
+  Future<void> _load(DateTime at, int windowDays) async {
     final watch = Stopwatch()..start();
-    final rows = await store.rangeIndexRows(at);
+    final rows = await store.rangeIndexRows(at, windowDays: windowDays);
     final bucket = _bucketOf(at);
     _index = rows;
     _epoch++;
@@ -189,9 +205,15 @@ class RangeSession {
     required String basis,
     required String city,
     required DateTime at,
+    int windowDays = 0,
     Duration timeout = const Duration(seconds: 45),
   }) async {
-    final key = scopeKey(family: family, fields: fields, basis: basis, city: city);
+    final key = scopeKey(
+        family: family,
+        fields: fields,
+        basis: basis,
+        city: city,
+        windowDays: windowDays);
     final hit = cached(key, at);
     if (hit != null) {
       await AppLogger.instance.record('range', 'served_from_memory',
@@ -201,7 +223,8 @@ class RangeSession {
     // The same confirmation asked twice at once is computed once.
     final pending = _inFlight[key];
     if (pending != null) return pending;
-    final future = _confirm(key, family, fields, basis, city, at, timeout);
+    final future =
+        _confirm(key, family, fields, basis, city, at, windowDays, timeout);
     _inFlight[key] = future;
     try {
       return await future;
@@ -216,6 +239,10 @@ class RangeSession {
   /// spec extraction, no `Quote` for the rows that stay off screen. Rows without
   /// a real announcement date or without a comparable price are withheld and
   /// counted, never shown as if they were candidates.
+
+  /// Reads the index for a scope that already names its own window.
+  Future<void> ensureIndexAt(DateTime at) =>
+      ensureIndex(at, windowDays: _windowDays < 0 ? 0 : _windowDays);
 
   /// True when the derived index is already in memory.
   bool get hasIndex => _index.isNotEmpty;
@@ -250,7 +277,7 @@ class RangeSession {
 
   Future<CandidateSet> candidates(
       {required CandidateScope scope, required DateTime at}) async {
-    await ensureIndex(at);
+    await ensureIndexAt(at);
     final watch = Stopwatch()..start();
     final set = _candidateSet(scope, at);
     await AppLogger.instance.record('prices', 'candidates_ready', {
@@ -272,16 +299,22 @@ class RangeSession {
     required Map<String, String> fields,
     required String basis,
     required String city,
+    int windowDays = 0,
   }) {
     _answers[scopeKey(
-        family: family, fields: fields, basis: basis, city: city)] = answer;
+      family: family,
+      fields: fields,
+      basis: basis,
+      city: city,
+      windowDays: windowDays,
+    )] = answer;
     return answer;
   }
 
   Future<RangeAnswer> _confirm(String key, String family,
       Map<String, String> fields, String basis, String city, DateTime at,
-      Duration timeout) async {
-    await ensureIndex(at);
+      int windowDays, Duration timeout) async {
+    await ensureIndex(at, windowDays: windowDays);
     final again = cached(key, at);
     if (again != null) return again.asMemory();
     final watch = Stopwatch()..start();
@@ -291,6 +324,7 @@ class RangeSession {
       'fields': fields,
       'basis': basis,
       'city': city,
+      'windowMs': windowMsFor(windowDays),
       'now': at.millisecondsSinceEpoch
     };
     // The projection is CPU-bound over the whole index: run it off the isolate
@@ -308,7 +342,7 @@ class RangeSession {
 }
 
 /// Background entry point; identical code to the synchronous projection.
-RangeAnswer _answerInBackground(Map<String, Object?> input) {
+  RangeAnswer _answerInBackground(Map<String, Object?> input) {
   final rows = (input['rows'] as List).cast<Map<String, Object?>>();
   final at = DateTime.fromMillisecondsSinceEpoch(input['now'] as int, isUtc: true);
   final projected = project(rows,
@@ -316,7 +350,8 @@ RangeAnswer _answerInBackground(Map<String, Object?> input) {
       fields: Map<String, String>.from(input['fields'] as Map),
       basis: input['basis'] as String,
       city: input['city'] as String,
-      nowMs: at.millisecondsSinceEpoch);
+      nowMs: at.millisecondsSinceEpoch,
+      windowMs: input['windowMs'] as int? ?? 48 * 3600 * 1000);
   return buildAnswer(projected,
       basis: input['basis'] as String, at: at, inputRows: rows.length);
 }

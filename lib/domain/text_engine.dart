@@ -69,8 +69,43 @@ class TextPriceEngine {
             : 'ریال';
   }
 
+  /// Currency of one row, decided next to its own amount.
+  ///
+  /// A public post often carries both words ("قیمت‌ها به تومان؛ تماس ۰۳۱… ریال")،
+  /// and the old rule then declared the whole line contradictory even though the
+  /// amount itself carried one word — the row lost its price. The word nearest
+  /// the amount wins, and a short trailing code the source wrote right after the
+  /// amount (`2.300.000R`, `2.300.000T`) is read as that currency.
+  static String currencyNear(String text, int at) {
+    final s = latin(text);
+    if (at >= 0 && at < s.length) {
+      final code = RegExp(r'^\s*([RT])(?![A-Za-z0-9])')
+          .firstMatch(s.substring(at))?[1];
+      if (code == 'R') return 'ریال';
+      if (code == 'T') return 'تومان';
+    }
+    final toman = [for (final m in RegExp('تومان').allMatches(s)) m.start];
+    final rial = [for (final m in RegExp('ریال').allMatches(s)) m.start];
+    if (toman.isEmpty && rial.isEmpty) return 'نامشخص';
+    if (toman.isEmpty) return 'ریال';
+    if (rial.isEmpty) return 'تومان';
+    int nearest(List<int> xs) =>
+        xs.map((x) => (x - at).abs()).reduce((a, b) => a < b ? a : b);
+    return nearest(toman) <= nearest(rial) ? 'تومان' : 'ریال';
+  }
+
+  /// The single basis a row states, or `unknown`.
+  ///
+  /// A basis is accepted only when the row itself names one: before the amount
+  /// ("هر کیلو ۱۲۵,۰۰۰"), after the currency ("۱۲۵,۰۰۰ تومان کیلو"), or as the
+  /// only unit word of the line ("کیلو ۱۲۵,۰۰۰"). A line that names two bases,
+  /// or names none, answers `unknown`: two readings of one offer may never both
+  /// enter a comparison, and no basis is invented from the price magnitude.
   static String priceUnit(String text) {
     final s = latin(text);
+    // A line that is a channel tag (#میلگرد_شاخه_انبار_مشهد) files the post; its
+    // words are labels, never the basis of an amount.
+    if (s.trimLeft().startsWith('#')) return 'unknown';
     if (RegExp(r'کیلویی|تومانی?\s*[/\\]\s*کیلو|ریال\s*[/\\]\s*کیلو')
         .hasMatch(s)) return 'kg';
     // The basis is written either before the amount ("هر کیلو ۱۲۵,۰۰۰") or after
@@ -84,7 +119,44 @@ class TextPriceEngine {
                 r'(?:تومان|ریال)\s*(?:[/|،,]\s*)?(کیلوگرم|کیلو|شاخه|عدد|برگ|رول|تن|متر\s*مربع|مترمربع|متر)(?![\p{L}])',
                 unicode: true)
             .firstMatch(s);
-    return m == null ? 'unknown' : parseUnit(m[1]!);
+    if (m != null) return parseUnit(m[1]!);
+    // A unit word next to the amount without the "هر" marker: "کیلو ۱۲۵,۰۰۰",
+    // "۱۲۵,۰۰۰ کیلو", "۲ بندیل، برگ ۴۷۰,۰۰۰". Only the line that carries the
+    // amount is read: a unit word in another line of the same caption (a note
+    // about weight, a hashtag, another product) is not the basis of this amount.
+    final amount = RegExp(r'(?<![\d.])(?:\d{1,4}(?:[,٬.]\d{3})+|\d{4,9})')
+        .firstMatch(s);
+    final from = amount == null ? 0 : s.lastIndexOf('\n', amount.start) + 1;
+    final to = amount == null
+        ? s.length
+        : (s.indexOf('\n', amount.end) < 0 ? s.length : s.indexOf('\n', amount.end));
+    final scope = s.substring(from, to);
+    final found = <String>{};
+    for (final unit in RegExp(
+            r'(?<![آ-یA-Za-z])(کیلوگرم|کیلو|مترمربع|متر مربع|شاخه|برگ|رول|تن|متر|عدد|قطعه)(?![آ-یA-Za-z])',
+            unicode: true)
+        .allMatches(scope)) {
+      final before = scope.substring(0, unit.start);
+      // A word inside a hashtag (#میلگرد_شاخه_انبار) is a branch label the
+      // channel uses to file the post, not the basis of the amount.
+      if (RegExp(r'#[^\s]*$').hasMatch(before) ||
+          before.endsWith('_') ||
+          scope.substring(unit.end).startsWith('_')) {
+        continue;
+      }
+      if (RegExp(
+              r'(?:وزن|جرم|معادل|تناژ|طول|عرض|ارتفاع|ضخامت|ابعاد|سایز|قطر|نمره|تعداد)[^\n]{0,12}$')
+          .hasMatch(before)) continue;
+      found.add(parseUnit(unit[1]!));
+    }
+    if (found.length != 1) return 'unknown';
+    final only = found.single;
+    // A bare metre/ton word also means a length or a weight somewhere else in
+    // the row; without a currency word on the same line it is not a basis.
+    if ((only == 'm' || only == 'ton') && !RegExp('تومان|ریال').hasMatch(scope)) {
+      return 'unknown';
+    }
+    return only;
   }
 
   static String terms(String text) => RegExp(
@@ -118,7 +190,7 @@ class TextPriceEngine {
   static final datePattern = RegExp(
       r'(?:1[34]\d{2})[/.\-]\d{1,2}[/.\-]\d{1,2}|\d{1,2}\s+(?:فروردین|اردیبهشت|خرداد|تیر|مرداد|شهریور|مهر|آبان|آذر|دی|بهمن|اسفند)\s+(?:ماه\s+)?1[34]\d{2}|20\d{2}-\d{2}-\d{2}');
   static final priceNumber = RegExp(
-      r'(?<![\d.])(?:\d+(?:[.٫]\d+)?(?=\s*(?:هزار|میلیون)\s*(?:تومان|ریال))|(?:\d{1,3}(?:[,٬.]\d{3})+|\d{1,3}(?: \d{3})+)|\d{4,9}|\d{1,3}(?=\s*(?:تومان|ریال)))(?:٫\d+)?(?![\d.,٬])');
+      r'(?<![\d.])(?:\d+(?:[.٫]\d+)?(?=\s*(?:هزار|میلیون)\s*(?:تومان|ریال))|(?:\d{1,4}(?:[,٬.]\d{3})+|\d{1,4}(?: \d{3})+)|\d{4,9}|\d{1,4}(?=\s*(?:تومان|ریال)))(?:٫\d+)?(?![\d.,٬])');
   static double? money(String raw) => number(raw
       .replaceAll('.', '')
       .replaceAll('٬', '')
@@ -158,7 +230,12 @@ class TextPriceEngine {
       String sellerCity = 'نامشخص',
       DateTime? publishedAt,
       bool image = false,
-      bool manual = false}) {
+      bool manual = false,
+      // Currency the source itself declares for its own prices (for example the
+      // "قیمت‌ها به تومان" notice of a channel). It is used only when neither the
+      // row nor its group states a currency, it is recorded as a source default,
+      // and it is never derived from the size of the amount.
+      String defaultCurrency = 'نامشخص'}) {
     if (text.length > 120000) {
       throw const FormatException(
           'متن بیش از حد بزرگ است؛ پیام‌ها را جدا وارد کنید.');
@@ -331,11 +408,15 @@ class TextPriceEngine {
         pending = null;
         continue;
       }
-      var cur = lineCurrency;
-      if (cur == 'نامشخص' &&
-          !line.contains('ریال') &&
-          !line.contains('تومان')) {
-        cur = contextCurrency;
+      // The currency of this row: the word written next to its own amount, then
+      // the group's stated currency, then the currency the source declares.
+      var cur = currencyNear(line, chosen.start);
+      if (cur == 'نامشخص') cur = lineCurrency;
+      if (cur == 'نامشخص') cur = contextCurrency;
+      var currencySource = cur == 'نامشخص' ? '' : 'متن همان ردیف یا گروه';
+      if (cur == 'نامشخص' && defaultCurrency != 'نامشخص') {
+        cur = defaultCurrency;
+        currencySource = 'ارز اعلامی خود منبع؛ نه حدس از بزرگی مبلغ';
       }
       final unit = lineUnit == 'unknown' ? contextUnit : lineUnit;
       final productCategory = cat.isNotEmpty
@@ -426,7 +507,11 @@ class TextPriceEngine {
                 ? '${numbers.first[0]} تا ${numbers.last[0]}'
                 : chosen[0]!,
             if (invalidDate) 'تاریخ نامعتبر': 'بله',
-            'مبنای ارز': cur,
+            'مبنای ارز': cur == 'نامشخص'
+                ? 'نامشخص'
+                : currencySource.isEmpty
+                    ? 'متن همان ردیف یا گروه'
+                    : currencySource,
             'مبنای واحد': unit == 'piece' && productCategory == 'بولت'
                 ? 'عدد / ست'
                 : unitLabel(unit),

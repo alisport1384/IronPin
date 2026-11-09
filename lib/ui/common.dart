@@ -87,6 +87,70 @@ Widget emptyState(String title, String detail,
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: muted, height: 1.9))
             ])));
+/// The time windows offered by every tab, in days (`0` = the whole archive).
+const windowLabels = <String, String>{
+  '0': 'همه زمان‌ها',
+  '1': '۲۴ ساعت',
+  '3': '۳ روز',
+  '7': '۱ هفته',
+  '14': '۲ هفته',
+  '30': '۱ ماه',
+  '90': '۳ ماه',
+  '180': '۶ ماه',
+  '365': '۱ سال',
+};
+
+/// The label of a window in days.
+String windowText(int days) => windowLabels['$days'] ?? '$days روز';
+
+/// The time selector of the information tab and of every child tab.
+///
+/// [days] is the effective window; a child tab passes `inherit: true` and gets
+/// an extra first option that means "same as the primary window", so its default
+/// always equals the parent's default and it only differs when the user chooses
+/// so for that tab.
+Widget windowField(String label, int days, ValueChanged<int> onChanged,
+    {bool inherit = false, int inherited = 0}) {
+  final options = <String, String>{
+    if (inherit) '-1': 'مانند بازه اصلی (${windowText(inherited)})',
+    ...windowLabels,
+  };
+  return selectField(label, '$days', options, (v) => onChanged(int.parse(v)));
+}
+
+/// A compact one-line time selector for the tabs, so a window can be changed
+/// without pushing the rest of the page out of view.
+Widget windowChip(String label, int days, ValueChanged<int> onChanged,
+    {bool inherit = false, int inherited = 0}) {
+  final options = <String, String>{
+    if (inherit) '-1': 'مانند بازه اصلی (${windowText(inherited)})',
+    ...windowLabels,
+  };
+  return Align(
+      alignment: Alignment.centerRight,
+      child: PopupMenuButton<String>(
+        initialValue: options.containsKey('$days') ? '$days' : null,
+        onSelected: (v) => onChanged(int.parse(v)),
+        itemBuilder: (_) => [
+          for (final e in options.entries)
+            PopupMenuItem(value: e.key, child: Text(e.value))
+        ],
+        child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.schedule, size: 15, color: teal),
+              const SizedBox(width: 6),
+              Flexible(
+                  child: Text(
+                      '$label: ${windowText(days < 0 ? inherited : days)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: ink))),
+              const Icon(Icons.arrow_drop_down, size: 16, color: muted)
+            ])),
+      ));
+}
+
 Widget selectField(String label, String value, Map<String, String> options,
         ValueChanged<String> onChanged) =>
     DropdownButtonFormField<String>(

@@ -63,7 +63,10 @@ void main() {
     final rows = parse('khabazzade-sheet', 'khabazzade_table_reconstructed');
     expect(rows.length, 3);
     expect(rows.every((q) => q.unit == 'unknown'), true);
-    expect(rows.every((q) => q.priceFor('original') == null), true);
+    // The announced number is a real price and stays visible as the original
+    // basis even without a unit; it never becomes a per-kilogram conversion.
+    expect(rows.every((q) => q.priceFor('original') == q.amount), true);
+    expect(rows.every((q) => q.priceFor('kg') == null), true);
     expect(rows.map((q) => q.amount).toSet(), {184000, 177000, 120000});
     expect(rows.where((q) => q.isWithinWeek(now)).length, 2);
   });

@@ -67,13 +67,15 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
   required String basis,
   required String city,
   required int nowMs,
+  int windowMs = 48 * 3600 * 1000,
 }) =>
     projectPrepared(prepare(indexRows),
         family: family,
         fields: fields,
         basis: basis,
         city: city,
-        nowMs: nowMs);
+        nowMs: nowMs,
+        windowMs: windowMs);
 
 /// Same answer as [project], over an index that is already expanded.
 ({List<Map<String, Object?>> rows, List<Map<String, Object?>> ranges,
@@ -86,8 +88,9 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
   required String basis,
   required String city,
   required int nowMs,
+  int windowMs = 48 * 3600 * 1000,
 }) {
-  const window = 48 * 3600 * 1000;
+  final window = windowMs;
   final since = nowMs - window;
   final constraints = {
     for (final e in fields.entries)
@@ -141,11 +144,7 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
     final unit = basis.isNotEmpty
         ? basis
         : (resolvedRowBasis(item.row.prices, item.row.unit) ?? unpricedBasis);
-    final price = unit == unpricedBasis
-        ? null
-        : (rows[index]['prices'] is Map
-            ? ((rows[index]['prices'] as Map)[unit] as num?)?.toDouble()
-            : item.value.price);
+    final price = unit == unpricedBasis ? null : item.row.priceIn(unit);
     if (unit == unpricedBasis) {
       const reason = 'واحد قیمت در منبع مشخص نیست؛ مبلغ دیده می‌شود ولی در میانگین نیست';
       excluded[reason] = (excluded[reason] ?? 0) + 1;
@@ -452,9 +451,18 @@ class CandidateScope {
     final currency = raw['currency'] as String? ?? '';
     final prices = unpackPrices(raw['prices'] as String? ?? '');
     // The comparable price of the requested basis, in toman, computed exactly as
-    // the money helpers do — a row without one has no number to rank.
-    final price =
-        toman(prices[basis == 'original' || basis.isEmpty ? unit : basis], currency);
+    // the money helpers do. With no explicit basis the row's own basis is used:
+    // its unit, or the unit its own declared mass converts to. A row whose source
+    // stated no unit still carries a real amount, and it is shown with that
+    // amount — a row is never dropped from the list for lacking a basis; the
+    // reason it cannot be averaged is stated on the card instead.
+    final basisKey = basis == 'original' || basis.isEmpty
+        ? (resolvedRowBasis(prices, unit) ?? '')
+        : basis;
+    final price = toman(prices[basisKey], currency) ??
+        (basisKey.isEmpty
+            ? toman((raw['amount'] as num?)?.toDouble(), currency)
+            : null);
     if (price == null || !price.isFinite || price <= 0) {
       unpriced++;
       held[identity] = 1;
@@ -549,7 +557,12 @@ bool _hasComparablePrice(Map<String, Object?> wire, String basis) {
   final prices = wire['prices'];
   final unit = wire['unit'] as String? ?? '';
   final key = basis == 'original' || basis.isEmpty ? unit : basis;
-  final raw = prices is Map ? prices[key] : wire['amount'];
+  // The row's own amount is a real price even when no per-unit conversion was
+  // written: without this fallback such a row was dropped from the candidates
+  // although the archive holds a number for it.
+  final raw = prices is Map && prices[key] != null
+      ? prices[key]
+      : wire['amount'];
   final price = toman(raw is num ? raw.toDouble() : null,
       wire['currency'] as String? ?? '');
   return price != null && price.isFinite && price > 0;

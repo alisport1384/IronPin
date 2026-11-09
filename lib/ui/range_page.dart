@@ -12,6 +12,26 @@ import '../domain/product_schema.dart';
 import 'calculator_page.dart';
 import 'common.dart';
 
+/// The amount a candidate really carries, in the unit it announced, so the list
+/// can never show an entry without a price.
+///
+/// Order: the comparable basis the row can prove, then the amount exactly as the
+/// source announced it (even when the source named no unit), and only then the
+/// raw extracted text of a row that has no number at all.
+String candidatePriceText(CatalogueItem p) {
+  final q = p.example;
+  final basis = rangeBasis(q);
+  final comparable = q.tomanFor(basis);
+  if (comparable != null) {
+    return '${fmt(comparable)} تومان / ${q.unitName(basis)}';
+  }
+  final own = q.tomanFor('original');
+  if (own != null) return '${fmt(own)} تومان • واحد نامشخص';
+  final amount = q.amount;
+  if (amount != null) return '${fmt(amount)} ${faDigits(q.currency)}';
+  return faDigits(q.details['مبلغ استخراج‌شده'] ?? 'بدون قیمت');
+}
+
 class RangePage extends StatefulWidget {
   final MarketController c;
   final Duration taskTimeout, readTimeout;
@@ -88,8 +108,16 @@ class _RangePageState extends State<RangePage> {
     // The same scope of the same snapshot is answered from memory: no spinner,
     // no recomputation, and nothing is guessed — it is the answer already shown.
     final session = widget.c.rangeSession;
+    // The range tab's own window; `0` (همه زمان‌ها) means no date limit, and the
+    // session's default (48 hours) is used only when no window is given at all.
+    final rangeWindow = widget.c.rangeWindow;
+    final windowDays = rangeWindow == 0 ? -1 : rangeWindow;
     final key = session.scopeKey(
-        family: family!, fields: constraints, basis: basis, city: city);
+        family: family!,
+        fields: constraints,
+        basis: basis,
+        city: city,
+        windowDays: windowDays);
     final cached = session.cached(key, at);
     setState(() {
       calculating = cached == null;
@@ -115,7 +143,7 @@ class _RangePageState extends State<RangePage> {
       final worker = RangeWorker.shared;
       RangeAnswer answer;
       try {
-        await session.ensureIndex(at);
+        await session.ensureIndex(at, windowDays: windowDays);
         if (worker.isLoaded && !worker.holdsToken(session.dataToken)) {
           worker.dispose();
         }
@@ -137,13 +165,15 @@ class _RangePageState extends State<RangePage> {
             basis: basis,
             city: city,
             nowMs: at.millisecondsSinceEpoch,
+            windowMs: windowMsFor(windowDays),
             timeout: widget.taskTimeout * 6);
         if (!mounted || token != generation) return;
         answer = session.answerFromWorker(message['answer'] as RangeAnswer,
             family: family!,
             fields: constraints,
             basis: basis,
-            city: city);
+            city: city,
+            windowDays: windowDays);
       } catch (workerFailure) {
         if (workerFailure is TimeoutException) rethrow;
         AppLogger.instance.capture(workerFailure, StackTrace.current,
@@ -156,6 +186,7 @@ class _RangePageState extends State<RangePage> {
             basis: basis,
             city: city,
             at: at,
+            windowDays: windowDays,
             timeout: widget.taskTimeout * 6);
       }
       if (!mounted || token != generation) return;
@@ -225,8 +256,8 @@ class _RangePageState extends State<RangePage> {
         .where((p) => p.example.amount == null)
         .length;
     return ListView(padding: const EdgeInsets.all(14), children: [
-      const Text('رنج‌گیری ۴۸ ساعت',
-          style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
+      Text('رنج‌گیری ${windowText(widget.c.rangeWindow)}',
+          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
       const Text('نوع محصول ← مشخصات ← مود قیمت ← تأیید',
           style: TextStyle(color: muted)),
       const Text(
@@ -234,6 +265,10 @@ class _RangePageState extends State<RangePage> {
           style: TextStyle(fontSize: 12, height: 1.8)),
       Text(
           'شهر سراسری: ${widget.c.selectedCity.isEmpty ? 'همه شهرها' : widget.c.selectedCity}'),
+      windowChip('بازه زمانی', widget.c.rangeDays, (v) {
+        unawaited(widget.c.setTabDays('range', v));
+        if (mounted) setState(invalidate);
+      }, inherit: true, inherited: widget.c.discoveryDays),
       if (family == null) ...[
         const Text('انتخاب نوع محصول',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -385,8 +420,17 @@ class _RangePageState extends State<RangePage> {
               for (final p in catalog.take(catalogVisible))
                 ListTile(
                   title: Text(faDigits(p.example.title)),
+                  // Every candidate carries the price the archive actually holds
+                  // for it, in the unit that price was announced with: a row is
+                  // never offered without its number.
+                  trailing: Text(candidatePriceText(p),
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: teal)),
                   subtitle: Text(faDigits(
                       '${p.example.specificationLabel} • ${p.example.seller}\n'
+                      '${sourceDay(p.example)}\n'
                       '${p.counted ? 'قابل شمارش در رنج همین واحد' : p.unavailableReasons.join('؛ ')}')),
                   onTap: () => showDialog<void>(
                       context: context,

@@ -184,14 +184,15 @@ class RangeProduct {
 String catalogueKey(Quote q) =>
     jsonEncode([q.endpoint, q.id, rangeGroupKey(q)]);
 
-List<String> rangeUnavailableReasons(Quote q, DateTime now) {
+List<String> rangeUnavailableReasons(Quote q, DateTime now,
+    {Duration window = const Duration(hours: 48)}) {
   final reasons = <String>[];
   final date = q.marketAt;
   if (date == null) {
     reasons.add('تاریخ نرخ/انتشار نامعلوم یا نامعتبر');
-  } else if (date.isBefore(now.toUtc().subtract(const Duration(hours: 48))) ||
+  } else if (date.isBefore(now.toUtc().subtract(window)) ||
       date.isAfter(now.toUtc())) {
-    reasons.add('در ۴۸ ساعت گذشته اعلام معتبر ندارد');
+    reasons.add('داخل بازه زمانی انتخاب‌شده اعلام معتبر ندارد');
   }
   if (q.amount == null || !q.amount!.isFinite || q.amount! <= 0) {
     reasons.add('مبلغ عددی معتبر ثبت نشده است');
@@ -304,6 +305,10 @@ class ProductRangeResult {
 ProductRangeResult calculateProductRange(Map<String, Object> input) {
   final query = input['query'] as ProductRangeQuery,
       now = input['now'] as DateTime;
+  // The window is the user's own selection (the capture window by default);
+  // 48 hours stays the default for callers that do not choose one.
+  final window = Duration(
+      milliseconds: input['windowMs'] as int? ?? 48 * 3600 * 1000);
   final quotes = input['quotes'] as List<Quote>;
   final unique = <String, Quote>{}, excluded = <String, int>{};
   void reject(String reason) =>
@@ -317,9 +322,8 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
       reject('تاریخ اعلام نامعلوم');
       continue;
     }
-    if (q.marketAt!.isAfter(now) ||
-        q.marketAt!.isBefore(now.subtract(const Duration(hours: 48)))) {
-      reject('خارج از ۴۸ ساعت');
+    if (q.marketAt!.isAfter(now) || q.marketAt!.isBefore(now.subtract(window))) {
+      reject('خارج از بازه زمانی انتخاب‌شده');
       continue;
     }
     final key = announcementKey(q), old = unique[key];
@@ -329,8 +333,9 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
     ..sort((a, b) => b.marketAt!.compareTo(a.marketAt!));
   final grouped = <String, List<Quote>>{};
   for (final q in announcements) {
-    // A user-chosen unit wins; otherwise the row's own unit, and when the source
-    // named none, the basis the domain can actually convert (kg, then piece).
+    // A user-chosen unit wins; otherwise the row's own unit, then the unit its
+    // own declared mass/length converts to, and finally the explicit «نامشخص»
+    // group, which is compared only with itself.
     final basis = query.basis.isNotEmpty
         ? query.basis
         : (resolvedBasis(q) ?? unpricedBasis);

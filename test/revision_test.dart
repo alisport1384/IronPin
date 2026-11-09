@@ -163,7 +163,7 @@ void main() {
       expect(c.enabled.contains('melal-rebar'), isTrue);
       expect(c.enabled.contains('melal-sheet'), isTrue);
       expect(endpoints.every((e) => c.enabled.contains(e.id)), isTrue);
-      expect(await store.setting('allRegisteredSourcesEnabledVersion'), '3');
+      expect(await store.setting('allRegisteredSourcesEnabledVersion'), '4');
       await c.setEnabled('telegram-mashhad', false);
       c.dispose();
       final second = MarketController(store);

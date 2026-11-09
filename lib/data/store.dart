@@ -260,7 +260,7 @@ class MarketStore {
     }
   }
 
-  Future<List<String>> rangePayloads(DateTime now) async {
+  Future<List<String>> rangePayloads(DateTime now, {int windowDays = 0}) async {
     final rows = await db.rawQuery(
         'SELECT payload FROM history WHERE market_at>=? AND market_at<=? '
         // Include every retained product, even inactive/old/undated rows, for
@@ -273,7 +273,9 @@ class MarketStore {
         'WHERE id NOT IN (SELECT id FROM latest) GROUP BY id) orphan '
         'ON h.seq=orphan.seq',
         [
-          now.toUtc().subtract(const Duration(hours: 48)).toIso8601String(),
+          // The index holds everything the tab may show: the archive rows of the
+          // selected window (48 hours when no window is chosen).
+          now.toUtc().subtract(windowFor(windowDays)).toIso8601String(),
           now.toUtc().toIso8601String()
         ]);
     return rows.map((r) => r['payload'] as String).toList();
@@ -314,8 +316,9 @@ class MarketStore {
 
   /// Index rows for the same selection `rangePayloads` returns, as the minimum
   /// the range engine needs: no payload parsing, no `Quote` construction.
-  Future<List<Map<String, Object?>>> rangeIndexRows(DateTime now) async {
-    final rows = await rangePayloads(now);
+  Future<List<Map<String, Object?>>> rangeIndexRows(DateTime now,
+      {int windowDays = 0}) async {
+    final rows = await rangePayloads(now, windowDays: windowDays);
     final wanted = <String, String>{};
     for (final payload in rows) {
       wanted[payloadFingerprint(payload)] = payload;

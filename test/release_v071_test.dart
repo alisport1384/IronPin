@@ -446,7 +446,7 @@ void main() {
 class RecordingClient extends SourceClient {
   final seen = <String>[];
   @override
-  Future<List<Quote>> fetch(SourceEndpoint e) async {
+  Future<List<Quote>> fetch(SourceEndpoint e, {int windowDays = 0}) async {
     seen.add(e.id);
     complete[e.id] = true;
     return [

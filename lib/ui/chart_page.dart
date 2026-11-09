@@ -20,7 +20,9 @@ class ChartPage extends StatefulWidget {
 
 class _ChartPageState extends State<ChartPage> {
   String? selected;
-  int days = 30;
+  /// The chart's own window, inherited from the primary window until the user
+  /// chooses one for this tab. `0` means the whole stored history.
+  int get days => widget.c.chartWindow;
   Future<List<Quote>>? future;
   String lastSignature = '';
   String loadedKey = '';
@@ -109,20 +111,14 @@ class _ChartPageState extends State<ChartPage> {
             if (q != null && mounted) setState(() => load(q.id));
           }),
       const SizedBox(height: 16),
-      selectField(
-          'بازه ثبت روی دستگاه',
-          '$days',
-          {
-            '7': '۷ روز',
-            '30': '۳۰ روز',
-            '90': '۹۰ روز',
-            '0': 'همه تاریخچه دستگاه'
-          },
-          (v) => setState(() {
-                days = int.parse(v);
-                historyLimit = 1000;
-                load(current.id);
-              })),
+      windowField('بازه ثبت روی دستگاه', widget.c.chartDays, (v) async {
+        await widget.c.setTabDays('chart', v);
+        if (!mounted) return;
+        setState(() {
+          historyLimit = 1000;
+          load(current.id);
+        });
+      }, inherit: true, inherited: widget.c.discoveryDays),
       FutureBuilder<List<Quote>>(
           future: future,
           builder: (context, snap) {

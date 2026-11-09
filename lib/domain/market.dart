@@ -122,6 +122,34 @@ String materialOf(String s) {
   return 'فولاد کربنی';
 }
 
+/// Milliseconds of a window in days, with the meaning every layer shares:
+/// a positive number is that many days, `0` is the archive's own 48-hour
+/// default, and a negative number is «همه زمان‌ها» (no limit).
+int windowMsFor(int days) => days > 0
+    ? days * 24 * 3600 * 1000
+    : (days == 0 ? 48 * 3600 * 1000 : 100 * 365 * 24 * 3600 * 1000);
+
+/// The same window as a [Duration].
+Duration windowFor(int days) => Duration(milliseconds: windowMsFor(days));
+
+/// The capture and display window of the whole app, in days. `0` is "all time".
+///
+/// A row belongs to a window when its **own announcement date** is inside it;
+/// a row whose date is unknown is judged by the moment the app stored it, so a
+/// fresh undated caption is still visible while an old one is not. A date in
+/// the future is not inside any window. Nothing is inferred and no date is
+/// rewritten: the rule only decides whether a stored row is shown or captured.
+bool insideWindow(Quote q, DateTime now, int days) {
+  if (days <= 0) return true;
+  final at = q.marketAt;
+  final moment = at ?? q.fetchedAt.toUtc();
+  if (moment.isBefore(now.toUtc().subtract(Duration(days: days)))) return false;
+  if (at != null && at.isAfter(now.toUtc().add(const Duration(minutes: 5)))) {
+    return false;
+  }
+  return true;
+}
+
 class Quote {
   final String id,
       endpoint,
@@ -329,8 +357,18 @@ class Quote {
   }
 
   double? tomanFor(String basis) => toman(priceFor(basis), currency);
-  double? priceFor(String basis) =>
-      _unitPrices[basis == 'original' ? unit : basis];
+
+  /// The price of this row in [basis].
+  ///
+  /// `original` is the amount exactly as the source announced it, in the unit the
+  /// source itself used, and it exists whenever the row has an amount — including
+  /// the case where the source named no unit at all. That is what lets a card
+  /// show the number it really carries instead of "no price" merely because the
+  /// basis is unknown. Every other basis is a real conversion and stays `null`
+  /// when the row cannot prove one.
+  double? priceFor(String basis) => basis == 'original'
+      ? (_positive(amount) ? amount : null)
+      : _unitPrices[basis];
   String conversionBasis(String target) => target == unit
       ? 'اعلام مستقیم منبع'
       : [
@@ -452,6 +490,9 @@ class MarketFilter {
       basis = 'original',
       sort = 'asc';
   bool recentWeek = false;
+
+  /// The tab's own time filter, in days; `0` means "the whole window".
+  int windowDays = 0;
   double? minPrice, maxPrice;
   bool mashhadFirst = true, onlyFresh = false, includeUnpriced = false;
   bool _sameMeasure(String a, String b) =>
@@ -483,6 +524,7 @@ class MarketFilter {
                 text: q.productSearchText)) &&
         (!onlyFresh || q.isFresh(now)) &&
         (!recentWeek || q.isWithinWeek(now)) &&
+        insideWindow(q, now, windowDays) &&
         (includeUnpriced ||
             price != null ||
             q.hasTextAmount) &&
@@ -519,6 +561,7 @@ class MarketFilter {
         onlyFresh,
         includeUnpriced,
         recentWeek,
+        windowDays,
         size,
         thickness,
         grade

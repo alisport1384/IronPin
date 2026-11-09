@@ -14,8 +14,10 @@ class MarketController extends ChangeNotifier {
   final MarketStore store;
   final SourceClient client;
   final MarketFilter filter = MarketFilter()
-    ..recentWeek = true
-    ..sort = 'latest';
+    ..sort = 'latest'
+    // A fresh controller already answers with the primary window; `init` only
+    // restores what the user saved.
+    ..windowDays = defaultWindowDays;
   List<Quote> quotes = [];
   final List<SourceEndpoint> discoveredSources = [];
   List<SourceEndpoint> get availableEndpoints =>
@@ -60,14 +62,28 @@ class MarketController extends ChangeNotifier {
   Map<String, Map<String, Object?>> states = {};
   Map<String, dynamic> registry = {};
   List<String> cities = [];
-  Set<String> enabled = {
-    for (final e in endpoints)
-      if (e.defaultEnabled) e.id
-  };
+  // Every registered route is enabled from the first run. Only a route the user
+  // turns off later stays off (and a channel discovered from a public post is
+  // still opt-in, because it is a candidate, not a registered source).
+  Set<String> enabled = {for (final e in endpoints) e.id};
   bool busy = false, ready = false, autoRefresh = false, disposed = false;
   bool foreground = true;
   int finished = 0, historyRevision = 0;
   String get selectedCity => filter.city;
+
+  /// The primary window of the whole app: what a refresh registers and what
+  /// every tab shows by default. One month, as chosen by the user.
+  int discoveryDays = defaultWindowDays;
+
+  /// A tab may narrow the primary window, or widen it; `-1` means "inherit".
+  /// The calculation tab has no time filter at all.
+  int pricesDays = -1, rangeDays = -1, chartDays = -1;
+
+  static const defaultWindowDays = 30;
+  int get pricesWindow => pricesDays >= 0 ? pricesDays : discoveryDays;
+  int get rangeWindow => rangeDays >= 0 ? rangeDays : discoveryDays;
+  int get chartWindow => chartDays >= 0 ? chartDays : discoveryDays;
+
   bool loggingEnabled = false;
   Future<void> setCity(String city) async {
     // A different city is a different query; derived answers never cross it.
@@ -89,6 +105,52 @@ class MarketController extends ChangeNotifier {
     await AppLogger.instance.setEnabled(value);
     await store.setSetting('loggingEnabled', '$value');
     _notify();
+  }
+
+  /// Sets the primary capture window and re-derives everything that depended
+  /// on the previous one.
+  Future<void> setDiscoveryDays(int days) async {
+    if (days == discoveryDays) return;
+    discoveryDays = days;
+    await store.setSetting('windowDays', '$days');
+    await _windowChanged();
+  }
+
+  /// Sets one tab's own time filter; `-1` restores "same as the primary window".
+  Future<void> setTabDays(String tab, int days) async {
+    switch (tab) {
+      case 'prices':
+        if (pricesDays == days) return;
+        pricesDays = days;
+      case 'range':
+        if (rangeDays == days) return;
+        rangeDays = days;
+      case 'chart':
+        if (chartDays == days) return;
+        chartDays = days;
+      default:
+        return;
+    }
+    await store.setSetting('windowDays:$tab', '$days');
+    await _windowChanged();
+  }
+
+  Future<void> _windowChanged() async {
+    filter.windowDays = pricesWindow;
+    // Every derived answer of the old window is void.
+    rangeSession.invalidate();
+    _filtered = [];
+    _filterKey = '';
+    _filteredCity = '';
+    candidates = null;
+    _candidateKey = '';
+    _rowCache = null;
+    _rowCacheKey = '';
+    _notify();
+    if (ready) {
+      unawaited(prepareCandidates());
+      unawaited(warmRangeIndex());
+    }
   }
 
   void historyChanged() {
@@ -120,7 +182,7 @@ class MarketController extends ChangeNotifier {
     try {
       final at = DateTime.now().toUtc();
       final session = rangeSession;
-      await session.ensureIndex(at);
+      await session.ensureIndex(at, windowDays: rangeWindow);
       if (disposed) return;
       // The worker holds rows, so a token it no longer matches must start from a
       // clean worker: a stale token would answer with another archive's rows.
@@ -137,6 +199,13 @@ class MarketController extends ChangeNotifier {
   Future<void> init() async {
     filter.city = await store.setting('selectedCity') ?? '';
     filter.cityKind = 'all';
+    discoveryDays =
+        int.tryParse(await store.setting('windowDays') ?? '') ?? defaultWindowDays;
+    if (discoveryDays < 0) discoveryDays = defaultWindowDays;
+    pricesDays = int.tryParse(await store.setting('windowDays:prices') ?? '') ?? -1;
+    rangeDays = int.tryParse(await store.setting('windowDays:range') ?? '') ?? -1;
+    chartDays = int.tryParse(await store.setting('windowDays:chart') ?? '') ?? -1;
+    filter.windowDays = pricesWindow;
     loggingEnabled = await store.setting('loggingEnabled') == 'true';
     await AppLogger.instance.setEnabled(loggingEnabled);
     registry = jsonDecode(await rootBundle.loadString('assets/registry.json'));
@@ -182,12 +251,12 @@ class MarketController extends ChangeNotifier {
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
       await store.setSetting('sheetSourcesVersion', '1');
     }
-    // Explicit user request in 0.5.1: all curated sources ON, once on upgrade.
+    // Explicit user request: all curated sources ON, once on upgrade.
     // Unreviewed discovered links are candidates, not confirmed source adapters.
-    if (await store.setting('allRegisteredSourcesEnabledVersion') != '3') {
-      enabled.addAll(availableEndpoints.map((e) => e.id));
+    if (await store.setting('allRegisteredSourcesEnabledVersion') != '4') {
+      enabled.addAll(endpoints.map((e) => e.id));
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('allRegisteredSourcesEnabledVersion', '3');
+      await store.setSetting('allRegisteredSourcesEnabledVersion', '4');
     }
     // Add only the eight newly requested routes once; preserve old OFF choices.
     if (await store.setting('mashhadSourcesVersion') != '072') {
@@ -232,8 +301,12 @@ class MarketController extends ChangeNotifier {
     final basis = filter.basis;
     final seen = <String>{};
     final options = <Quote>[];
+    final now = DateTime.now().toUtc();
     void add(Iterable<Quote> source) {
       for (final q in source) {
+        // Only rows inside the chart's own window: the tab shows what was stored
+        // in the selected window, exactly like the other tabs.
+        if (!insideWindow(q, now, chartWindow)) continue;
         if (q.tomanFor(basis) == null) continue;
         if (seen.add(q.id)) options.add(q);
       }
@@ -314,6 +387,7 @@ class MarketController extends ChangeNotifier {
         filter.unit,
         filter.recentWeek,
         filter.includeUnpriced,
+        filter.windowDays,
         quotes.length,
         identityHashCode(quotes),
         historyRevision,
@@ -362,7 +436,11 @@ class MarketController extends ChangeNotifier {
   CandidateScope candidateScope() => CandidateScope(
         basis: filter.basis,
         query: filter.query,
-        maxAgeDays: filter.recentWeek ? 7 : 3650,
+        // The tab's own window is the selection window; the "only this week"
+        // switch narrows it further when it is turned on.
+        maxAgeDays: filter.recentWeek && pricesWindow > 7
+            ? 7
+            : (pricesWindow <= 0 ? 36500 : pricesWindow),
         category: filter.category,
         material: filter.material,
         city: filter.city,
@@ -546,7 +624,7 @@ class MarketController extends ChangeNotifier {
       while (index < queue.length && !disposed) {
         final e = queue[index++];
         try {
-          final data = await client.fetch(e);
+          final data = await client.fetch(e, windowDays: discoveryDays);
           await store.saveSnapshot(e.id, data,
               replaceMissing: client.complete[e.id] ?? true);
           // Fresh rows are derived at write time; drop the previous answers.

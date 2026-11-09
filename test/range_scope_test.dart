@@ -89,7 +89,7 @@ void main() {
     offer(7, grade: 'A2'),
     offer(8, unit: 'ton', amount: 42000000),
     offer(9, amount: null),
-    offer(10, date: now.subtract(const Duration(days: 30)).toIso8601String()),
+    offer(10, date: now.subtract(const Duration(days: 40)).toIso8601String()),
     offer(11, details: const {'حالت': 'رول'}),
   ];
 
@@ -138,16 +138,19 @@ void main() {
   test('the window is the user filter, not a hidden one', () async {
     final c = await prepared(archive);
     addTearDown(c.dispose);
-    // The tab opens on «فقط هفته اخیر», so a month-old offer is out — but it is
-    // out because that filter is on, and it comes back the moment it is off.
+    // The tab opens on the primary window (one month), so an offer older than it
+    // is out — but it is out because that window is selected, and it returns the
+    // moment the window is widened to «همه زمان‌ها».
     expect(c.candidateRows.map((q) => q.id), isNot(contains('p10')));
     expect(c.candidates!.undated, greaterThan(0),
         reason: 'the rows held back are counted, never hidden without a number');
-    c.filter.recentWeek = false;
-    c.changed();
+    await c.setDiscoveryDays(0);
+    for (var i = 0; i < 200 && c.candidates == null; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
     await c.prepareCandidates();
     expect(c.candidateRows.map((q) => q.id), contains('p10'),
-        reason: 'with the window off the old offer is a candidate again');
+        reason: 'with the window widened the old offer is a candidate again');
   });
 
   test('an offer stored twice is one card, never two', () async {

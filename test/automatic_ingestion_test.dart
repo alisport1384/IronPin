@@ -32,9 +32,12 @@ void main() {
       expect(c.quotes.where((q) => q.hasTextAmount).length,
           greaterThanOrEqualTo(16));
       expect(c.quotes.every((q) => q.details['ورودی دستی'] != 'بله'), true);
+      // This fixture is older than the default one-month window, so the window
+      // is widened here: the assertion is about the search, not about the date.
       c.filter
         ..query = 'ورق 3'
-        ..recentWeek = false;
+        ..recentWeek = false
+        ..windowDays = 0;
       expect(c.filtered.length, 3);
       expect(c.filtered.every((q) => q.sellerCity == 'مشهد'), true);
       c.filter.recentWeek = true;

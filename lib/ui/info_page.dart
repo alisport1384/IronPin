@@ -20,7 +20,21 @@ class _InfoPageState extends State<InfoPage> {
   Future<void> exportLogs() async {
     setState(() => exporting = true);
     try {
-      final destination = await AppLogger.instance.export();
+      final destination = await AppLogger.instance.export(summary: {
+        'version': '0.8.1',
+        'windowDays': widget.c.discoveryDays,
+        'pricesWindow': widget.c.pricesWindow,
+        'rangeWindow': widget.c.rangeWindow,
+        'chartWindow': widget.c.chartWindow,
+        'city': widget.c.selectedCity.isEmpty
+            ? 'همه شهرها'
+            : widget.c.selectedCity,
+        'enabledSources': widget.c.enabled.length,
+        'registeredRows': widget.c.quotes.length,
+        'visibleRows': widget.c.candidateCount,
+        'historyRows': await widget.c.store.historyCount(),
+        'lastError': AppLogger.instance.lastError ?? 'ندارد',
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(destination == null
@@ -157,7 +171,7 @@ class _InfoPageState extends State<InfoPage> {
             const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                    'فقط با روشن‌کردن کلید لاگ، خلاصه محصول و منبع در حافظه اختصاصی ثبت می‌شود؛ کلیک، فیلتر، محاسبه و خطای عمومی ثبت نمی‌شوند. پاک‌سازی ماهانه تاریخچه، لاگ‌ها را حذف نمی‌کند. برای نگهداری خارج از برنامه از دکمه زیر خروجی بگیر.')),
+                    'با روشن‌کردن کلید لاگ، خلاصه محصول، منبع، رنج‌گیری، فیلتر، خطا و راه‌اندازی در حافظه اختصاصی ثبت می‌شود؛ محتوای کامل پیام‌ها هرگز ذخیره نمی‌شود. حتی اگر کلید خاموش باشد، خروجی یک فایل خلاصه از وضعیت همین اجرا می‌سازد و دکمه خروجی خالی برنمی‌گردد. پاک‌سازی ماهانه تاریخچه، لاگ‌ها را حذف نمی‌کند.')),
             if (AppLogger.instance.lastError != null)
               const Text(
                   'ثبت لاگ با خطا روبه‌رو شده؛ فضای خالی و دسترسی پوشه را بررسی کنید.',
@@ -188,6 +202,22 @@ class _InfoPageState extends State<InfoPage> {
           icon: const Icon(Icons.location_on_outlined),
           label: Text(
               city.isEmpty ? 'شهر سراسری: تمام شهرها' : 'شهر سراسری: $city')),
+      const SizedBox(height: 10),
+      Container(
+          decoration: BoxDecoration(
+              border: Border.all(color: muted.withOpacity(.35)),
+              borderRadius: BorderRadius.circular(10)),
+          child: windowChip('بازه زمانی جستجو و ثبت', c.discoveryDays, (days) async {
+            await c.setDiscoveryDays(days);
+            if (mounted) setState(() {});
+          })),
+      infoBox('پنجره اصلی جستجو و ثبت',
+          'دریافت، اعتبارسنجی و ذخیره فقط برای ردیفی انجام می‌شود که تاریخ اعلام خودش داخل این بازه باشد؛ ردیف قدیمی‌تر نه ثبت می‌شود و نه در زبانه‌ها دیده می‌شود. زبانه‌های قیمت، رنج‌گیری و نمودار همین بازه را به ارث می‌برند و هر زبانه می‌تواند بازه خودش را جدا کند؛ زبانه محاسبات فیلتر زمانی ندارد.'),
+      Text(
+          'بازه فعال زبانه‌ها: قیمت ${windowText(c.pricesWindow)} • '
+          'رنگ‌گیری ${windowText(c.rangeWindow)} • '
+          'نمودار ${windowText(c.chartWindow)}',
+          style: const TextStyle(fontSize: 11, color: muted)),
       infoBox('شهر فقط فیلتر نمایش است',
           'دفتر، بارگیری، محل تولید و اشاره صریح همان کالا بررسی می‌شوند؛ اطلاعات شهرهای دیگر نمایش یا محاسبه نمی‌شوند. دریافت از همه منابع فعال، مستقل از شهر ادامه دارد. شهر نامعلوم حدس زده نمی‌شود.'),
       const Text('اتصال‌های قابل نوسازی',
@@ -371,9 +401,9 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: () => showLicensePage(
               context: context,
               applicationName: 'IronPin',
-              applicationVersion: '0.7.5'),
+              applicationVersion: '0.8.1'),
           child: const Text('مجوزهای نرم‌افزار و داده')),
-      const Text('IronPin 0.7.5 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
+      const Text('IronPin 0.8.1 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: muted)),
       const SizedBox(height: 18),

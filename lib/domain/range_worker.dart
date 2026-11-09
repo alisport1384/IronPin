@@ -128,6 +128,7 @@ class RangeWorker {
     required String basis,
     required String city,
     required int nowMs,
+    int windowMs = 48 * 3600 * 1000,
     Duration timeout = const Duration(seconds: 45),
     void Function(int done, int total)? onProgress,
   }) async {
@@ -145,6 +146,7 @@ class RangeWorker {
       'basis': basis,
       'city': city,
       'now': nowMs,
+      'windowMs': windowMs,
     });
     try {
       return await completer.future.timeout(timeout, onTimeout: () {
@@ -208,7 +210,8 @@ Future<void> _workerMain(List<Object> arguments) async {
           fields: Map<String, String>.from(message['fields'] as Map),
           basis: message['basis'] as String,
           city: message['city'] as String,
-          nowMs: message['now'] as int);
+          nowMs: message['now'] as int,
+          windowMs: message['windowMs'] as int? ?? 48 * 3600 * 1000);
       if (cancelled.remove(id)) continue;
       // The answer is assembled here, in the worker, and sent back as domain
       // objects, so the UI isolate only receives the rows it will draw.

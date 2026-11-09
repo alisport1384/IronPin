@@ -58,7 +58,8 @@ class PublicMessages {
       required String seller,
       required String city,
       required DateTime fetchedAt,
-      required String platform}) {
+      required String platform,
+      String defaultCurrency = 'نامشخص'}) {
     final doc = html.parse(body), base = Uri.parse(url);
     final handle =
         base.pathSegments.where((s) => s.isNotEmpty && s != 's').firstOrNull ??
@@ -90,7 +91,8 @@ class PublicMessages {
             postId: post,
             publishedAt: sourceDate(
                 message.querySelector('time')?.attributes['datetime'] ?? ''),
-            image: image));
+            image: image,
+            defaultCurrency: defaultCurrency));
       }
       return result;
     }
@@ -129,7 +131,8 @@ class PublicMessages {
           sourceUrl: base.resolve(a.attributes['href']!).toString(),
           fetchedAt: fetchedAt,
           postId: '$handle/$post',
-          publishedAt: published));
+          publishedAt: published,
+          defaultCurrency: defaultCurrency));
     }
     if (result.isNotEmpty) return result;
     if (platform == 'rubika') {
@@ -147,6 +150,7 @@ class PublicMessages {
             sellerCity: city,
             sourceUrl: url,
             fetchedAt: fetchedAt,
+            defaultCurrency: defaultCurrency,
             postId: 'document')
         .map((q) => Quote.fromJson(q.toJson()
           ..['details'] = {

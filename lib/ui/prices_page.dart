@@ -51,11 +51,17 @@ class PricesPage extends StatelessWidget {
                 icon: const Icon(Icons.tune, size: 21))
           ])),
       Padding(
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+          child: windowChip('بازه زمانی', c.pricesDays, (v) {
+            unawaited(c.setTabDays('prices', v));
+          }, inherit: true, inherited: c.discoveryDays)),
+      Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(children: [
             Expanded(
                 child: Text(
-                    '${fmt(total)} پیشنهاد${c.filter.recentWeek ? ' • هفته اخیر' : ''}'
+                    '${fmt(total)} پیشنهاد • ${windowText(c.pricesWindow)}'
+                    '${c.filter.recentWeek && c.pricesWindow > 7 ? ' • هفته اخیر' : ''}'
                     '${hasMore ? ' • ${fmt(list.length)} مورد آماده نمایش' : ''}',
                     style: const TextStyle(fontSize: 10, color: muted),
                     overflow: TextOverflow.ellipsis)),
@@ -105,7 +111,7 @@ class PricesPage extends StatelessWidget {
                                   : 'نتیجه‌ای با این فیلتر نیست',
                           c.quotes.isEmpty
                               ? 'نوسازی را بزنید؛ تحلیل منابع خودکار داخل اپ انجام می‌شود. وضعیت دریافت در اطلاعات است.'
-                              : 'فیلتر شهر، بازه تاریخ یا مشخصات را بررسی کنید. داده بی‌تاریخ/قدیمی با برداشتن هفته اخیر قابل بررسی است؛ نبود نتیجه به معنی نبود فروشنده نیست.')
+                              : 'بازه زمانی «${windowText(c.pricesWindow)}» یا فیلتر شهر و مشخصات را بررسی کنید. ردیف‌های ثبت‌شده داخل بازه دیگر را با تغییر همان بازه ببینید؛ نبود نتیجه به معنی نبود فروشنده نیست.')
                     ])
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
@@ -275,18 +281,21 @@ class UnitPrices extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (q.priceFor('original') == null) return const SizedBox.shrink();
+    // A row whose source named no unit still has a real, announced amount: it is
+    // shown as exactly that, instead of a table of conversions it cannot prove.
+    final units = q.unit == 'unknown' ? <String>['original'] : q.displayUnits;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('قیمت در واحدهای مرتبط',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
       LayoutBuilder(
           builder: (context, box) => Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final unit in q.displayUnits)
+                for (final unit in units)
                   Container(
                       width: (box.maxWidth - 8) / 2,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: unit == q.unit
+                          color: unit == q.unit || unit == 'original'
                               ? teal.withOpacity(.08)
                               : const Color(0xfff3f6f8),
                           borderRadius: BorderRadius.circular(9)),
@@ -294,7 +303,9 @@ class UnitPrices extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                                'هر ${q.unitName(unit)}${unit == q.unit ? ' • اصلی' : q.priceFor(unit) != null ? ' • تبدیل' : ''}',
+                                unit == 'original'
+                                    ? 'قیمت اعلام‌شده • واحد اعلام نشده'
+                                    : 'هر ${q.unitName(unit)}${unit == q.unit ? ' • اصلی' : q.priceFor(unit) != null ? ' • تبدیل' : ''}',
                                 style: const TextStyle(
                                     fontSize: 11, color: muted)),
                             const SizedBox(height: 4),

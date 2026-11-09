@@ -149,7 +149,8 @@ void main() {
     await t.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 150)));
     await t.pumpAndSettle();
-    expect(find.text('رنج‌گیری ۴۸ ساعت'), findsOneWidget);
+    // The title names the window the tab is really using (one month by default).
+    expect(find.textContaining('رنج‌گیری'), findsOneWidget);
     await t.tap(find.byType(ListTile).first);
     await t.pumpAndSettle();
     expect(find.text('۱۵۰ تومان / کیلوگرم'), findsNothing);

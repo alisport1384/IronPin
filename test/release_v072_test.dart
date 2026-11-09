@@ -83,7 +83,7 @@ void main() {
       'sourcesVersion': '2',
       'analysisSourcesVersion': '1',
       'sheetSourcesVersion': '1',
-      'allRegisteredSourcesEnabledVersion': '3',
+      'allRegisteredSourcesEnabledVersion': '4',
       'selectedCity': 'مشهد',
       'loggingEnabled': 'false'
     }.entries) {
