@@ -56,8 +56,8 @@ Future<void> _scrollTo(WidgetTester t, Finder target) async {
 
 Future<void> _settleRange(WidgetTester t) async {
   for (var i = 0; i < 120; i++) {
-    await t.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 25)));
+    await t
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 25)));
     await t.pump();
     if (find.byType(LinearProgressIndicator).evaluate().isEmpty) break;
   }
@@ -403,8 +403,7 @@ void main() {
     expect(city, '');
     expect(t.takeException(), isNull);
   });
-  testWidgets(
-      'a zero read budget still ends the spinner and never blocks data',
+  testWidgets('a zero read budget still ends the spinner and never blocks data',
       (t) async {
     final store = await t.runAsync(() => MarketStore.open(
         dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
@@ -446,7 +445,8 @@ void main() {
 class RecordingClient extends SourceClient {
   final seen = <String>[];
   @override
-  Future<List<Quote>> fetch(SourceEndpoint e, {int windowDays = 0}) async {
+  Future<List<Quote>> fetch(SourceEndpoint e,
+      {int windowDays = 0, int? pageLimit}) async {
     seen.add(e.id);
     complete[e.id] = true;
     return [

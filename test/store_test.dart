@@ -70,6 +70,21 @@ void main() {
     expect((await store.latest()).single.amount, 120);
     expect((await store.history('a')).length, 1);
   });
+  test(
+      'refresh lease excludes overlapping work and recovers after release/expiry',
+      () async {
+    final first = await store.acquireRefreshLock();
+    expect(first, isNotNull);
+    expect(await store.acquireRefreshLock(), isNull);
+    await store.releaseRefreshLock(first!);
+    final second = await store.acquireRefreshLock();
+    expect(second, isNotNull);
+    await store.db.rawUpdate('UPDATE refresh_lock SET expires_at=0 WHERE id=1');
+    final recovered = await store.acquireRefreshLock();
+    expect(recovered, isNotNull);
+    expect(recovered, isNot(second));
+    await store.releaseRefreshLock(recovered!);
+  });
   test('source settings persist', () async {
     await store.setSetting('autoRefresh', 'false');
     expect(await store.setting('autoRefresh'), 'false');

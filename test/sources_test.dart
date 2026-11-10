@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -115,6 +116,42 @@ void main() {
     expect(rows.first.priceFor('kg'), null);
     expect(rows.first.unit, 'unknown');
     expect(rows.first.details['متن پیام'], isNotEmpty);
+  });
+  test('all-time scans use the page cap, not an implicit seven-day cutoff',
+      () async {
+    var requests = 0;
+    final raw = fixture('telegram');
+    final client = SourceClient(
+        client: MockClient((request) async {
+          requests++;
+          final older = request.url.queryParameters.isEmpty ? '2' : '1';
+          return http.Response.bytes(
+              utf8.encode('$raw<a href="?before=$older">older</a>'), 200,
+              headers: {'content-type': 'text/html; charset=utf-8'});
+        }),
+        maxChannelPages: 6);
+    final rows = await client.fetch(
+        endpoints.firstWhere((e) => e.parser == 'telegram'),
+        windowDays: 0,
+        pageLimit: 2);
+    expect(rows, isNotEmpty);
+    expect(requests, 2);
+    expect(client.complete.values.single, false);
+    client.close();
+  });
+  test('out-of-window public posts are not returned for storage', () async {
+    final stale = fixture('telegram')
+        .replaceAll('۱۴ آبان ماه ۱۴۰۵', '۱۴ آبان ماه ۱۴۰۴')
+        .replaceAll('2026-11-05T07:07:05+00:00', '2025-11-05T07:07:05+00:00');
+    final client = SourceClient(
+        client: MockClient((_) async => http.Response.bytes(
+            utf8.encode(stale), 200,
+            headers: {'content-type': 'text/html; charset=utf-8'})));
+    await expectLater(
+        client.fetch(endpoints.firstWhere((e) => e.parser == 'telegram'),
+            windowDays: 30),
+        throwsFormatException);
+    client.close();
   });
   test('HTTP errors fail without a successful empty snapshot', () async {
     final client = SourceClient(

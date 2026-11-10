@@ -1,7 +1,7 @@
 name: ironpin
 description: Persian iron market monitor with on-device source refresh and history.
 publish_to: none
-version: 0.8.5+21
+version: 0.9.0+22
 environment:
   sdk: '>=3.5.0 <4.0.0'
 dependencies:
@@ -15,6 +15,7 @@ dependencies:
   path: 1.9.0
   url_launcher: 6.3.0
   shamsi_date: 1.0.4
+  workmanager: 0.5.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

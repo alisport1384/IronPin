@@ -46,7 +46,7 @@ class MarketStore {
     final p = dbPath ?? path.join(await getDatabasesPath(), 'ironpin.db');
     final db = await f.openDatabase(p,
         options: OpenDatabaseOptions(
-            version: 7,
+            version: 8,
             onCreate: (db, version) async {
               await db.execute(
                   'CREATE TABLE latest (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)');
@@ -64,6 +64,8 @@ class MarketStore {
                   'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
               await db.execute(
                   'CREATE TABLE sync (endpoint TEXT PRIMARY KEY, attempted_at TEXT NOT NULL, success_at TEXT, message TEXT NOT NULL)');
+              await db.execute(
+                  'CREATE TABLE refresh_lock (id INTEGER PRIMARY KEY CHECK(id=1), owner TEXT NOT NULL, expires_at INTEGER NOT NULL)');
               for (final sql in _rangeIndexSchema) {
                 await db.execute(sql);
               }
@@ -158,6 +160,10 @@ class MarketStore {
                       .execute("ALTER TABLE range_index ADD COLUMN amount_raw "
                           "TEXT NOT NULL DEFAULT ''");
                 }
+              }
+              if (oldVersion < 8) {
+                await db.execute(
+                    'CREATE TABLE IF NOT EXISTS refresh_lock (id INTEGER PRIMARY KEY CHECK(id=1), owner TEXT NOT NULL, expires_at INTEGER NOT NULL)');
               }
             }));
     return MarketStore(db);
@@ -474,6 +480,29 @@ class MarketStore {
       'elapsedMs': watch.elapsedMilliseconds
     });
     return report;
+  }
+
+  static int _refreshLockSequence = 0;
+
+  Future<String?> acquireRefreshLock(
+      {Duration lease = const Duration(minutes: 30)}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final owner = '$now-${identityHashCode(this)}-${++_refreshLockSequence}';
+    return db.transaction((tx) async {
+      final current = await tx.query('refresh_lock',
+          columns: ['owner', 'expires_at'], where: 'id=1', limit: 1);
+      if (current.isNotEmpty && (current.first['expires_at'] as int) > now) {
+        return null;
+      }
+      await tx.insert('refresh_lock',
+          {'id': 1, 'owner': owner, 'expires_at': now + lease.inMilliseconds},
+          conflictAlgorithm: ConflictAlgorithm.replace);
+      return owner;
+    });
+  }
+
+  Future<void> releaseRefreshLock(String owner) async {
+    await db.delete('refresh_lock', where: 'owner=?', whereArgs: [owner]);
   }
 
   Future<void> failure(String endpoint, String message) async {

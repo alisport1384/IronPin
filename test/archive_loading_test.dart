@@ -25,7 +25,7 @@ Quote offer(String endpoint, int n) => Quote(
 class LocalClient extends SourceClient {
   @override
   Future<List<Quote>> fetch(SourceEndpoint endpoint,
-          {int windowDays = 30}) async =>
+          {int windowDays = 30, int? pageLimit}) async =>
       [offer(endpoint.id, 1)];
 }
 

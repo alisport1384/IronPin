@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/controller.dart';
+import 'data/background_scan.dart';
 import 'data/store.dart';
 import 'data/app_logger.dart';
 import 'domain/market.dart';
@@ -21,6 +22,7 @@ Future<void> main() async {
         await rootBundle.loadString('assets/THIRD_PARTY_NOTICES.txt'));
   });
   AppLogger.instance.installErrorHandlers();
+  await BackgroundScanScheduler.initialize();
   runApp(const IronPinApp());
 }
 
@@ -208,7 +210,10 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
     widget.c.foreground = state == AppLifecycleState.resumed;
     unawaited(
         AppLogger.instance.record('lifecycle', 'state', {'state': state.name}));
-    if (state == AppLifecycleState.resumed) unawaited(_checkRetention());
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_checkRetention());
+      unawaited(widget.c.refreshBackgroundState());
+    }
   }
 
   @override

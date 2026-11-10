@@ -28,6 +28,7 @@ void main() {
                 headers: {'content-type': 'text/html; charset=utf-8'}))));
     try {
       c.enabled = {'telegram-hayperahan'};
+      await c.setDiscoveryDays(0);
       await c.refresh();
       expect(c.quotes.where((q) => q.hasTextAmount).length,
           greaterThanOrEqualTo(16));

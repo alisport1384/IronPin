@@ -6,6 +6,7 @@ import '../domain/market.dart';
 import '../domain/range_projection.dart';
 import '../domain/range_worker.dart';
 import 'range_session.dart';
+import 'background_scan.dart';
 import 'sources.dart';
 import 'store.dart';
 import 'app_logger.dart';
@@ -68,6 +69,9 @@ class MarketController extends ChangeNotifier {
   Set<String> enabled = {for (final e in endpoints) e.id};
   bool busy = false, ready = false, autoRefresh = false, disposed = false;
   bool foreground = true;
+  int scanIntervalMinutes = 30;
+  String? lastBackgroundScan;
+  int lastBackgroundScanCount = 0;
   int finished = 0, historyRevision = 0;
   String get selectedCity => filter.city;
 
@@ -268,8 +272,21 @@ class MarketController extends ChangeNotifier {
       await store.setSetting('enabled', jsonEncode(enabled.toList()));
       await store.setSetting('mashhadSourcesVersion', '072');
     }
-    autoRefresh = false;
-    await store.setSetting('autoRefresh', 'false');
+    autoRefresh = await store.setting('autoRefresh') == 'true';
+    scanIntervalMinutes =
+        int.tryParse(await store.setting('scanIntervalMinutes') ?? '') ?? 30;
+    if (![15, 30, 60].contains(scanIntervalMinutes)) scanIntervalMinutes = 30;
+    lastBackgroundScan = await store.setting('lastBackgroundScan');
+    lastBackgroundScanCount =
+        int.tryParse(await store.setting('lastBackgroundScanCount') ?? '') ?? 0;
+    try {
+      await BackgroundScanScheduler.configure(
+          enabled: autoRefresh, intervalMinutes: scanIntervalMinutes);
+    } catch (error, stack) {
+      autoRefresh = false;
+      await store.setSetting('autoRefresh', 'false');
+      AppLogger.instance.capture(error, stack, section: 'background_scan');
+    }
     await reload();
     ready = true;
     await AppLogger.instance
@@ -608,9 +625,44 @@ class MarketController extends ChangeNotifier {
   }
 
   Future<void> setAuto(bool value) async {
-    // Legacy method retained; background/network auto-refresh is disabled.
-    autoRefresh = false;
-    await store.setSetting('autoRefresh', 'false');
+    final previous = autoRefresh;
+    autoRefresh = value;
+    try {
+      await BackgroundScanScheduler.configure(
+          enabled: value, intervalMinutes: scanIntervalMinutes);
+      await store.setSetting('autoRefresh', '$value');
+    } catch (error, stack) {
+      autoRefresh = previous;
+      AppLogger.instance.capture(error, stack, section: 'background_scan');
+      rethrow;
+    }
+    _notify();
+  }
+
+  Future<void> setScanInterval(int minutes) async {
+    if (![15, 30, 60].contains(minutes)) {
+      throw ArgumentError.value(minutes, 'minutes', 'Expected 15, 30, or 60');
+    }
+    final previous = scanIntervalMinutes;
+    scanIntervalMinutes = minutes;
+    try {
+      if (autoRefresh) {
+        await BackgroundScanScheduler.configure(
+            enabled: true, intervalMinutes: minutes);
+      }
+      await store.setSetting('scanIntervalMinutes', '$minutes');
+    } catch (error, stack) {
+      scanIntervalMinutes = previous;
+      AppLogger.instance.capture(error, stack, section: 'background_scan');
+      rethrow;
+    }
+    _notify();
+  }
+
+  Future<void> refreshBackgroundState() async {
+    lastBackgroundScan = await store.setting('lastBackgroundScan');
+    lastBackgroundScanCount =
+        int.tryParse(await store.setting('lastBackgroundScanCount') ?? '') ?? 0;
     _notify();
   }
 
@@ -648,6 +700,17 @@ class MarketController extends ChangeNotifier {
 
   Future<void> refresh() async {
     if (busy || transferring || disposed) return;
+    String? refreshLock;
+    try {
+      refreshLock = await store.acquireRefreshLock();
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'refresh_lock');
+      return;
+    }
+    if (refreshLock == null || busy || transferring || disposed) {
+      if (refreshLock != null) await store.releaseRefreshLock(refreshLock);
+      return;
+    }
     busy = true;
     // Drop retained answers and worker copies BEFORE allocating the next
     // archive. A refresh must not hold the old and new indices concurrently.
@@ -710,27 +773,33 @@ class MarketController extends ChangeNotifier {
       await store.setSetting(
           'lastRefresh', DateTime.now().toUtc().toIso8601String());
     } finally {
-      busy = false;
-      if (_indexStale) {
-        rangeSession.invalidate();
-        _indexStale = false;
+      try {
+        if (_indexStale) {
+          rangeSession.invalidate();
+          _indexStale = false;
+        }
+        await _publishTail;
+        if (_publishFailed || !_quotesLoaded) {
+          await reload();
+        } else {
+          // Every successful source is already decoded; do not allocate another
+          // full archive just to publish the final status (including failures).
+          states = await store.syncStates();
+          _notify();
+        }
+        await AppLogger.instance
+            .checkpoint('refresh_publish_complete', rows: quotes.length);
+        unawaited(AppLogger.instance.record('network', 'refresh_complete',
+            {'completed': finished, 'cachedRows': quotes.length}));
+      } finally {
+        try {
+          await store.releaseRefreshLock(refreshLock);
+        } finally {
+          busy = false;
+          _notify();
+          unawaited(prepareCandidates());
+        }
       }
-      await _publishTail;
-      if (_publishFailed || !_quotesLoaded) {
-        await reload();
-      } else {
-        // Every successful source is already decoded; do not allocate another
-        // full archive just to publish the final status (including failures).
-        states = await store.syncStates();
-        _notify();
-      }
-      // The refresh is over, so the derived index is built once against the
-      // finished archive instead of once per published source.
-      await AppLogger.instance
-          .checkpoint('refresh_publish_complete', rows: quotes.length);
-      unawaited(prepareCandidates());
-      unawaited(AppLogger.instance.record('network', 'refresh_complete',
-          {'completed': finished, 'cachedRows': quotes.length}));
     }
   }
 

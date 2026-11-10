@@ -712,12 +712,14 @@ class SourceClient {
   final int maxChannelPages;
   SourceClient({http.Client? client, this.maxChannelPages = 6})
       : client = client ?? http.Client();
+
   /// Reads one source.
   ///
   /// [windowDays] is used only to stop following older channel pages: once a
   /// page holds nothing inside the window there is nothing left to register, so
   /// a long refresh does not crawl history the app is not allowed to show.
-  Future<List<Quote>> fetch(SourceEndpoint e, {int windowDays = 0}) async {
+  Future<List<Quote>> fetch(SourceEndpoint e,
+      {int windowDays = 0, int? pageLimit}) async {
     unawaited(AppLogger.instance
         .record('network', 'fetch_started', {'endpoint': e.id}));
     final channel = ['telegram', 'eitaa', 'bale', 'rubika'].contains(e.parser);
@@ -729,7 +731,10 @@ class SourceClient {
     var pages = 0;
     var finished = false;
     final fetched = DateTime.now().toUtc();
-    while (visited.add(url) && pages < (channel ? maxChannelPages : 1)) {
+    final cap = pageLimit == null
+        ? maxChannelPages
+        : (pageLimit < maxChannelPages ? pageLimit : maxChannelPages);
+    while (visited.add(url) && pages < (channel ? cap : 1)) {
       try {
         // Follow only published same-channel pagination; never construct a private API.
         final r = await client.get(Uri.parse(url), headers: {
@@ -754,8 +759,15 @@ class SourceClient {
         for (final x in links) {
           found[x.id] = x;
         }
-        if (!channel) tableRows.addAll(rows);
-        for (final q in rows) {
+        final inWindow = windowDays <= 0
+            ? rows
+            : rows.where((q) {
+                final at = q.publishedAt ?? q.marketAt;
+                return at == null ||
+                    !at.isBefore(fetched.subtract(Duration(days: windowDays)));
+              }).toList();
+        if (!channel) tableRows.addAll(inWindow);
+        for (final q in inWindow) {
           all.putIfAbsent(q.id, () => q);
         }
         pages++;
@@ -769,15 +781,16 @@ class SourceClient {
             .map((q) => q.publishedAt ?? q.marketAt)
             .whereType<DateTime>()
             .toList();
-        final reach = Duration(days: windowDays > 0 ? windowDays : 7);
-        if (next == null ||
-            (dates.isNotEmpty &&
-                dates.every((d) => d.isBefore(fetched.subtract(reach))))) {
+        final reachedWindow = windowDays > 0 &&
+            dates.isNotEmpty &&
+            dates.every((d) =>
+                d.isBefore(fetched.subtract(Duration(days: windowDays))));
+        if (next == null || reachedWindow) {
           finished = true;
           break;
         }
         url = next;
-        if (pages < maxChannelPages) {
+        if (pages < cap) {
           await Future<void>.delayed(const Duration(milliseconds: 350));
         }
       } catch (error) {
@@ -797,8 +810,9 @@ class SourceClient {
       'endpoint': e.id,
       'rows': all.length,
       'pages': pages,
-      'coverage':
-          finished ? 'preview_exhausted_or_week_reached' : 'page_limit_partial',
+      'coverage': finished
+          ? 'preview_exhausted_or_window_reached'
+          : 'page_limit_partial',
       'discovered': found.length
     });
     if (all.isEmpty) {

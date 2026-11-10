@@ -21,14 +21,13 @@ class _InfoPageState extends State<InfoPage> {
     setState(() => exporting = true);
     try {
       final destination = await AppLogger.instance.export(summary: {
-        'version': '0.8.1',
+        'version': '0.9.0',
         'windowDays': widget.c.discoveryDays,
         'pricesWindow': widget.c.pricesWindow,
         'rangeWindow': widget.c.rangeWindow,
         'chartWindow': widget.c.chartWindow,
-        'city': widget.c.selectedCity.isEmpty
-            ? 'همه شهرها'
-            : widget.c.selectedCity,
+        'city':
+            widget.c.selectedCity.isEmpty ? 'همه شهرها' : widget.c.selectedCity,
         'enabledSources': widget.c.enabled.length,
         'registeredRows': widget.c.quotes.length,
         'visibleRows': widget.c.candidateCount,
@@ -146,8 +145,48 @@ class _InfoPageState extends State<InfoPage> {
           title: const Text('دریافت دستی، داده و نگهداری',
               style: TextStyle(fontSize: 12)),
           children: [
+            SwitchListTile(
+                title: const Text('اسکن دوره‌ای در پس‌زمینه'),
+                subtitle: const Text(
+                    'اختیاری؛ فقط منابع فعال، بدون تضمین ساعت اجرای دقیق Android'),
+                value: c.autoRefresh,
+                onChanged: c.busy
+                    ? null
+                    : (value) async {
+                        try {
+                          await c.setAuto(value);
+                          if (mounted) setState(() {});
+                        } catch (_) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              content: Text(
+                                  'زمان‌بندی پس‌زمینه در این دستگاه فعال نشد.')));
+                        }
+                      }),
+            if (c.autoRefresh)
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DropdownButtonFormField<int>(
+                      value: c.scanIntervalMinutes,
+                      decoration: const InputDecoration(
+                          labelText: 'فاصلهٔ پیشنهادی اسکن'),
+                      items: const [15, 30, 60]
+                          .map((minutes) => DropdownMenuItem(
+                              value: minutes, child: Text('$minutes دقیقه')))
+                          .toList(),
+                      onChanged: (minutes) async {
+                        if (minutes == null) return;
+                        await c.setScanInterval(minutes);
+                        if (mounted) setState(() {});
+                      })),
+            if (c.autoRefresh)
+              Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(c.lastBackgroundScan == null
+                      ? 'هنوز اسکن پس‌زمینه‌ای ثبت نشده است.'
+                      : 'آخرین اسکن پس‌زمینه: ${dateLabel(DateTime.tryParse(c.lastBackgroundScan!))} • ${fmt(c.lastBackgroundScanCount)} منبع موفق')),
             infoBox('بدون سرور دائمی',
-                'قیمت فقط با زدن دکمه نوسازی در بالای برنامه از اینترنت دریافت می‌شود؛ بازکردن اپ، بازگشت به آن، گذشت زمان و کشیدن صفحه هیچ دریافت خودکاری ندارند. تاریخچه فقط روی همین دستگاه و از شروع دریافت ساخته می‌شود.'),
+                'نوسازی دستی با دکمهٔ بالای برنامه انجام می‌شود. اسکن دوره‌ای فقط پس از فعال‌سازی شما و با WorkManager/اتصال اینترنت ثبت می‌شود؛ Android حداقل بازهٔ ۱۵ دقیقه‌ای دارد و زمان دقیق یا اجرای دائمی را تضمین نمی‌کند. هر نوبت فقط یک دستهٔ چرخشی از منابع فعال و حداکثر دو صفحهٔ عمومی هر کانال را می‌خواند. تاریخچه فقط روی همین دستگاه و از شروع دریافت ساخته می‌شود.'),
             infoBox('لاگ کم‌حجم محصولات و منابع',
                 'لاگ فقط خلاصه تغییر محصول و وضعیت منبع است؛ نمونه حداکثر۱۰محصول در هر ثبت. سقف مجموع۱مگابایت؛ لاگ تشخیصی قدیمی هنگام ارتقا کنار می‌رود، نه تاریخچه قیمت یا بکاپ.'),
             infoBox('ذخیره محلی و تصمیم ماهانه',
@@ -207,7 +246,8 @@ class _InfoPageState extends State<InfoPage> {
           decoration: BoxDecoration(
               border: Border.all(color: muted.withOpacity(.35)),
               borderRadius: BorderRadius.circular(10)),
-          child: windowChip('بازه زمانی جستجو و ثبت', c.discoveryDays, (days) async {
+          child: windowChip('بازه زمانی جستجو و ثبت', c.discoveryDays,
+              (days) async {
             await c.setDiscoveryDays(days);
             if (mounted) setState(() {});
           })),
