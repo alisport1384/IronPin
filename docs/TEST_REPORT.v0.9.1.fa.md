@@ -13,10 +13,12 @@ No issues found!
 
 ```
 flutter test
-+400: All tests passed!
++406: All tests passed!
 ```
 
-آزمون‌های تازه: ۲۷ مورد در `test/searcher_test.dart` + ۵ مورد در
+آزمون‌های تازه: ۲۷ مورد در `test/searcher_test.dart` + ۶ مورد در
+`test/photo_scan_test.dart` (خواندن خودکار عکس پست، تصویر ناخوانا، خطای دانلود، نبود موتور،
+تشخیص اینکه ایموجی/آواتار عکس قیمت نیست) + ۵ مورد در
 `test/maps_resolver_test.dart` (بازکردن لینک کوتاه با بدل HTTP، شکست لینک مرده، حالت
 بدون اینترنت، و اینکه فقط لینک کوتاه به مرحلهٔ شبکه می‌رود).
 
@@ -50,7 +52,7 @@ flutter build apk --release --target-platform android-arm
 - خروجی تحویلی: `releases/app-armeabi-v7a-release.apk` (کپیِ
   `build/app/outputs/flutter-apk/app-release.apk`)
 - حجم: ۱۳.۷ مگابایت • `versionName 0.9.1` • `versionCode 23` • `minSdk 21` • `targetSdk 35`
-- `sha256`: `ea36c5d0dd00996c87d4a89dcc6b1bb5082f7babe938a23fd691682acbfc6e05`
+- `sha256`: `55b89fb8dcb1d4fa7baacc1215f492496340ed2b1591bc1ef8015d2d9b2a60c9`
 - دو پاس OCR روی گوشی (تصویر اصلی + نسخهٔ خاکستری/کنتراست‌بالا) و انتخاب پاس بهتر.
 - محتوای بررسی‌شده با `unzip -l` و `aapt dump badging`: فقط `lib/armeabi-v7a/*`
   (`libapp.so`، `libflutter.so`، `libtesseract.so`، `libleptonica.so`، `libjpeg.so`،

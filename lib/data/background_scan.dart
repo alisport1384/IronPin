@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../domain/maps_resolver.dart';
+import '../domain/ocr.dart';
+import '../domain/photo_scan.dart';
 import '../domain/searcher.dart';
 import 'sources.dart';
 import 'store.dart';
@@ -77,6 +79,11 @@ class BackgroundScanScheduler {
 Future<bool> runBackgroundScan() async {
   MarketStore? store;
   final client = SourceClient(maxChannelPages: 2);
+  // The same automatic picture reading as a manual refresh. Inside the
+  // WorkManager isolate Flutter plugins are not registered, so the scanner marks
+  // itself blocked and the posts keep their own rows until a foreground scan.
+  final photos = PhotoScanner(
+      client: client.client, engine: OcrEngine.platform());
   String? lease;
   try {
     store = await MarketStore.open();
@@ -111,8 +118,14 @@ Future<bool> runBackgroundScan() async {
     final days = int.tryParse(await store.setting('windowDays') ?? '') ?? 30;
     for (final endpoint in batch.sources) {
       try {
-        final quotes =
+        final fetched =
             await client.fetch(endpoint, windowDays: days, pageLimit: 2);
+        final batch = await readPostPhotos(fetched, photos,
+            defaultCurrency: endpoint.defaultCurrency);
+        if (batch.read > 0) {
+          await store.setSetting('lastPhotoScanCount', '${batch.read}');
+        }
+        final quotes = batch.rows;
         // The same searcher rules apply in the background: only in-window,
         // product-bearing rows with a resolved place enter the archive, and an
         // empty result never wipes the rows already stored.

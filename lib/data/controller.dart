@@ -3,12 +3,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../domain/market.dart';
-import '../domain/maps_link.dart';
 import '../domain/maps_resolver.dart';
 import '../domain/ocr.dart';
+import '../domain/photo_scan.dart';
 import '../domain/range_projection.dart';
 import '../domain/searcher.dart';
-import '../domain/text_engine.dart';
 import '../domain/range_worker.dart';
 import 'range_session.dart';
 import 'background_scan.dart';
@@ -19,6 +18,9 @@ import 'app_logger.dart';
 class MarketController extends ChangeNotifier {
   final MarketStore store;
   final SourceClient client;
+
+  /// Reads the pictures a source publishes; no manual pick anywhere.
+  final PhotoScanner photoScanner;
   final MarketFilter filter = MarketFilter()
     ..sort = 'latest'
     // A fresh controller already answers with the primary window; `init` only
@@ -26,15 +28,10 @@ class MarketController extends ChangeNotifier {
     ..windowDays = defaultWindowDays;
   List<Quote> quotes = [];
 
-  /// Rows read from a picture the user picked. They enter the main archive like
-  /// any other row, under their own source id.
-  static const imageEndpoint = 'local-image';
-  static String get imageSourceName => 'تحلیل عکس';
-
-  /// Result of the last image analysis, shown on the info page.
-  String imageReport = '';
-  bool analyzingImage = false;
-  List<Quote> lastImageRows = const [];
+  /// How many pictures the scanner read during the last scan, and what it saw.
+  /// The user never picks a picture: the scan reads the ones the sources publish.
+  int photosScanned = 0;
+  String photoReport = '';
   final List<SourceEndpoint> discoveredSources = [];
   List<SourceEndpoint> get availableEndpoints =>
       [...endpoints, ...discoveredSources];
@@ -190,8 +187,11 @@ class MarketController extends ChangeNotifier {
   bool transferring = false;
   final Map<String, int> endpointRevisions = {};
   int historyEpoch = 0;
-  MarketController(this.store, {SourceClient? client})
-      : client = client ?? SourceClient();
+  MarketController(this.store, {SourceClient? client, PhotoScanner? photoScanner})
+      : client = client ?? SourceClient(),
+        photoScanner = photoScanner ?? PhotoScanner(
+            client: (client ?? SourceClient()).client,
+            engine: OcrEngine.platform());
 
   /// In-memory index of the archive and its confirmed answers. Purely additive:
   /// every answer is derived from the stored payloads, and any write drops it.
@@ -778,7 +778,10 @@ class MarketController extends ChangeNotifier {
       while (index < queue.length && !disposed) {
         final e = queue[index++];
         try {
-          final data = await client.fetch(e, windowDays: discoveryDays);
+          final fetched = await client.fetch(e, windowDays: discoveryDays);
+          // A price list published only as a picture is read here, automatically.
+          final data = await readPhotos(fetched,
+              defaultCurrency: e.defaultCurrency);
           // One searcher decides what may enter the archive: inside the parent
           // window, about a product, with its place resolved and one copy of
           // each offer. A source that yields nothing usable keeps its previous
@@ -866,104 +869,18 @@ class MarketController extends ChangeNotifier {
     }
   }
 
-  /// Reads one picture end to end: picker → offline OCR (Persian) → the same
-  /// text analyzer the sources use → the same searcher → the main archive.
-  ///
-  /// Nothing is stored when the picture yields neither a product nor a price;
-  /// the caller receives a sentence that says exactly what happened.
-  Future<String> analyzeImage() async {
-    if (analyzingImage || disposed) return 'تحلیل تصویر در جریان است.';
-    analyzingImage = true;
-    imageReport = 'در حال خواندن تصویر…';
-    _notify();
-    var report = '';
-    try {
-      final engine = OcrEngine.platform();
-      final path = await engine.pickImage();
-      if (path == null || path.isEmpty) {
-        report = 'تصویری انتخاب نشد.';
-        return report;
-      }
-      final ocrResult = await engine.recognize(path);
-      if (ocrResult.isEmpty) {
-        report = ocrResult.error ?? 'متن خوانایی در تصویر پیدا نشد.';
-        return report;
-      }
-      final now = DateTime.now();
-      var text = Searcher.cleanOcrText(ocrResult.text);
-      // A picture almost always writes the map as a short link. Open it while the
-      // app is online and append the address it really points at, so the same
-      // parser reads the place instead of reporting "unknown".
-      final resolver = MapsResolver(client.client);
-      var mapNote = '';
-      final shortLinks = shortMapsLinksIn(text);
-      if (shortLinks.isNotEmpty) {
-        final info = await resolver.resolve(shortLinks.first);
-        mapNote = MapsResolver.evidenceLine(info, shortLinks.first);
-        if (info != null) text = '$text\n${info.url}';
-      }
-      // Tesseract reports a mean word confidence on some builds; when it does
-      // not, the text itself is scored, and that score is labelled as such.
-      final confidence = ocrResult.confidence ?? OcrQuality.score(text);
-      final confidenceLabel =
-          '${(confidence * 100).round()}٪${ocrResult.confidence == null ? ' (برآورد از متن)' : ''}';
-      final rows = TextPriceEngine.analyze(
-          text: text,
-          endpoint: imageEndpoint,
-          seller: imageSourceName,
-          sourceUrl: 'file:$path',
-          fetchedAt: now,
-          postId: 'image-${TextPriceEngine.key(text)}',
-          publishedAt: now,
-          image: true,
-          manual: true,
-          ocrConfidence: confidence,
-          ocrEngine: ocrResult.engine);
-      final found = await Searcher.processAsync(rows,
-          now: now,
-          windowDays: discoveryDays,
-          keepManualFallback: false,
-          resolver: resolver);
-      lastImageRows = found.quotes;
-      if (found.quotes.isEmpty) {
-        // Say what the picture really held instead of a bare failure: the family
-        // it names, the city its landline proves, the state of its map link.
-        final seen = Searcher.imageEvidence(text, rows: rows);
-        final parts = <String>[
-          ...seen.entries.map((e) => '${e.key}: ${e.value}'),
-          if (mapNote.isNotEmpty) 'نقشه: $mapNote',
-        ];
-        report = 'متن تصویر خوانده شد (اطمینان $confidenceLabel) ولی ردیف قابل‌ثبتی '
-            'نبود؛ چیزی ذخیره نشد.${parts.isEmpty ? '' : ' ${parts.join(' • ')}'}';
-        return report;
-      }
-      await store.saveSnapshot(imageEndpoint, found.quotes,
-          replaceMissing: false);
-      historyRevision++;
-      _indexStale = true;
-      await _publishEndpoint(imageEndpoint);
-      final places = found.quotes
-          .map((q) => q.sellerCity)
-          .where((c) => c.isNotEmpty && c != 'نامشخص')
-          .toSet();
-      report = '${found.kept} ردیف از تصویر ثبت شد؛ '
-          'اطمینان OCR $confidenceLabel'
-          '${places.isEmpty ? '' : '؛ شهر: ${places.join('، ')}'}';
-      unawaited(AppLogger.instance.record('image', 'analyzed', {
-        'rows': found.kept,
-        'noise': found.noise,
-        'confidence': confidence,
-      }));
-      return report;
-    } catch (error, stack) {
-      AppLogger.instance.capture(error, stack, section: 'image');
-      report = 'تحلیل تصویر کامل نشد؛ خطا ثبت شد و چیزی ذخیره نشد.';
-      return report;
-    } finally {
-      imageReport = report;
-      analyzingImage = false;
-      _notify();
+  /// Reads the pictures the fetched posts carry (delegates to the one shared
+  /// pipeline, so the background scan behaves identically).
+  Future<List<Quote>> readPhotos(List<Quote> rows,
+      {String defaultCurrency = 'نامشخص'}) async {
+    final batch = await readPostPhotos(rows, photoScanner,
+        defaultCurrency: defaultCurrency, cancelled: () => disposed);
+    photosScanned += batch.read;
+    if (batch.read > 0 || batch.failed > 0) {
+      photoReport = 'تصویر خوانده‌شده: ${batch.read}'
+          '${batch.failed == 0 ? '' : ' • خوانده‌نشده: ${batch.failed}'}';
     }
+    return batch.rows;
   }
 
   @override

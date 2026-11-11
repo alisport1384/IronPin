@@ -32,9 +32,9 @@ class OcrResult {
 abstract class OcrEngine {
   Future<OcrResult> recognize(String imagePath);
 
-  /// Opens the system photo picker and copies the chosen picture into the app
-  /// cache. Returns `null` when the user cancels.
-  Future<String?> pickImage();
+  /// A directory this app may write a downloaded picture into, when the platform
+  /// exposes one.
+  Future<String?> cacheDirectory();
 
   static OcrEngine platform() =>
       Platform.isAndroid ? const MethodChannelOcrEngine() : const UnavailableOcrEngine();
@@ -43,6 +43,17 @@ abstract class OcrEngine {
 class MethodChannelOcrEngine implements OcrEngine {
   const MethodChannelOcrEngine();
   static const _channel = MethodChannel('ir.ironpin.ironpin/ocr');
+
+  @override
+  Future<String?> cacheDirectory() async {
+    try {
+      return await _channel.invokeMethod<String>('cacheDir');
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
 
   @override
   Future<OcrResult> recognize(String imagePath) async {
@@ -63,17 +74,6 @@ class MethodChannelOcrEngine implements OcrEngine {
       return OcrResult('', engine: 'tesseract-fas', error: e.message ?? e.code);
     }
   }
-
-  @override
-  Future<String?> pickImage() async {
-    try {
-      return await _channel.invokeMethod<String>('pickImage');
-    } on MissingPluginException {
-      return null;
-    } on PlatformException {
-      return null;
-    }
-  }
 }
 
 /// Used on platforms without the native engine, and by tests.
@@ -85,5 +85,5 @@ class UnavailableOcrEngine implements OcrEngine {
       const OcrResult('', engine: 'none', error: 'OCR در این پلتفرم در دسترس نیست');
 
   @override
-  Future<String?> pickImage() async => null;
+  Future<String?> cacheDirectory() async => null;
 }

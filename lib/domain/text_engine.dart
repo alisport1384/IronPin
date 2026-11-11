@@ -239,11 +239,16 @@ class TextPriceEngine {
       // review instead of pretending the amount was read cleanly.
       double? ocrConfidence,
       String ocrEngine = '',
+      // The picture the source itself attached. It is evidence of the post's own
+      // shape, never a value; the text of that picture is read automatically by
+      // the photo scanner and comes back through `text`.
+      String photoUrl = '',
       // Currency the source itself declares for its own prices (for example the
       // "قیمت‌ها به تومان" notice of a channel). It is used only when neither the
       // row nor its group states a currency, it is recorded as a source default,
       // and it is never derived from the size of the amount.
       String defaultCurrency = 'نامشخص'}) {
+    final hasPhoto = photoUrl.isNotEmpty;
     if (text.length > 120000) {
       throw const FormatException(
           'متن بیش از حد بزرگ است؛ پیام‌ها را جدا وارد کنید.');
@@ -561,6 +566,7 @@ class TextPriceEngine {
                   : 'متن خوانده‌شده از تصویر',
             if (ocrConfidence != null) 'اطمینان OCR': '${(ocrConfidence * 100).round()}٪',
             if (ocrEngine.isNotEmpty) 'موتور OCR': ocrEngine,
+            if (hasPhoto) 'پیوست تصویر': photoUrl,
           }));
       lastPriceIndex = index;
       pending = null;
@@ -596,6 +602,7 @@ class TextPriceEngine {
                 : 'متن',
             if (ocrConfidence != null) 'اطمینان OCR': '${(ocrConfidence * 100).round()}٪',
             if (ocrEngine.isNotEmpty) 'موتور OCR': ocrEngine,
+            if (hasPhoto) 'پیوست تصویر': photoUrl,
             'تحلیل متن': 'محلی v$version',
             if (manual) 'ورودی دستی': 'بله'
           }));

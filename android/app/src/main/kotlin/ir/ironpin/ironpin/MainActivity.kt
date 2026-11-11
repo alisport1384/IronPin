@@ -72,7 +72,6 @@ class MainActivity: FlutterActivity() {
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (ocr?.onActivityResult(requestCode, resultCode, data) == true) return
         if (requestCode == requestBackupExport || requestCode == requestBackupImport) {
             val result=pending ?: return
             pending=null

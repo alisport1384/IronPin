@@ -194,45 +194,17 @@ class _InfoPageState extends State<InfoPage> {
           ]),
       ExpansionTile(
           dense: true,
-          initiallyExpanded: c.imageReport.isNotEmpty,
-          title: const Text('تحلیل عکس با OCR فارسی',
+          title: const Text('تحلیل خودکار تصاویر پست‌ها',
               style: TextStyle(fontSize: 12)),
           children: [
+            infoBox('بدون انتخاب دستی',
+                'لیست قیمتی که کانال به‌صورت عکس منتشر می‌کند، در همان اسکن خودکار دانلود و روی همین گوشی با موتور فارسی خوانده می‌شود؛ محصول، قیمت، شماره تماس (برای شهر) و لینک نقشه از آن استخراج و در داده‌های اصلی ثبت می‌شود. تصویری که خوانده نشود، پست خودش به‌عنوان شاهد می‌ماند و دلیلش ثبت می‌شود.'),
             Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                          'تصویر قیمت/لیست محصول را انتخاب کنید. متن داخل تصویر با موتور فارسی همین دستگاه خوانده می‌شود، بعد محصول، قیمت، شماره تماس (برای شهر) و لینک نقشه تحلیل و در داده‌های اصلی ثبت می‌شود. تصویر جایی ارسال نمی‌شود.',
-                          style: TextStyle(color: muted, fontSize: 11)),
-                      const SizedBox(height: 8),
-                      FilledButton.icon(
-                          onPressed: c.analyzingImage
-                              ? null
-                              : () async {
-                                  final report = await c.analyzeImage();
-                                  if (!context.mounted) return;
-                                  setState(() {});
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(SnackBar(content: Text(report)));
-                                },
-                          icon: const Icon(Icons.image_search, size: 18),
-                          label: Text(c.analyzingImage
-                              ? 'در حال خواندن تصویر…'
-                              : 'انتخاب عکس و تحلیل')),
-                      if (c.imageReport.isNotEmpty)
-                        Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(c.imageReport,
-                                style: const TextStyle(fontSize: 11))),
-                      for (final q in c.lastImageRows.take(8))
-                        Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                                '${q.title} • ${q.amount == null ? 'بدون مبلغ' : '${fmt(q.amount!)} ${q.currency}'} • ${q.sellerCity}',
-                                style: const TextStyle(fontSize: 11))),
-                    ])),
+                padding: const EdgeInsets.all(16),
+                child: Text(c.photosScanned == 0 && c.photoReport.isEmpty
+                    ? 'در این اجرا تصویری برای خواندن پیدا نشد.'
+                    : 'تصاویر خوانده‌شده در این اجرا: ${fmt(c.photosScanned)}'
+                        '${c.photoReport.isEmpty ? '' : ' • ${c.photoReport}'}')),
           ]),
       SwitchListTile(
           title: const Text('ثبت لاگ محصولات و منابع'),

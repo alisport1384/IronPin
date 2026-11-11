@@ -51,6 +51,37 @@ class PublicMessages {
         .join('\n');
   }
 
+  /// The picture the post itself carries, as an absolute URL.
+  ///
+  /// Telegram previews put it in a `background-image` on the photo wrapper; the
+  /// other messengers' previews use an `<img>`. Emoji, avatars and logos are not
+  /// price lists, so they are skipped.
+  static String photoOf(Element box, Uri base) {
+    for (final wrap in box.querySelectorAll('.tgme_widget_message_photo_wrap')) {
+      final style = wrap.attributes['style'] ?? '';
+      final match = RegExp(r"url\('?([^')]+)'?\)").firstMatch(style);
+      if (match != null) return base.resolve(match[1]!).toString();
+    }
+    for (final img in box.querySelectorAll('img')) {
+      final classes = img.attributes['class'] ?? '';
+      if (classes.contains('emoji') ||
+          classes.contains('avatar') ||
+          classes.contains('logo')) {
+        continue;
+      }
+      final src = img.attributes['src'] ?? img.attributes['data-src'] ?? '';
+      if (src.isEmpty) continue;
+      final absolute = base.resolve(src);
+      if (!RegExp(r'\.(?:jpe?g|png|webp)$', caseSensitive: false)
+          .hasMatch(absolute.path)) {
+        continue;
+      }
+      if (absolute.host.isEmpty) continue;
+      return absolute.toString();
+    }
+    return '';
+  }
+
   static List<Quote> read(
       {required String body,
       required String url,
@@ -78,7 +109,8 @@ class PublicMessages {
         final post = message.attributes['data-post'] ?? '';
         if (post.isEmpty || !seen.add(post)) continue;
         final node = message.querySelector('.tgme_widget_message_text');
-        final image =
+        final photo = photoOf(message, base);
+        final image = photo.isNotEmpty ||
             message.querySelector('.tgme_widget_message_photo_wrap') != null;
         if (node == null && !image) continue;
         result.addAll(TextPriceEngine.analyze(
@@ -92,6 +124,7 @@ class PublicMessages {
             publishedAt: sourceDate(
                 message.querySelector('time')?.attributes['datetime'] ?? ''),
             image: image,
+            photoUrl: photo,
             defaultCurrency: defaultCurrency));
       }
       return result;
@@ -132,6 +165,8 @@ class PublicMessages {
           fetchedAt: fetchedAt,
           postId: '$handle/$post',
           publishedAt: published,
+          image: photoOf(box, base).isNotEmpty,
+          photoUrl: photoOf(box, base),
           defaultCurrency: defaultCurrency));
     }
     if (result.isNotEmpty) return result;

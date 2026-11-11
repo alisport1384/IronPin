@@ -1,13 +1,14 @@
 package ir.ironpin.ironpin
 
-import android.app.Activity
-import android.content.Intent
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.os.Handler
+import android.os.Looper
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import com.googlecode.tesseract.android.TessBaseAPI
@@ -23,72 +24,29 @@ import java.util.concurrent.Executors
  * used; the recognised text goes back to Dart, where the same analyzer that
  * reads channel posts extracts the product, the price and the place.
  */
-class OcrChannel(private val activity: Activity, messenger: BinaryMessenger) {
+class OcrChannel(context: Context, messenger: BinaryMessenger) {
+
+    private val appContext = context.applicationContext
     companion object {
         const val CHANNEL = "ir.ironpin.ironpin/ocr"
-        private const val PICK_IMAGE = 6131
         private const val LANGUAGE = "fas+eng"
         private const val MAX_SIDE = 2600
         private val ASSETS = listOf("fas.traineddata", "eng.traineddata")
     }
 
     private val executor = Executors.newSingleThreadExecutor()
-    private var pendingPick: MethodChannel.Result? = null
     private var api: TessBaseAPI? = null
     private var initialised = false
 
     init {
         MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "pickImage" -> pickImage(result)
+                // The cache directory the app may write a downloaded picture into.
+                "cacheDir" -> result.success(appContext.cacheDir.absolutePath)
                 "recognize" -> recognize(call.argument<String>("path"), result)
                 else -> result.notImplemented()
             }
         }
-    }
-
-    private fun pickImage(result: MethodChannel.Result) {
-        if (pendingPick != null) {
-            result.error("BUSY", "A photo picker is already open", null)
-            return
-        }
-        pendingPick = result
-        try {
-            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "image/*"
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            activity.startActivityForResult(intent, PICK_IMAGE)
-        } catch (e: Exception) {
-            pendingPick = null
-            result.error("PICKER", e.message, null)
-        }
-    }
-
-    /** Returns true when the result belonged to the OCR picker. */
-    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if (requestCode != PICK_IMAGE) return false
-        val result = pendingPick ?: return true
-        pendingPick = null
-        val uri = data?.data
-        if (resultCode != Activity.RESULT_OK || uri == null) {
-            result.success(null)
-            return true
-        }
-        executor.execute {
-            try {
-                val dir = File(activity.cacheDir, "ocr").apply { mkdirs() }
-                val out = File(dir, "pick-${System.currentTimeMillis()}.img")
-                activity.contentResolver.openInputStream(uri)?.use { input ->
-                    out.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
-                } ?: throw IllegalStateException("Cannot read the chosen picture")
-                activity.runOnUiThread { result.success(out.absolutePath) }
-            } catch (e: Exception) {
-                activity.runOnUiThread { result.error("IMAGE", e.message, null) }
-            }
-        }
-        return true
     }
 
     private fun recognize(path: String?, result: MethodChannel.Result) {
@@ -97,8 +55,8 @@ class OcrChannel(private val activity: Activity, messenger: BinaryMessenger) {
             return
         }
         val file = File(path)
-        val allowed = file.canonicalPath.startsWith(activity.cacheDir.canonicalPath) ||
-                file.canonicalPath.startsWith(activity.filesDir.canonicalPath)
+        val allowed = file.canonicalPath.startsWith(appContext.cacheDir.canonicalPath) ||
+                file.canonicalPath.startsWith(appContext.filesDir.canonicalPath)
         if (!allowed || !file.isFile) {
             result.error("PATH", "Image is not readable inside the app sandbox", null)
             return
@@ -119,19 +77,21 @@ class OcrChannel(private val activity: Activity, messenger: BinaryMessenger) {
                 // both passes read the same pixels.
                 var best = ""
                 for (candidate in listOf(bitmap, enhance(bitmap))) {
-                  engine.setImage(candidate)
-                  val read = engine.getUTF8Text() ?: ""
-                  confidence = meanConfidence(engine)
-                  if (score(read) > score(best)) best = read
-                  engine.clear()
-                  if (candidate !== bitmap) candidate.recycle()
+                    engine.setImage(candidate)
+                    val read = engine.getUTF8Text() ?: ""
+                    confidence = meanConfidence(engine)
+                    if (score(read) > score(best)) best = read
+                    engine.clear()
+                    if (candidate !== bitmap) candidate.recycle()
                 }
                 text = best
                 bitmap.recycle()
             } catch (e: Exception) {
                 error = e.message ?: e.javaClass.simpleName
             }
-            activity.runOnUiThread {
+            // The reply must be delivered on the main thread, but this class only
+            // needs a Context (it never opens an activity of its own).
+            Handler(Looper.getMainLooper()).post {
                 result.success(mapOf(
                     "text" to text,
                     "confidence" to confidence,
@@ -183,13 +143,13 @@ class OcrChannel(private val activity: Activity, messenger: BinaryMessenger) {
     /** Copies the bundled `tessdata` out of the APK once and initialises Tesseract. */
     @Synchronized
     private fun engine(): TessBaseAPI {
-        val root = activity.filesDir
+        val root = appContext.filesDir
         val tessdata = File(root, "tessdata").apply { mkdirs() }
         for (name in ASSETS) {
             val target = File(tessdata, name)
             if (target.length() > 0) continue
             try {
-                activity.assets.open("tessdata/$name").use { input ->
+                appContext.assets.open("tessdata/$name").use { input ->
                     target.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
                 }
             } catch (_: Exception) {
@@ -225,8 +185,6 @@ class OcrChannel(private val activity: Activity, messenger: BinaryMessenger) {
     }
 
     fun dispose() {
-        pendingPick?.success(null)
-        pendingPick = null
         executor.shutdown()
         try {
             api?.recycle()
