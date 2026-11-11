@@ -26,7 +26,7 @@
 - **اسکن دائم**: تایمر پیش‌زمینه با فاصلهٔ ۱۵/۳۰/۶۰ دقیقه در کنار WorkManager؛ اندروید زمان دقیق
   اجرای پس‌زمینه را تضمین نمی‌کند.
 - `flutter analyze` بدون ایراد و ۴۱۱ آزمون موفق (۵ آزمون در `test/refresh_lock_test.dart` و ۲۴ آزمون در `test/searcher_test.dart`).
-- [تغییرات ۰.۹.۱](production/CHANGES.v0.9.1.fa.md) · [راهنمای جستجو](docs/SEARCH_INTELLIGENCE.fa.md) · [گزارش آزمون و فایل‌ها](docs/TEST_REPORT.v0.9.1.fa.md).
+- [تغییرات ۰.۹.۲](production/CHANGES.v0.9.2.fa.md) · [تغییرات ۰.۹.۱](production/CHANGES.v0.9.1.fa.md) · [راهنمای جستجو](docs/SEARCH_INTELLIGENCE.fa.md) · [گزارش آزمون و فایل‌ها](docs/TEST_REPORT.v0.9.1.fa.md).
 - دو APK آزمایشی ساخته شد: ۳۲ بیتی `armeabi-v7a` و ۶۴ بیتی `arm64-v8a` (هر فایل فقط کتابخانه‌های معماری خودش). امضا با کلید آزمایشی Android است، نه کلید اصلی صاحب برنامه. روش ساخت و بررسی: `docs/BUILD.fa.md`.
 
 ### تاریخی ۰.۹.۰ — اسکن دوره‌ایِ محدود و ثبت در پنجرهٔ زمانی

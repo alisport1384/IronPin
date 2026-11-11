@@ -68,8 +68,11 @@ void main() {
     expect(priced.isNotEmpty, true);
     expect(priced.first.sellerCity, 'تهران');
     expect(priced.first.details['پیوست تصویر'], 'https://cdn/x.jpg');
-    expect(found.quotes.any((q) => (q.details['متن OCR'] ?? '').contains('میلگرد')),
+    // The reader hands the full text to the searcher as evidence…
+    expect(batch.rows.any((q) => (q.details['متن OCR'] ?? '').contains('میلگرد')),
         true);
+    // …and the searcher stores the item, not the text (0.9.2).
+    expect(found.quotes.any((q) => q.details.containsKey('متن OCR')), false);
   });
 
   test('an unreadable picture keeps the post and records why', () async {

@@ -22,5 +22,8 @@ bool cityMatches(Quote q, String selected) {
       q.details.entries.any((e) =>
           RegExp('شهر|محل|بارگیری|تولید|کارخانه|انبار|دفتر|مبدا|مبدأ')
               .hasMatch(e.key) &&
+          // A comparison or conflict line names every city that was weighed,
+          // also the ones that lost; it does not place the row in them.
+          !RegExp('مقایسه|تعارض').hasMatch(e.key) &&
           has(e.value));
 }

@@ -1,3 +1,6 @@
+import 'dart:isolate';
+
+import 'geo_city.dart';
 import 'market.dart';
 import 'maps_link.dart';
 import 'maps_resolver.dart';
@@ -23,14 +26,22 @@ import 'product_text.dart';
 class SearcherResult {
   final List<Quote> quotes;
   final int outOfWindow, noise, duplicates;
+
+  /// Rows whose price is far from the rest of the same product group in the
+  /// same read. They are kept and marked, never silently removed.
+  final int flagged;
   const SearcherResult(this.quotes,
-      {this.outOfWindow = 0, this.noise = 0, this.duplicates = 0});
+      {this.outOfWindow = 0,
+      this.noise = 0,
+      this.duplicates = 0,
+      this.flagged = 0});
 
   Map<String, int> get categories => Searcher.categoryCounts(quotes);
   int get kept => quotes.length;
 
   String get summary =>
-      'نگه‌داشته ${quotes.length} • خارج از بازه $outOfWindow • بی‌محصول/بی‌قیمت $noise • تکراری $duplicates';
+      'نگه‌داشته ${quotes.length} • خارج از بازه $outOfWindow • بی‌محصول/بی‌قیمت $noise • تکراری $duplicates'
+      '${flagged == 0 ? '' : ' • قیمت نیازمند بازبینی $flagged'}';
 }
 
 class Searcher {
@@ -117,62 +128,163 @@ class Searcher {
   /// City of one row, from what the seller wrote, strongest evidence first.
   ///
   /// Written by the source (the city column of a price table, or a city the
-  /// seller typed) → the written postal address → the map link → the landline
-  /// area code. A mobile number is never a place.
+  /// seller typed) → the written postal address → the map link (a place name,
+  /// or the city its coordinates fall in) → the landline (county digits, else
+  /// the province code). A mobile number is never a place.
+  ///
+  /// The evidence kinds are then **compared**: a landline only proves a
+  /// province (or a county), a map pin proves a point, so «۰۲۱» next to a pin
+  /// in اسلامشهر agree — same province — and the pin, being the more precise
+  /// statement, names the city. Only evidence from different provinces is a
+  /// conflict, and a conflict is written down, not resolved silently.
   static Quote resolvePlace(Quote q) {
     final text = _messageText(q);
+    final place = _placeOf(text);
     final declared = _city(q.sellerCity);
-    final address = cityInText(addressIn(text));
-    final maps = mapsLinksIn(text).where((m) => m.hasCity).map((m) => m.city);
-    final mapsCity = maps.isEmpty ? '' : maps.first;
-    final phones = phonesIn(text);
-    final landline = phones.where((p) => p.hasCity).toList();
-    final phoneCity = landline.isEmpty ? '' : landline.first.city;
-    final phoneFull = landline.isNotEmpty && landline.first.complete;
+    final declaredProvince = declared.isEmpty ? '' : Geo.provinceOf(declared);
 
     final chosen = declared.isNotEmpty
         ? declared
-        : address.isNotEmpty
-            ? address
-            : mapsCity.isNotEmpty
-                ? mapsCity
-                : phoneCity;
+        : place.addressCity.isNotEmpty
+            ? place.addressCity
+            : place.mapsCity.isNotEmpty
+                ? place.mapsCity
+                : place.phoneCity;
     final basis = declared.isNotEmpty
         ? 'شهر اعلامی خود منبع/فروشنده'
-        : address.isNotEmpty
+        : place.addressCity.isNotEmpty
             ? 'آدرس نوشته‌شده در متن'
-            : mapsCity.isNotEmpty
-                ? 'نام مکان در لینک نقشه'
-                : phoneCity.isNotEmpty
-                    ? 'پیش‌شماره تلفن ثابت${phoneFull ? '' : ' (ناقص)'}'
+            : place.mapsCity.isNotEmpty
+                ? (place.mapsFromCoordinates
+                    ? 'مختصات لینک نقشه'
+                    : 'نام مکان در لینک نقشه')
+                : place.phoneCity.isNotEmpty
+                    ? (place.phoneCounty
+                        ? 'پیش‌شماره و رقم‌های شهرستان تلفن ثابت'
+                        : 'پیش‌شماره تلفن ثابت${place.phoneFull ? '' : ' (ناقص)'}')
                     : 'نامشخص';
 
+    // (label, city, province, precise) — a province-code landline is not a
+    // statement about the city, only about the province.
+    final named = <({String label, String city, String province, bool exact})>[
+      if (declared.isNotEmpty)
+        (label: 'منبع', city: declared, province: declaredProvince, exact: true),
+      if (place.addressCity.isNotEmpty)
+        (
+          label: 'آدرس',
+          city: place.addressCity,
+          province: Geo.provinceOf(place.addressCity),
+          exact: true
+        ),
+      if (place.mapsCity.isNotEmpty)
+        (
+          label: 'نقشه',
+          city: place.mapsCity,
+          province: place.mapsProvince,
+          exact: true
+        ),
+      if (place.phoneCity.isNotEmpty)
+        (
+          label: 'تلفن',
+          city: place.phoneCity,
+          province: place.phoneProvince,
+          exact: place.phoneCounty
+        ),
+    ];
+    var comparison = '';
     final conflicts = <String>[];
-    final named = <String, String>{
-      if (declared.isNotEmpty) 'منبع': declared,
-      if (address.isNotEmpty) 'آدرس': address,
-      if (mapsCity.isNotEmpty) 'نقشه': mapsCity,
-      if (phoneCity.isNotEmpty) 'تلفن': phoneCity,
-    };
-    if (named.values.toSet().length > 1) {
-      conflicts.add(named.entries.map((e) => '${e.key}: ${e.value}').join(' ≠ '));
+    if (named.length >= 2) {
+      bool sameCity(String a, String b) => Geo.key(a) == Geo.key(b);
+      var allSameCity = true, clash = false;
+      for (var i = 0; i < named.length; i++) {
+        for (var j = i + 1; j < named.length; j++) {
+          final a = named[i], b = named[j];
+          if (sameCity(a.city, b.city)) continue;
+          allSameCity = false;
+          final sameProvince = a.province.isNotEmpty &&
+              b.province.isNotEmpty &&
+              a.province == b.province;
+          // Two different cities of one province only disagree when both
+          // sources actually speak about the city.
+          if (!sameProvince || (a.exact && b.exact)) clash = true;
+        }
+      }
+      if (allSameCity) {
+        comparison = 'هم‌خوان: ${named.first.city}';
+      } else if (!clash) {
+        final province = named
+            .map((e) => e.province)
+            .firstWhere((p) => p.isNotEmpty, orElse: () => '');
+        comparison = 'هم‌خوان در سطح استان $province: '
+            '${named.map((e) => '${e.label} ${e.exact ? e.city : 'استان ${e.province}'}').join(' ↔ ')}'
+            '؛ دقیق‌ترین شاهد ثبت شد';
+      } else {
+        comparison = 'ناهم‌خوان؛ قوی‌ترین شاهد ثبت شد';
+        conflicts
+            .add(named.map((e) => '${e.label}: ${e.city}').join(' ≠ '));
+      }
     }
-    final agree = named.length >= 2 && named.values.toSet().length == 1;
+    final province = chosen.isEmpty
+        ? ''
+        : (named
+            .where((e) => Geo.key(e.city) == Geo.key(chosen))
+            .map((e) => e.province)
+            .firstWhere((p) => p.isNotEmpty, orElse: () => ''));
 
     final j = q.toJson();
     j['sellerCity'] = chosen.isEmpty ? q.sellerCity : chosen;
     j['details'] = <String, String>{
       ...q.details,
       'مبنای شهر': basis,
-      if (named.length >= 2)
-        'مقایسه شواهد شهر':
-            agree ? 'هم‌خوان: ${named.values.first}' : 'ناهم‌خوان؛ قوی‌ترین شاهد ثبت شد',
+      if (province.isNotEmpty) 'استان': province,
+      if (comparison.isNotEmpty) 'مقایسه شواهد شهر': comparison,
       if (conflicts.isNotEmpty) 'تعارض شهر': conflicts.join(' | '),
-      ...phoneEvidence(text),
-      ...mapsEvidence(text),
-      if (address.isNotEmpty) 'آدرس متن': address,
+      ...place.phoneEvidence,
+      ...place.mapsEvidence,
+      if (place.address.isNotEmpty) 'آدرس متن': place.address,
     };
     return Quote.fromJson(j);
+  }
+
+  /// Place evidence of one message, computed once: every row of a thirty-row
+  /// price list carries the same message, and reading its phones, links and
+  /// address thirty times was most of the cost of a large refresh.
+  static final Map<String, _PlaceEvidence> _placeMemo = {};
+
+  static _PlaceEvidence _placeOf(String text) {
+    final known = _placeMemo[text];
+    if (known != null) return known;
+    final address = addressIn(text);
+    final addressCities = address.isEmpty ? const <String>[] : citiesInText(address);
+    final links = mapsLinksIn(text);
+    MapsInfo? map;
+    for (final link in links) {
+      if (!link.hasCity) continue;
+      // A pin is the more precise statement; a name-only link is next.
+      if (map == null || (link.hasCoordinates && !map.hasCoordinates)) map = link;
+    }
+    final landline = phonesIn(text).where((p) => p.hasCity).toList()
+      ..sort((a, b) {
+        if (a.countyLevel != b.countyLevel) return a.countyLevel ? -1 : 1;
+        if (a.complete != b.complete) return a.complete ? -1 : 1;
+        return b.digits.length.compareTo(a.digits.length);
+      });
+    final phone = landline.isEmpty ? null : landline.first;
+    final result = _PlaceEvidence(
+        address: address.length > 140 ? address.substring(0, 140) : address,
+        addressCity: addressCities.isEmpty ? '' : addressCities.first,
+        mapsCity: map?.city ?? '',
+        mapsProvince: map?.province ?? '',
+        mapsFromCoordinates: map?.cityBasis == 'مختصات',
+        phoneCity: phone?.city ?? '',
+        phoneProvince: phone?.province ?? '',
+        phoneCounty: phone?.countyLevel ?? false,
+        phoneFull: phone?.complete ?? false,
+        phoneEvidence: phoneEvidence(text),
+        mapsEvidence: mapsEvidence(text));
+    if (_placeMemo.length >= 64) _placeMemo.remove(_placeMemo.keys.first);
+    _placeMemo[text] = result;
+    return result;
   }
 
   static String _city(String value) {
@@ -190,6 +302,10 @@ class Searcher {
   static String _messageText(Quote q) => [
         q.details['متن پیام'] ?? '',
         q.details['متن OCR'] ?? '',
+        // Contact lines of the post a picture was attached to (phones, map
+        // links, address) — carried over so an image row is located by what
+        // its own post says.
+        q.details[captionEvidenceKey] ?? '',
         // A short map link that was opened adds the address it really points at.
         q.details['نقشه (بازشده)'] ?? '',
       ].where((s) => s.isNotEmpty).join('\n');
@@ -225,29 +341,179 @@ class Searcher {
       }
     }
     final list = kept.values.toList()..sort(compare);
+    final flagged = _flagOutliers(list);
+    // Last step, after every rule has read the message: the archive keeps the
+    // product, its price and the evidence lines — not the message.
+    for (var i = 0; i < list.length; i++) {
+      list[i] = compact(list[i]);
+    }
     return SearcherResult(list,
-        outOfWindow: outOfWindow, noise: noise, duplicates: duplicates);
+        outOfWindow: outOfWindow,
+        noise: noise,
+        duplicates: duplicates,
+        flagged: flagged);
+  }
+
+  /// Key under which the contact lines of a post travel with its image rows.
+  static const captionEvidenceKey = 'شواهد تماس پست';
+
+  /// Detail entries that hold whole messages. They are working material for
+  /// the rules above and are never written to the archive.
+  static const proseKeys = {
+    'متن پیام',
+    'متن OCR',
+    'نقشه (بازشده)',
+    captionEvidenceKey,
+  };
+
+  /// The contact lines of a text and nothing else: lines that carry a phone
+  /// number, a map link or an address keyword. Product talk and greetings are
+  /// left behind.
+  static String contactLines(String text) {
+    final out = <String>[];
+    for (final raw in text.split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty || line.length > 400) continue;
+      if (phonesIn(line).isNotEmpty ||
+          isMapsUrl(line) ||
+          addressIn(line).isNotEmpty) {
+        out.add(line.length > 260 ? line.substring(0, 260) : line);
+      }
+      if (out.length >= 12) break;
+    }
+    return out.join('\n');
+  }
+
+  static final _termTags = <RegExp, String>{
+    RegExp(r'نقد'): 'نقدی',
+    RegExp(r'اعتبار|مدت\s*دار|چک|اقساط'): 'اعتباری/چکی',
+    RegExp(r'پیش\s*پرداخت'): 'پیش‌پرداخت',
+    RegExp(r'تسویه'): 'تسویه',
+    RegExp(r'درب\s*کارخانه'): 'تحویل درب کارخانه',
+    RegExp(r'درب\s*انبار'): 'تحویل درب انبار',
+    RegExp(r'بنگاه'): 'تحویل بنگاه',
+    RegExp(r'حداقل\s*سفارش'): 'حداقل سفارش دارد',
+    RegExp(r'کرایه|هزینه\s*حمل'): 'کرایه حمل ذکر شده',
+    RegExp(r'بندیل'): 'بندیل',
+    RegExp(r'شاخه\s*ای|شاخه‌ای'): 'شاخه‌ای',
+  };
+
+  /// Sale terms as short tags instead of the sentences they were written in.
+  static String compactTerms(String terms) {
+    if (terms.trim().isEmpty) return terms;
+    final t = ProductText.normalize(terms);
+    final tags = <String>[
+      for (final e in _termTags.entries)
+        if (e.key.hasMatch(t)) e.value
+    ];
+    return tags.isEmpty ? 'نامشخص' : tags.join('؛ ');
+  }
+
+  static String _clip(String value, int max) {
+    final v = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return v.runes.length <= max ? v : '${String.fromCharCodes(v.runes.take(max))}…';
+  }
+
+  /// What is written to the archive for one row: product, price, place and the
+  /// short evidence lines. Whole messages, OCR dumps and free sentences are
+  /// removed here, in one place, for every source kind.
+  static Quote compact(Quote q) {
+    final details = <String, String>{};
+    for (final e in q.details.entries) {
+      if (proseKeys.contains(e.key)) continue;
+      final max = switch (e.key) {
+        'شاهد ردیف' => 160,
+        'سرعنوان گروه' => 80,
+        'آدرس متن' => 140,
+        _ => 220,
+      };
+      details[e.key] = _clip(e.value, max);
+    }
+    final j = q.toJson();
+    j['details'] = details;
+    j['title'] = _clip(q.title, 110);
+    j['terms'] = compactTerms(q.terms);
+    return Quote.fromJson(j);
+  }
+
+  /// Marks prices that sit far away from the same product group of the same
+  /// read. A dropped or doubled digit (the usual OCR and typing error) lands
+  /// an order of magnitude away from its neighbours; a real discount does not.
+  /// Rows are flagged for review and kept — an unusual price can be genuine.
+  static int _flagOutliers(List<Quote> rows) {
+    final groups = <String, List<int>>{};
+    for (var i = 0; i < rows.length; i++) {
+      final q = rows[i];
+      final amount = q.amount;
+      if (amount == null || amount <= 0) continue;
+      if (q.unit == 'unknown' || q.currency == 'نامشخص') continue;
+      final family = ProductFacts.of(q).family;
+      if (family.isEmpty) continue;
+      (groups['$family|${q.unit}|${q.currency}'] ??= []).add(i);
+    }
+    var flagged = 0;
+    for (final members in groups.values) {
+      if (members.length < 5) continue;
+      final values = [for (final i in members) rows[i].amount!]..sort();
+      final median = values[values.length ~/ 2];
+      if (median <= 0) continue;
+      for (final i in members) {
+        final ratio = rows[i].amount! / median;
+        if (ratio < 4 && ratio > 0.25) continue;
+        final j = rows[i].toJson();
+        j['details'] = <String, String>{
+          ...rows[i].details,
+          'هشدار قیمت': 'فاصلهٔ زیاد با میانهٔ ${members.length} ردیف هم‌گروه در همین خواندن '
+              '(${ratio >= 4 ? 'حدود ${ratio.round()} برابر' : 'کمتر از یک‌چهارم'})؛ '
+              'احتمال افتادن/اضافه‌شدن رقم — نیازمند بازبینی',
+        };
+        final status = rows[i].status;
+        j['status'] = status.contains('نیازمند بازبینی')
+            ? status
+            : '$status • قیمت نیازمند بازبینی';
+        rows[i] = Quote.fromJson(j);
+        flagged++;
+      }
+    }
+    return flagged;
   }
 
   /// Opens the shortened map links of every row, then applies the normal rules.
   ///
-  /// Only the first short link of a post is opened, only while the app is online
-  /// (the caller passes a resolver), and the resolved address is appended to the
+  /// Up to three short links of a post are opened, only while the app is
+  /// online (the caller passes a resolver), each link once per run however
+  /// many rows share the post, and the resolved address is appended to the
   /// row's own text as evidence — never as a guess about the seller's location.
   static Future<void> resolveShortLinks(
       List<Quote> rows, MapsResolver resolver) async {
+    final byText = <String, ({String evidence, String opened})>{};
     for (var i = 0; i < rows.length; i++) {
       final q = rows[i];
       final text = _messageText(q);
-      final links = shortMapsLinksIn(text);
-      if (links.isEmpty) continue;
-      final info = await resolver.resolve(links.first);
+      var answer = byText[text];
+      if (answer == null) {
+        final links = shortMapsLinksIn(text);
+        if (links.isEmpty) {
+          answer = (evidence: '', opened: '');
+        } else {
+          final lines = <String>[], opened = <String>[];
+          for (final link in links.take(3)) {
+            final info = await resolver.resolve(link);
+            lines.add(MapsResolver.evidenceLine(info, link));
+            // The final address is kept next to the row so the ordinary
+            // offline parser reads it exactly like a link written in full.
+            if (info != null) opened.add(info.url);
+            if (info != null && info.hasCoordinates) break;
+          }
+          answer = (evidence: lines.join(' | '), opened: opened.join('\n'));
+        }
+        byText[text] = answer;
+      }
+      if (answer.evidence.isEmpty) continue;
       final j = q.toJson();
       final details = Map<String, String>.from(q.details);
-      details['بازکردن لینک نقشه'] = MapsResolver.evidenceLine(info, links.first);
-      // The final address is kept next to the row so the ordinary offline
-      // parser reads it exactly like a link the seller wrote in full.
-      if (info != null) details['نقشه (بازشده)'] = info.url;
+      details['بازکردن لینک نقشه'] = answer.evidence;
+      if (answer.opened.isNotEmpty) details['نقشه (بازشده)'] = answer.opened;
       j['details'] = details;
       rows[i] = Quote.fromJson(j);
     }
@@ -266,6 +532,7 @@ class Searcher {
     if (landline.isNotEmpty) {
       out['شهر از تلفن'] =
           '${landline.first.city} (پیش‌شماره ${landline.first.areaCode})';
+      out['استان از تلفن'] = landline.first.province;
     }
     final links = mapsLinksIn(text);
     if (links.isNotEmpty) {
@@ -301,11 +568,47 @@ class Searcher {
     if (resolver != null) {
       await resolveShortLinks(list, resolver);
     }
-    return process(list,
-        now: now,
-        windowDays: windowDays,
-        keepManualFallback: keepManualFallback);
+    // The rules are pure and regex-heavy. A long list is decided off the
+    // interface thread, so a refresh of many large sources never stalls a
+    // frame; a short one is cheaper to decide in place than to copy.
+    if (list.length < backgroundThreshold) {
+      return process(list,
+          now: now,
+          windowDays: windowDays,
+          keepManualFallback: keepManualFallback);
+    }
+    try {
+      return await processInBackground(list,
+          now: now,
+          windowDays: windowDays,
+          keepManualFallback: keepManualFallback);
+    } catch (_) {
+      // No second isolate available (some embedders): same answer, in place.
+      return process(list,
+          now: now,
+          windowDays: windowDays,
+          keepManualFallback: keepManualFallback);
+    }
   }
+
+  /// [process] on a second isolate.
+  ///
+  /// It is a function of its own on purpose: the closure sent to the isolate
+  /// may hold only the rows and the three settings. Written inline in
+  /// [processAsync] it would also hold the link resolver and its HTTP client,
+  /// which cannot be sent, and the work would silently stay on the interface
+  /// thread.
+  static Future<SearcherResult> processInBackground(List<Quote> list,
+          {required DateTime now,
+          required int windowDays,
+          bool keepManualFallback = true}) =>
+      Isolate.run(() => process(list,
+          now: now,
+          windowDays: windowDays,
+          keepManualFallback: keepManualFallback));
+
+  /// Row count from which [processAsync] works on a background isolate.
+  static const backgroundThreshold = 24;
 
   /// A stored row must be about a product, and about its price.
   ///
@@ -324,7 +627,11 @@ class Searcher {
     final announced = q.hasTextAmount;
     final manual = q.details['ورودی دستی'] == 'بله';
     if (!hasProduct) return manual && keepManualFallback;
-    return hasPrice || announced || q.currency != 'نامشخص' || q.unit != 'unknown';
+    if (manual && keepManualFallback) return true;
+    // A product line with no amount at all («تماس بگیرید», a caption, a
+    // greeting that names a product) is a sentence, not an offer: the archive
+    // holds products with their announced price, nothing else.
+    return hasPrice || announced;
   }
 
   /// Which of two copies of the same offer is the one to keep.
@@ -472,4 +779,23 @@ extension on Quote {
     if (at == null) return '';
     return '${at.year}-${at.month.toString().padLeft(2, '0')}-${at.day.toString().padLeft(2, '0')}';
   }
+}
+
+class _PlaceEvidence {
+  final String address, addressCity, mapsCity, mapsProvince;
+  final String phoneCity, phoneProvince;
+  final bool mapsFromCoordinates, phoneCounty, phoneFull;
+  final Map<String, String> phoneEvidence, mapsEvidence;
+  const _PlaceEvidence(
+      {required this.address,
+      required this.addressCity,
+      required this.mapsCity,
+      required this.mapsProvince,
+      required this.mapsFromCoordinates,
+      required this.phoneCity,
+      required this.phoneProvince,
+      required this.phoneCounty,
+      required this.phoneFull,
+      required this.phoneEvidence,
+      required this.mapsEvidence});
 }

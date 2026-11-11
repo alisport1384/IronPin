@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import 'market.dart';
 import 'ocr.dart';
+import 'product_text.dart';
 import 'searcher.dart';
 import 'text_engine.dart';
 
@@ -18,11 +19,15 @@ class PhotoRead {
   final String engine;
   final String? error;
 
+  /// Every reading of the picture (cleaned), the engine's own pick included.
+  final List<String> passes;
+
   const PhotoRead(this.url,
       {this.text = '',
       this.confidence,
       this.engine = 'tesseract',
-      this.error});
+      this.error,
+      this.passes = const []});
 
   bool get ok => text.trim().isNotEmpty;
   String get confidenceLabel => confidence == null
@@ -87,7 +92,7 @@ class PhotoScanner {
     Uint8List bytes;
     try {
       final response = await client
-          .get(Uri.parse(url), headers: {'user-agent': 'IronPin/0.9.1 (public post image)'})
+          .get(Uri.parse(url), headers: {'user-agent': 'IronPin/0.9.2 (public post image)'})
           .timeout(timeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return PhotoRead(url, error: 'تصویر با کد ${response.statusCode} دریافت نشد');
@@ -125,7 +130,12 @@ class PhotoScanner {
           text: text,
           confidence: result.confidence ?? OcrQuality.score(text),
           engine: result.engine,
-          error: result.error);
+          error: result.error,
+          passes: [
+            for (final pass in result.passes)
+              if (Searcher.cleanOcrText(pass).isNotEmpty)
+                Searcher.cleanOcrText(pass)
+          ]);
     } catch (error) {
       return PhotoRead(url, error: 'خواندن تصویر ناموفق بود: $error');
     } finally {
@@ -185,8 +195,9 @@ Future<PhotoBatch> readPostPhotos(List<Quote> rows, PhotoScanner scanner,
     }
     read++;
     final text = Searcher.cleanOcrText(photo.text);
-    final analyzed = TextPriceEngine.analyze(
-        text: text,
+    final caption = q.details['متن پیام'] ?? '';
+    List<Quote> analyze(String body) => TextPriceEngine.analyze(
+        text: body,
         endpoint: q.endpoint,
         seller: q.seller,
         sellerCity: q.sellerCity,
@@ -199,7 +210,51 @@ Future<PhotoBatch> readPostPhotos(List<Quote> rows, PhotoScanner scanner,
         ocrEngine: photo.engine,
         photoUrl: url,
         defaultCurrency: defaultCurrency);
-    if (analyzed.isEmpty) {
+    int priced(List<Quote> rows) =>
+        rows.where((r) => (r.amount != null && r.amount! > 0) || r.hasTextAmount).length;
+
+    // The engine read the picture several ways. The reading to keep is the one
+    // the analyzer can turn into the most product rows with a price — judged
+    // by the same rules that read channel posts, not by a letter count.
+    final readings = <String>{text, ...photo.passes}.toList();
+    var analyzed = const <Quote>[];
+    var chosen = text;
+    var best = -1;
+    for (final reading in readings) {
+      final rows = analyze(reading);
+      final count = priced(rows);
+      if (count > best) {
+        best = count;
+        analyzed = rows;
+        chosen = reading;
+      }
+    }
+    // A picture that is only a table («۱۴ … ۴۲٬۳۰۰») names its product in the
+    // caption of the same post. The caption's product line is then the heading
+    // the table belongs to — it is the seller's own statement about this very
+    // picture, not a guess.
+    final heading = _productHeading(caption);
+    if (best <= 0 && heading.isNotEmpty) {
+      for (final reading in readings) {
+        final rows = analyze('$heading\n$reading');
+        final count = priced(rows);
+        if (count > best) {
+          best = count;
+          analyzed = rows;
+          chosen = reading;
+        }
+      }
+    }
+    // Phones, map links and the address are taken from every reading and from
+    // the caption: a link that one layout mode broke is intact in another.
+    final contacts = <String>{
+      for (final line in Searcher.contactLines(caption).split('\n'))
+        if (line.isNotEmpty) line,
+      for (final reading in readings)
+        for (final line in Searcher.contactLines(reading).split('\n'))
+          if (line.isNotEmpty) line,
+    }.take(16).join('\n');
+    if (best <= 0) {
       failed++;
       final j = q.toJson();
       j['details'] = {
@@ -207,15 +262,31 @@ Future<PhotoBatch> readPostPhotos(List<Quote> rows, PhotoScanner scanner,
         'خواندن تصویر': 'متن خوانده شد ولی مبلغ/محصول قابل‌انتساب نبود',
         'اطمینان OCR': photo.confidenceLabel,
         'متن OCR': text,
+        if (contacts.isNotEmpty) Searcher.captionEvidenceKey: contacts,
       };
       out.add(Quote.fromJson(j));
       continue;
     }
     for (final row in analyzed) {
       final j = row.toJson();
-      j['details'] = {...row.details, 'متن OCR': text};
+      j['details'] = {
+        ...row.details,
+        'متن OCR': chosen,
+        if (contacts.isNotEmpty) Searcher.captionEvidenceKey: contacts,
+        if (readings.length > 1) 'خوانش‌های تصویر': '${readings.length}',
+      };
       out.add(Quote.fromJson(j));
     }
   }
   return PhotoBatch(out, read: read, failed: failed);
+}
+
+/// The first caption line that names a product, short enough to be a heading.
+String _productHeading(String caption) {
+  for (final raw in caption.split('\n')) {
+    final line = raw.trim();
+    if (line.isEmpty || line.length > 120) continue;
+    if (ProductText.category(line).isNotEmpty) return line;
+  }
+  return '';
 }

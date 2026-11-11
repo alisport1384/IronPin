@@ -21,7 +21,7 @@ class _InfoPageState extends State<InfoPage> {
     setState(() => exporting = true);
     try {
       final destination = await AppLogger.instance.export(summary: {
-        'version': '0.9.0',
+        'version': '0.9.2',
         'windowDays': widget.c.discoveryDays,
         'pricesWindow': widget.c.pricesWindow,
         'rangeWindow': widget.c.rangeWindow,
@@ -269,7 +269,7 @@ class _InfoPageState extends State<InfoPage> {
           'دریافت، اعتبارسنجی و ذخیره فقط برای ردیفی انجام می‌شود که تاریخ اعلام خودش داخل این بازه باشد؛ ردیف قدیمی‌تر نه ثبت می‌شود و نه در زبانه‌ها دیده می‌شود. زبانه‌های قیمت، رنج‌گیری و نمودار همین بازه را به ارث می‌برند و هر زبانه می‌تواند بازه خودش را جدا کند؛ زبانه محاسبات فیلتر زمانی ندارد.'),
       Text(
           'بازه فعال زبانه‌ها: قیمت ${windowText(c.pricesWindow)} • '
-          'رنگ‌گیری ${windowText(c.rangeWindow)} • '
+          'رنج‌گیری ${windowText(c.rangeWindow)} • '
           'نمودار ${windowText(c.chartWindow)}',
           style: const TextStyle(fontSize: 11, color: muted)),
       infoBox('شهر فقط فیلتر نمایش است',
@@ -455,9 +455,9 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: () => showLicensePage(
               context: context,
               applicationName: 'IronPin',
-              applicationVersion: '0.8.1'),
+              applicationVersion: '0.9.2'),
           child: const Text('مجوزهای نرم‌افزار و داده')),
-      const Text('IronPin 0.8.1 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
+      const Text('IronPin 0.9.2 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: muted)),
       const SizedBox(height: 18),

@@ -58,6 +58,21 @@ cp build/app/outputs/flutter-apk/app-release.apk \
 خروجی‌های تحویلی در `releases/` و با همین نام‌ها هستند؛ `.apk` در گیت ignore است و فقط
 فایل `SHA256SUMS` کامیت می‌شود.
 
+### تحویل ۰.۹.۲ — ۲۰ آبان ۱۴۰۵
+
+فقط معماری ۳۲ بیتی ساخته شد؛ فایل ۶۴ بیتی این نسخه ساخته نشده و در `SHA256SUMS` نیست.
+
+| فایل | معماری | حجم | sha256 |
+| --- | --- | ---: | --- |
+| `releases/app-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۱MB (۱۳٬۷۰۲٬۰۱۰ بایت) | `8ae9ccdccd313e955ad683c2316fbe3013c5d5c6bbe44983aae964fb7a7507bd` |
+
+`versionName 0.9.2`، `versionCode 24`، `minSdk 21`، `targetSdk 35`، شامل `assets/tessdata/fas`+`eng`
+و فقط `lib/armeabi-v7a/*`. امضا با کلید آزمایشی Android که در همین محیط ساخت تازه ساخته شده
+(اثر انگشت SHA-256: `efe968e4…3923e1`). این کلید با کلید تحویل‌های قبلی یکی نیست؛ اندروید
+نصب روی نسخهٔ قبلی را رد می‌کند و باید ابتدا از داخل برنامه پشتیبان گرفت، نسخهٔ قبلی را حذف
+کرد و بعد نصب کرد. برای اینکه این وضع تکرار نشود، ساخت بعدی با `tool/sign_env.sh` و یک
+کلید ثابت انجام شود.
+
 ### تحویل ۰.۹.۱ — ۲۰ آبان ۱۴۰۵ (بازساخت پس از رفع اشکال نوسازی)
 
 این دو فایل همان نسخهٔ `0.9.1+23` هستند که پس از رفع اشکال «نوسازی فقط یک‌بار» دوباره
@@ -100,7 +115,7 @@ sha256sum releases/*.apk > releases/SHA256SUMS
 
 چه چیزی باید دیده شود:
 
-- `versionName 0.9.1`، `versionCode 23`، `sdkVersion 21`، `targetSdkVersion 35`.
+- `versionName 0.9.2`، `versionCode 24`، `sdkVersion 21`، `targetSdkVersion 35`.
 - فقط `lib/armeabi-v7a/*` در فایل ۳۲بیتی و فقط `lib/arm64-v8a/*` در فایل ۶۴بیتی،
   هر کدام شامل `libapp.so`، `libflutter.so`، `libtesseract.so`، `libleptonica.so`،
   `libjpeg.so`، `libpngx.so`.

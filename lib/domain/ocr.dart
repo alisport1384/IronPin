@@ -13,8 +13,16 @@ class OcrResult {
   final String engine;
   final String? error;
 
+  /// Every reading the engine made of the same picture (different layout
+  /// modes and contrast). [text] is the engine's own pick; the caller may find
+  /// that another reading yields more priced product rows.
+  final List<String> passes;
+
   const OcrResult(this.text,
-      {this.confidence, this.engine = 'tesseract-fas', this.error});
+      {this.confidence,
+      this.engine = 'tesseract-fas',
+      this.error,
+      this.passes = const []});
 
   static const empty = OcrResult('', engine: 'none');
 
@@ -66,7 +74,11 @@ class MethodChannelOcrEngine implements OcrEngine {
       return OcrResult(text,
           confidence: rawConfidence is num ? rawConfidence.toDouble() : null,
           engine: map['engine'] as String? ?? 'tesseract-fas',
-          error: map['error'] as String?);
+          error: map['error'] as String?,
+          passes: [
+            for (final pass in (map['passes'] as List? ?? const []))
+              if (pass is String && pass.trim().isNotEmpty) pass
+          ]);
     } on MissingPluginException {
       return const OcrResult('',
           engine: 'none', error: 'موتور OCR در این نسخه نصب نشده است');

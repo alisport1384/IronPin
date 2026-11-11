@@ -1,3 +1,4 @@
+import 'landline_counties.g.dart';
 import 'market.dart' show latin;
 
 /// Iranian phone evidence.
@@ -39,6 +40,11 @@ class PhoneInfo {
   /// incomplete, and used as weaker city evidence.
   final bool complete;
 
+  /// True when [city] comes from the county digits of the local number
+  /// (`031-55…` → کاشان) rather than from the province code alone, in which
+  /// case [city] is only the provincial capital.
+  final bool countyLevel;
+
   const PhoneInfo({
     required this.raw,
     required this.kind,
@@ -48,6 +54,7 @@ class PhoneInfo {
     this.province = '',
     this.operator = '',
     this.complete = false,
+    this.countyLevel = false,
   });
 
   bool get hasCity => city.isNotEmpty;
@@ -62,7 +69,9 @@ class PhoneInfo {
   String get evidence {
     if (hasCity) {
       final suffix = complete ? '' : ' (شماره ناقص؛ فقط پیش‌شماره خوانده شد)';
-      return '$label ${_pretty(digits)} → $city، استان $province$suffix';
+      return countyLevel
+          ? '$label ${_pretty(digits)} → $city، استان $province (از رقم‌های شهرستان)$suffix'
+          : '$label ${_pretty(digits)} → $city، استان $province$suffix';
     }
     if (operator.isNotEmpty) return '$label ${_pretty(digits)} → اپراتور $operator؛ شهر از شماره همراه تعیین نمی‌شود';
     return '$label ${_pretty(digits)} → پیش‌شماره ناشناخته؛ شهری استنتاج نشد';
@@ -181,6 +190,24 @@ String normalizeIranPhone(String raw) {
   return d;
 }
 
+/// County seat of a landline from the first digits of its local number, or `''`.
+///
+/// The longest documented prefix wins; a prefix that two counties share is not
+/// resolved at all, because picking one of them would be a guess.
+String landlineCountyOf(String area, String local) {
+  final table = landlineCounties[area];
+  if (table == null) return '';
+  final shared = landlineSharedPrefixes[area] ?? const <String>{};
+  for (final length in const [3, 2]) {
+    if (local.length < length) continue;
+    final prefix = local.substring(0, length);
+    if (shared.contains(prefix)) return '';
+    final hit = table[prefix];
+    if (hit != null) return hit;
+  }
+  return '';
+}
+
 /// Classifies one number. Never invents a city for a mobile.
 PhoneInfo classifyPhone(String raw) {
   final digits = normalizeIranPhone(raw);
@@ -193,47 +220,67 @@ PhoneInfo classifyPhone(String raw) {
         operator: operator,
         complete: digits.length == 11);
   }
-  if (digits.startsWith('0') && digits.length == 11) {
+  // A full landline, or a truncated one (`03134155`) that still carries its
+  // area code and the first digits of the local number.
+  if (digits.startsWith('0') && digits.length >= 8 && digits.length <= 11) {
     final area = digits.substring(0, 3);
     final place = landlineAreas[area];
+    final county = place == null ? '' : landlineCountyOf(area, digits.substring(3));
     return PhoneInfo(
         raw: raw,
         kind: 'ثابت',
         digits: digits,
         areaCode: area,
-        city: place?[0] ?? '',
+        city: county.isNotEmpty ? county : (place?[0] ?? ''),
         province: place?[1] ?? '',
-        complete: true);
-  }
-  // A truncated landline (`03134155`) still carries its area code.
-  if (digits.startsWith('0') && digits.length >= 8 && digits.length < 11) {
-    final area = digits.substring(0, 3);
-    final place = landlineAreas[area];
-    return PhoneInfo(
-        raw: raw,
-        kind: 'ثابت',
-        digits: digits,
-        areaCode: area,
-        city: place?[0] ?? '',
-        province: place?[1] ?? '',
-        complete: false);
+        complete: digits.length == 11,
+        countyLevel: county.isNotEmpty);
   }
   return PhoneInfo(raw: raw, kind: 'نامشخص', digits: digits);
 }
 
 final RegExp _phoneToken = RegExp(
-    '(?:\\+?98|0)$_digits{2}[\\s\\-‌]*$_digits{3,8}(?:[\\s\\-]?$_digits{2,4})?');
+    '(?<![0-9۰-۹٠-٩])(?:\\+?98|0)$_digits{2}[\\s\\-‌]*$_digits{3,8}(?:[\\s\\-]?$_digits{2,4})?');
+
+/// Persian text is right-to-left, so a landline is very often written with the
+/// local number first: «۹۱۳۲۳۰۰۰-۰۲۱» or «91323000 (021)». OCR also returns it in
+/// that visual order. Group 1 is the local number, group 2 the area code.
+final RegExp _phoneReversed = RegExp(
+    '(?<![0-9])([1-9][0-9]{3}[\\s]?[0-9]{4})\\s*[-–—_/()\\s]{1,3}\\s*\\(?(0[1-8][0-9])\\)?(?![0-9])');
+
+/// `(021) 9132 3000`, `021_91323000`, `021/91323000`.
+final RegExp _phoneBracketed = RegExp(
+    '\\(?(0[1-8][0-9])\\)?\\s*[-–—_/)\\s]{1,3}\\s*([1-9][0-9]{3}[\\s\\-]?[0-9]{4})(?![0-9])');
 
 /// Every phone-like token of a text, de-duplicated, longest first.
 List<PhoneInfo> phonesIn(String text) {
   final seen = <String>{};
   final out = <PhoneInfo>[];
-  for (final m in _phoneToken.allMatches(latin(text))) {
-    final digits = normalizeIranPhone(m[0]!);
-    if (digits.length < 8 || !seen.add(digits)) continue;
+  final source = latin(text);
+  void take(String candidate) {
+    final digits = normalizeIranPhone(candidate);
     // Long order codes and bank/ID numbers are not contact numbers.
-    if (digits.length > 13) continue;
+    if (digits.length < 8 || digits.length > 13) return;
+    // A truncated copy of a number already read in full is the same number.
+    if (seen.any((known) => known.startsWith(digits))) return;
+    seen.removeWhere((known) => digits.startsWith(known));
+    out.removeWhere((known) => digits.startsWith(known.digits));
+    seen.add(digits);
     out.add(classifyPhone(digits));
+  }
+
+  // Area code written after or around the local number first: these are the
+  // complete readings, and the plain pattern below would only see their halves.
+  for (final m in _phoneReversed.allMatches(source)) {
+    if (!landlineAreas.containsKey(m[2])) continue;
+    take('${m[2]}${m[1]}');
+  }
+  for (final m in _phoneBracketed.allMatches(source)) {
+    if (!landlineAreas.containsKey(m[1])) continue;
+    take('${m[1]}${m[2]}');
+  }
+  for (final m in _phoneToken.allMatches(source)) {
+    take(m[0]!);
   }
   return out;
 }
@@ -262,8 +309,11 @@ Map<String, String> phoneEvidence(String text) {
     out['شماره ${i + 1}'] = phones[i].evidence;
   }
   if (withPlace.isNotEmpty) {
-    out['مبنای شهر از شماره'] =
-        'پیش‌شماره ${withPlace.first.areaCode} → ${withPlace.first.city}';
+    final best = withPlace.firstWhere((p) => p.countyLevel,
+        orElse: () => withPlace.first);
+    out['مبنای شهر از شماره'] = best.countyLevel
+        ? 'پیش‌شماره ${best.areaCode} و رقم‌های شهرستان → ${best.city}'
+        : 'پیش‌شماره ${best.areaCode} → ${best.city}';
   }
   return out;
 }

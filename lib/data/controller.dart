@@ -732,15 +732,52 @@ class MarketController extends ChangeNotifier {
   /// keeps a refresh of many sources against a large archive from allocating a
   /// fresh copy of every stored row once per publish.
   Future<void> _publishEndpoint(String endpoint) {
+    _publishPending.add(endpoint);
+    return _publishFlush ??= _schedulePublish();
+  }
+
+  final Set<String> _publishPending = {};
+  Future<void>? _publishFlush;
+  Completer<void>? _publishHurry;
+
+  /// False once the last source of a refresh is in: nothing more to wait for.
+  bool _gather = true;
+
+  /// How long arrivals are gathered before the list is rebuilt once.
+  ///
+  /// Publishing after every single source rebuilt the whole in-memory list,
+  /// invalidated the filter and repainted the screen once per source; with many
+  /// sources and a large archive those rebuilds ran back to back and the
+  /// interface stopped answering. A small archive still publishes at once.
+  Duration get _publishWindow => quotes.length >= 1500
+      ? const Duration(milliseconds: 2500)
+      : quotes.length >= 300
+          ? const Duration(milliseconds: 900)
+          : Duration.zero;
+
+  Future<void> _schedulePublish() {
     // Serialize publications, not downloads. Never drop a completed source
     // just because the other network worker is publishing at the same time.
     final next = _publishTail.then((_) async {
-      final rows = await store.latestFor(endpoint);
+      final wait = _publishWindow;
+      if (wait > Duration.zero && busy && _gather && !disposed) {
+        final hurry = _publishHurry = Completer<void>();
+        await Future.any([Future<void>.delayed(wait), hurry.future]);
+        _publishHurry = null;
+      }
+      final batch = _publishPending.toSet();
+      _publishPending.clear();
+      _publishFlush = null;
+      if (disposed || batch.isEmpty) return;
+      final fresh = <Quote>[];
+      for (final endpoint in batch) {
+        fresh.addAll(await store.latestFor(endpoint));
+      }
       if (disposed) return;
       quotes = [
         for (final q in quotes)
-          if (q.endpoint != endpoint) q,
-        ...rows,
+          if (!batch.contains(q.endpoint)) q,
+        ...fresh,
       ];
       states = await store.syncStates();
       _notify();
@@ -748,9 +785,31 @@ class MarketController extends ChangeNotifier {
     // A failed publication must not poison the queue. Reconcile from disk at
     // the end instead; callers still receive the original error.
     _publishTail = next.then<void>((_) {}, onError: (Object e, StackTrace s) {
+      _publishFlush = null;
       _publishFailed = true;
     });
     return next;
+  }
+
+  DateTime _lastProgress = DateTime.fromMillisecondsSinceEpoch(0);
+  Timer? _progressTimer;
+
+  /// Progress of a running refresh, announced at most a few times a second.
+  /// Every announcement rebuilds the visible page, so one per finished source
+  /// is too many when sources finish in bursts.
+  void _progress() {
+    const gap = Duration(milliseconds: 350);
+    final now = DateTime.now();
+    if (now.difference(_lastProgress) >= gap) {
+      _lastProgress = now;
+      _notify();
+      return;
+    }
+    _progressTimer ??= Timer(gap, () {
+      _progressTimer = null;
+      _lastProgress = DateTime.now();
+      _notify();
+    });
   }
 
   Future<void> refresh() async {
@@ -844,7 +903,7 @@ class MarketController extends ChangeNotifier {
                     : 'ردیف قابل‌ثبت نبود (بیرون از بازه: ${found.outOfWindow} • '
                         'بی‌قیمت/بی‌محصول: ${found.noise})؛ داده قبلی حفظ شد.');
             finished++;
-            _notify();
+            _progress();
             continue;
           }
           await store.saveSnapshot(e.id, found.quotes,
@@ -858,7 +917,10 @@ class MarketController extends ChangeNotifier {
           // Publish this source's own rows immediately; all-ON must not wait for
           // the slowest source before showing the first received prices, and the
           // rest of the archive is not re-read to do it.
-          await _publishEndpoint(e.id);
+          // The worker does not wait for the screen: arrivals are gathered and
+          // shown together, and a failed publication is reconciled from disk
+          // when the refresh ends.
+          unawaited(_publishEndpoint(e.id).catchError((Object _) {}));
         } catch (error, stack) {
           AppLogger.instance.capture(error, stack, section: 'source');
           await store.failure(
@@ -868,7 +930,7 @@ class MarketController extends ChangeNotifier {
                   : 'خطا در اتصال/مهلت دریافت؛ داده قبلی حفظ شد.');
         }
         finished++;
-        _notify();
+        _progress();
         // Low concurrency, no login/CAPTCHA bypass or aggressive retries.
         await Future<void>.delayed(const Duration(milliseconds: 450));
       }
@@ -889,7 +951,14 @@ class MarketController extends ChangeNotifier {
           rangeSession.invalidate();
           _indexStale = false;
         }
+        _progressTimer?.cancel();
+        _progressTimer = null;
+        // Nothing is left to gather: publish what has arrived now.
+        _gather = false;
+        if (!(_publishHurry?.isCompleted ?? true)) _publishHurry!.complete();
         await _publishTail;
+        if (_publishFlush != null) await _publishTail;
+        _gather = true;
         if (_publishFailed || !_quotesLoaded) {
           await reload();
         } else {
@@ -940,6 +1009,9 @@ class MarketController extends ChangeNotifier {
     _watchTimer = null;
     _refreshHeartbeat?.cancel();
     _refreshHeartbeat = null;
+    _progressTimer?.cancel();
+    _progressTimer = null;
+    if (!(_publishHurry?.isCompleted ?? true)) _publishHurry!.complete();
 
     rangeSession.invalidate();
     RangeWorker.shared.dispose();
