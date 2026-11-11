@@ -82,9 +82,13 @@
 - `flutter test`: **۳۹۲ آزمون موفق**؛ ۲۴ آزمون تازه در `test/searcher_test.dart`
   (شهر از تلفن، پارس نقشه، سناریوی عکس گزارش‌شده، تعارض شهر، اطمینان پایین OCR،
   پنجرهٔ والد، حذف تکراری، ترتیب، ویژگی‌های خانواده، ترمیم OCR).
-- ساخت: `flutter build apk --release --target-platform android-arm` →
-  `releases/app-armeabi-v7a-release.apk` (۱۳.۶ مگابایت، فقط `armeabi-v7a`).
-  در این APK فقط کتابخانه‌های ۳۲بیتی و مدل‌های `tessdata/fas`+`eng` هستند.
+- ساخت دو معماری با یک کد و یک نسخه (`docs/BUILD.fa.md`):
+  - `flutter build apk --release --target-platform android-arm` →
+    `releases/app-armeabi-v7a-release.apk` (۱۳٬۶۵۱٬۶۹۳ بایت)
+  - `flutter build apk --release --target-platform android-arm64` →
+    `releases/app-arm64-v8a-release.apk` (۱۴٬۲۹۷٬۹۳۵ بایت)
+  - هر فایل فقط کتابخانه‌های معماری خودش + `tessdata/fas`+`eng` را دارد و با کلید
+    آزمایشی Android امضا شده است. فهرست هش: `releases/SHA256SUMS`.
 - امضا: کلید آزمایشی Android (کلید اصلی صاحب برنامه در ریپو نیست).
 
 ## محدودیت‌ها (بدون تغییر)

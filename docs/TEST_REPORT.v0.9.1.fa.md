@@ -49,15 +49,19 @@ flutter test
 flutter build apk --release --target-platform android-arm
 ```
 
-- خروجی تحویلی: `releases/app-armeabi-v7a-release.apk` (کپیِ
-  `build/app/outputs/flutter-apk/app-release.apk`)
-- حجم: ۱۳.۷ مگابایت • `versionName 0.9.1` • `versionCode 23` • `minSdk 21` • `targetSdk 35`
-- `sha256`: `55b89fb8dcb1d4fa7baacc1215f492496340ed2b1591bc1ef8015d2d9b2a60c9`
-- دو پاس OCR روی گوشی (تصویر اصلی + نسخهٔ خاکستری/کنتراست‌بالا) و انتخاب پاس بهتر.
-- محتوای بررسی‌شده با `unzip -l` و `aapt dump badging`: فقط `lib/armeabi-v7a/*`
-  (`libapp.so`، `libflutter.so`، `libtesseract.so`، `libleptonica.so`، `libjpeg.so`،
-  `libpngx.so`)، بدون کتابخانهٔ ۶۴بیتی/ایکس۸۶ (فیلتر `abiFilters 'armeabi-v7a'`)،
-  و مدل‌های `assets/tessdata/fas.traineddata` (۴۳۱ کیلوبایت) و `eng.traineddata` (۴.۱ مگابایت).
+- دو خروجی تحویلی (هر دو از یک کد و یک نسخه):
+  - `releases/app-armeabi-v7a-release.apk` — ۳۲ بیتی، ۱۳٬۶۵۱٬۶۹۳ بایت،
+    `sha256` = `6f283c06ab01988eedec1086d47d6189006ae260ea09470370746de2959670f9`
+  - `releases/app-arm64-v8a-release.apk` — ۶۴ بیتی، ۱۴٬۲۹۷٬۹۳۵ بایت،
+    `sha256` = `d8edd312ba4338d9e253aacd58c14a88659d93a5442e27df28bd9ecaa7aa9d3d`
+- `versionName 0.9.1` • `versionCode 23` • `minSdk 21` • `targetSdk 35`
+- فهرست کامل در `releases/SHA256SUMS` و روش ساخت/بررسی در `docs/BUILD.fa.md`.
+- محتوای هر دو با `unzip -l` بررسی شد: فایل ۳۲بیتی فقط `lib/armeabi-v7a/*` و فایل ۶۴بیتی
+  فقط `lib/arm64-v8a/*` (`libapp.so`، `libflutter.so`، `libtesseract.so`،
+  `libleptonica.so`، `libjpeg.so`، `libpngx.so`) و مدل‌های
+  `assets/tessdata/fas.traineddata` (۴۳۱KB) و `eng.traineddata` (۴.۱MB) در هر دو.
+- فیلتر ABI از `-Ptarget-platform` خود Flutter خوانده می‌شود؛ به همین دلیل هیچ بستهٔ
+  مخلوط (۳۲+۶۴) ساخته نمی‌شود.
 - امضا: کلید آزمایشی Android (`CN=Android Debug`) — کلید اصلی صاحب برنامه در ریپو نیست.
 - در ساخت اول، Gradle daemon به‌علت کمبود حافظهٔ میزبان از بین رفت؛ با روشن‌کردن swap میزبان
   و `-Xmx512m`/`SerialGC` در `android/gradle.properties` ساخت کامل شد. این تغییر فقط
