@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../domain/market.dart';
+import '../domain/maps_link.dart';
+import '../domain/maps_resolver.dart';
 import '../domain/ocr.dart';
 import '../domain/range_projection.dart';
 import '../domain/searcher.dart';
@@ -783,8 +785,10 @@ class MarketController extends ChangeNotifier {
           // rows instead of being wiped by prose.
           final found = data.isEmpty
               ? const SearcherResult([])
-              : Searcher.process(data,
-                  now: DateTime.now(), windowDays: discoveryDays);
+              : await Searcher.processAsync(data,
+                  now: DateTime.now(),
+                  windowDays: discoveryDays,
+                  resolver: MapsResolver(client.client));
           if (found.quotes.isEmpty) {
             await AppLogger.instance.record('search', 'no_rows', {
               'endpoint': e.id,
@@ -886,7 +890,18 @@ class MarketController extends ChangeNotifier {
         return report;
       }
       final now = DateTime.now();
-      final text = Searcher.cleanOcrText(ocrResult.text);
+      var text = Searcher.cleanOcrText(ocrResult.text);
+      // A picture almost always writes the map as a short link. Open it while the
+      // app is online and append the address it really points at, so the same
+      // parser reads the place instead of reporting "unknown".
+      final resolver = MapsResolver(client.client);
+      var mapNote = '';
+      final shortLinks = shortMapsLinksIn(text);
+      if (shortLinks.isNotEmpty) {
+        final info = await resolver.resolve(shortLinks.first);
+        mapNote = MapsResolver.evidenceLine(info, shortLinks.first);
+        if (info != null) text = '$text\n${info.url}';
+      }
       // Tesseract reports a mean word confidence on some builds; when it does
       // not, the text itself is scored, and that score is labelled as such.
       final confidence = ocrResult.confidence ?? OcrQuality.score(text);
@@ -904,12 +919,22 @@ class MarketController extends ChangeNotifier {
           manual: true,
           ocrConfidence: confidence,
           ocrEngine: ocrResult.engine);
-      final found = Searcher.process(rows,
-          now: now, windowDays: discoveryDays, keepManualFallback: false);
+      final found = await Searcher.processAsync(rows,
+          now: now,
+          windowDays: discoveryDays,
+          keepManualFallback: false,
+          resolver: resolver);
       lastImageRows = found.quotes;
       if (found.quotes.isEmpty) {
-        report = 'متن تصویر خوانده شد (اطمینان $confidenceLabel) '
-            'ولی محصول یا قیمتی شناسایی نشد؛ چیزی ذخیره نشد.';
+        // Say what the picture really held instead of a bare failure: the family
+        // it names, the city its landline proves, the state of its map link.
+        final seen = Searcher.imageEvidence(text, rows: rows);
+        final parts = <String>[
+          ...seen.entries.map((e) => '${e.key}: ${e.value}'),
+          if (mapNote.isNotEmpty) 'نقشه: $mapNote',
+        ];
+        report = 'متن تصویر خوانده شد (اطمینان $confidenceLabel) ولی ردیف قابل‌ثبتی '
+            'نبود؛ چیزی ذخیره نشد.${parts.isEmpty ? '' : ' ${parts.join(' • ')}'}';
         return report;
       }
       await store.saveSnapshot(imageEndpoint, found.quotes,

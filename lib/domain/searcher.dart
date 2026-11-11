@@ -1,5 +1,6 @@
 import 'market.dart';
 import 'maps_link.dart';
+import 'maps_resolver.dart';
 import 'phone_city.dart';
 import 'product_schema.dart';
 import 'product_text.dart';
@@ -186,12 +187,12 @@ class Searcher {
     return c;
   }
 
-  static String _messageText(Quote q) {
-    final direct = q.details['متن پیام'];
-    if (direct != null && direct.isNotEmpty) return direct;
-    final ocr = q.details['متن OCR'];
-    return ocr ?? '';
-  }
+  static String _messageText(Quote q) => [
+        q.details['متن پیام'] ?? '',
+        q.details['متن OCR'] ?? '',
+        // A short map link that was opened adds the address it really points at.
+        q.details['نقشه (بازشده)'] ?? '',
+      ].where((s) => s.isNotEmpty).join('\n');
 
   // ------------------------------------------------------------------ pipeline
 
@@ -226,6 +227,84 @@ class Searcher {
     final list = kept.values.toList()..sort(compare);
     return SearcherResult(list,
         outOfWindow: outOfWindow, noise: noise, duplicates: duplicates);
+  }
+
+  /// Opens the shortened map links of every row, then applies the normal rules.
+  ///
+  /// Only the first short link of a post is opened, only while the app is online
+  /// (the caller passes a resolver), and the resolved address is appended to the
+  /// row's own text as evidence — never as a guess about the seller's location.
+  static Future<void> resolveShortLinks(
+      List<Quote> rows, MapsResolver resolver) async {
+    for (var i = 0; i < rows.length; i++) {
+      final q = rows[i];
+      final text = _messageText(q);
+      final links = shortMapsLinksIn(text);
+      if (links.isEmpty) continue;
+      final info = await resolver.resolve(links.first);
+      final j = q.toJson();
+      final details = Map<String, String>.from(q.details);
+      details['بازکردن لینک نقشه'] = MapsResolver.evidenceLine(info, links.first);
+      // The final address is kept next to the row so the ordinary offline
+      // parser reads it exactly like a link the seller wrote in full.
+      if (info != null) details['نقشه (بازشده)'] = info.url;
+      j['details'] = details;
+      rows[i] = Quote.fromJson(j);
+    }
+  }
+
+  /// What a picture actually contained, written for the user.
+  ///
+  /// When an image yields no storable row this is the answer to "what did you
+  /// see?": the product family the post names, the city its landline proves, the
+  /// state of its map link, and whether any amount was legible at all.
+  static Map<String, String> imageEvidence(String text, {List<Quote> rows = const []}) {
+    final out = <String, String>{};
+    final family = ProductText.category(text);
+    if (family.isNotEmpty) out['خانواده محصول'] = family;
+    final landline = phonesIn(text).where((p) => p.hasCity).toList();
+    if (landline.isNotEmpty) {
+      out['شهر از تلفن'] =
+          '${landline.first.city} (پیش‌شماره ${landline.first.areaCode})';
+    }
+    final links = mapsLinksIn(text);
+    if (links.isNotEmpty) {
+      out['نقشه'] = links.first.hasCity
+          ? 'شهر ${links.first.city}'
+          : links.first.kind == 'لینک کوتاه'
+              ? 'لینک کوتاه؛ بازکردن لازم دارد'
+              : links.first.evidence;
+    }
+    // A phone number is not a price: strip contact tokens before counting.
+    var body = text;
+    for (final phone in phonesIn(text)) {
+      body = body.replaceAll(phone.digits, ' ');
+    }
+    final amounts = RegExp(r'\d[\d,٬.]{4,}')
+        .allMatches(body)
+        .map((m) => m[0]!.replaceAll(RegExp(r'[.,]$'), ''))
+        .toSet()
+        .length;
+    out['مبلغ‌های خوانده‌شده'] = amounts == 0
+        ? 'هیچ مبلغی خوانا نبود'
+        : '$amounts عدد${rows.isEmpty ? ' (بدون محصول قابل‌انتساب)' : ''}';
+    return out;
+  }
+
+  /// [process] with the one network step the searcher is allowed to make.
+  static Future<SearcherResult> processAsync(Iterable<Quote> rows,
+      {required DateTime now,
+      required int windowDays,
+      MapsResolver? resolver,
+      bool keepManualFallback = true}) async {
+    final list = rows.toList();
+    if (resolver != null) {
+      await resolveShortLinks(list, resolver);
+    }
+    return process(list,
+        now: now,
+        windowDays: windowDays,
+        keepManualFallback: keepManualFallback);
   }
 
   /// A stored row must be about a product, and about its price.
@@ -327,8 +406,9 @@ class Searcher {
   static String cleanOcrText(String raw) {
     var s = raw
         .replaceAll('\u200c', ' ')
-        .replaceAll('\u200f', '')
-        .replaceAll('\u200e', '')
+        // Bidi control marks: a chat bubble and OCR both insert them around a
+        // Persian line, and they break every URL and number they touch.
+        .replaceAll(RegExp('[\u200e\u200f\u202a-\u202e\u2066-\u2069]'), '')
         .replaceAll('\t', ' ')
         .replaceAll('ي', 'ی')
         .replaceAll('ك', 'ک')
@@ -348,6 +428,25 @@ class Searcher {
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty)
         .toList();
+    // A chat bubble wraps a long link: `https://maps.app.goo.gl` on one line and
+    // `/KyKq5e2b7vr…` on the next. Without joining them the link is lost.
+    for (var i = 0; i < lines.length - 1; i++) {
+      final head = lines[i], next = lines[i + 1];
+      if (RegExp(r'https?://\S+$').hasMatch(head) &&
+          RegExp(r'^(?:/|\?|#)').hasMatch(next)) {
+        // Only the path token belongs to the link; whatever the bubble or OCR
+        // wrote next to it on the same line stays a line of its own.
+        final parts = next.split(RegExp(r'\s+'));
+        final tail = next.substring(parts.first.length).trim();
+        lines[i] = '$head${parts.first}';
+        if (tail.isEmpty) {
+          lines.removeAt(i + 1);
+        } else {
+          lines[i + 1] = tail;
+        }
+        i--;
+      }
+    }
     return lines.join('\n');
   }
 }

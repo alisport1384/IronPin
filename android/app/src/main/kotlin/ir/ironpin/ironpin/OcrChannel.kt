@@ -4,6 +4,10 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import com.googlecode.tesseract.android.TessBaseAPI
@@ -108,10 +112,21 @@ class OcrChannel(private val activity: Activity, messenger: BinaryMessenger) {
                 if (bitmap == null) throw IllegalStateException("Picture could not be decoded")
                 val engine = engine()
                 engine.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
-                engine.setImage(bitmap)
-                text = engine.getUTF8Text() ?: ""
-                confidence = meanConfidence(engine)
-                engine.clear()
+                // Two passes: the picture as it is, and a grey/contrast copy at a
+                // larger size. A price table photographed on a phone is often
+                // low-contrast and small; the pass that yields more Persian
+                // letters and digits is the one returned. Nothing is invented —
+                // both passes read the same pixels.
+                var best = ""
+                for (candidate in listOf(bitmap, enhance(bitmap))) {
+                  engine.setImage(candidate)
+                  val read = engine.getUTF8Text() ?: ""
+                  confidence = meanConfidence(engine)
+                  if (score(read) > score(best)) best = read
+                  engine.clear()
+                  if (candidate !== bitmap) candidate.recycle()
+                }
+                text = best
                 bitmap.recycle()
             } catch (e: Exception) {
                 error = e.message ?: e.javaClass.simpleName
@@ -125,6 +140,32 @@ class OcrChannel(private val activity: Activity, messenger: BinaryMessenger) {
                 ))
             }
         }
+    }
+
+    /** Persian letters and digits read: the only yardstick used to pick a pass. */
+    private fun score(text: String): Int =
+        text.count { c -> c in '\u0600'..'\u06FF' || c.isDigit() }
+
+    /** Grey, higher-contrast, larger copy of the picture for the second pass. */
+    private fun enhance(source: Bitmap): Bitmap {
+        val scale = if (source.width < 1600) 1.8f else 1.2f
+        val width = (source.width * scale).toInt().coerceAtMost(3200)
+        val height = (source.height * scale).toInt().coerceAtMost(3200)
+        val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            colorFilter = ColorMatrixColorFilter(
+                ColorMatrix(
+                    floatArrayOf(
+                        0.55f, 0.55f, 0.55f, 0f, 18f,
+                        0.55f, 0.55f, 0.55f, 0f, 18f,
+                        0.55f, 0.55f, 0.55f, 0f, 18f,
+                        0f, 0f, 0f, 1f, 0f
+                    )
+                )
+            )
+        }
+        Canvas(out).drawBitmap(source, null, android.graphics.Rect(0, 0, width, height), paint)
+        return out
     }
 
     private fun decode(file: File): Bitmap? {

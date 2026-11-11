@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ironpin/domain/maps_link.dart';
 import 'package:ironpin/domain/market.dart';
-import 'package:ironpin/domain/ocr.dart';
+import 'package:ironpin/domain/ocr_quality.dart';
 import 'package:ironpin/domain/phone_city.dart';
 import 'package:ironpin/domain/searcher.dart';
 import 'package:ironpin/domain/text_engine.dart';
@@ -245,6 +245,72 @@ https://www.google.com/maps/place/Isfahan/@32.65,51.66,12z''',
       ], now: now, windowDays: 30);
       expect(result.categories['میلگرد'], 1);
       expect(result.categories['تیرآهن'], 1);
+    });
+  });
+
+
+  group('the reported Eitaa screenshot', () {
+    // Exactly what Tesseract returned for the user's picture, Persian caption
+    // first, links wrapped by the chat bubble, table thumbnail unreadable.
+    const ocrRaw = '''‎gE‏ 19 #آبان 1405
+#میلگرد
+ی" شماره تماس با مجموعه 5
+02191323000
+@ مشاهده قیمت ‎a)‏ روز کلیه کارخانجات 5
+‎www.shahrahan.com‏
+‎Juss‏ تلگرام ۸
+‎https://t.me/shahrahan‏
+‏بکانال ‎٩ wl‏
+‎https://eitaa.com/shahr_ahan‏
+‎Q‏ ##آدرس مجموعه 5
+‎https://maps.app.goo.gl‏
+‎/KyKq5e2b7vrHCjxb9 Sow BO‏''';
+
+    test('a link the bubble wrapped is put back together', () {
+      final cleaned = Searcher.cleanOcrText(ocrRaw);
+      expect(cleaned, contains('https://maps.app.goo.gl/KyKq5e2b7vrHCjxb9'));
+      // The junk OCR wrote next to the code never becomes part of the link.
+      expect(cleaned, isNot(contains('KyKq5e2b7vrHCjxb9Sow')));
+      // Bidi marks the chat UI inserts are gone.
+      expect(cleaned.contains('\u200e'), false);
+      expect(cleaned.contains('\u200f'), false);
+    });
+
+    test('the city the app could not find comes from the landline', () {
+      final cleaned = Searcher.cleanOcrText(ocrRaw);
+      expect(landlineCityIn(cleaned), 'تهران');
+      final rows = Searcher.process(
+          analyze(cleaned, published: now, image: true, confidence: 0.45),
+          now: now,
+          windowDays: 30)
+          .quotes;
+      // The thumbnail of the price table is not readable at that size, so no
+      // price row is invented — but the picture is still explained.
+      expect(rows, isEmpty);
+      final seen = Searcher.imageEvidence(cleaned);
+      expect(seen['خانواده محصول'], 'میلگرد');
+      expect(seen['شهر از تلفن'], contains('تهران'));
+      expect(seen['نقشه'], contains('لینک کوتاه'));
+      expect(seen['مبلغ‌های خوانده‌شده'], contains('هیچ مبلغی'));
+    });
+
+    test('a post with the same shape but a readable price is stored', () {
+      const text = '''قیمت میلگرد
+19 #آبان 1405
+میلگرد آجدار سایز 16 A3
+11,890,000 تومان
+تلفن: 021-91323000
+https://maps.app.goo.gl/KyKq5e2b7vrHCjxb9''';
+      final rows = Searcher.process(
+          analyze(text, published: now, image: true, confidence: 0.82),
+          now: now,
+          windowDays: 30)
+          .quotes;
+      final priced = rows.where((q) => q.amount == 11890000).toList();
+      expect(priced.length, 1);
+      expect(rows.every((q) => q.sellerCity == 'تهران'), true);
+      expect(rows.first.details['نقشه 1'], contains('لینک کوتاه'));
+      expect(rows.first.details['مبنای شهر'], contains('پیش‌شماره'));
     });
   });
 

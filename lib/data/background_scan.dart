@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../domain/maps_resolver.dart';
 import '../domain/searcher.dart';
 import 'sources.dart';
 import 'store.dart';
@@ -117,7 +118,10 @@ Future<bool> runBackgroundScan() async {
         // empty result never wipes the rows already stored.
         final found = quotes.isEmpty
             ? const SearcherResult([])
-            : Searcher.process(quotes, now: DateTime.now(), windowDays: days);
+            : await Searcher.processAsync(quotes,
+                now: DateTime.now(),
+                windowDays: days,
+                resolver: MapsResolver(client.client));
         if (found.quotes.isEmpty) continue;
         await store.saveSnapshot(endpoint.id, found.quotes,
             replaceMissing: client.complete[endpoint.id] ?? true);

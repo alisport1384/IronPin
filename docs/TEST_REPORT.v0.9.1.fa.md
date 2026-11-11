@@ -13,10 +13,14 @@ No issues found!
 
 ```
 flutter test
-+392: All tests passed!
++400: All tests passed!
 ```
 
-آزمون‌های تازه در `test/searcher_test.dart` (۲۴ مورد):
+آزمون‌های تازه: ۲۷ مورد در `test/searcher_test.dart` + ۵ مورد در
+`test/maps_resolver_test.dart` (بازکردن لینک کوتاه با بدل HTTP، شکست لینک مرده، حالت
+بدون اینترنت، و اینکه فقط لینک کوتاه به مرحلهٔ شبکه می‌رود).
+
+گروه‌های `test/searcher_test.dart`:
 
 | گروه | آنچه سنجیده می‌شود |
 | --- | --- |
@@ -27,6 +31,7 @@ flutter test
 | اطمینان OCR | اطمینان ۴۰٪ → ردیف می‌ماند ولی وضعیت «ارقام نیازمند بازبینی» می‌گیرد؛ عکس بی‌محصول → هیچ ردیفی ذخیره نمی‌شود |
 | قواعد جستجوگر | پنجرهٔ والد، حذف تکراری، رد متن بی‌محصول، ترتیب خانواده‌ها، ویژگی‌های لازم هر خانواده، شمارش دسته‌ها |
 | ترمیم متن OCR | حفظ «آهن»، اصلاح `ي/ك`، هزارگان، ارقامی که بین دو رقم حرف خوانده شده‌اند، سقف برآورد اطمینان |
+| عکس واقعی گزارش‌شده | متن OCR همان اسکرین‌شات ایتا: چسباندن لینک دو خط شده، حذف کاراکترهای جهت‌دهی، شهر تهران از `02191323000`، عدم ساخت قیمت از جدول ناخوانا، و استخراج درست وقتی همان پست قیمت خوانا دارد |
 
 آزمون‌های موجود که پس از تغییر مسیر داده سبز ماندند (نمونه):
 
@@ -44,8 +49,9 @@ flutter build apk --release --target-platform android-arm
 
 - خروجی تحویلی: `releases/app-armeabi-v7a-release.apk` (کپیِ
   `build/app/outputs/flutter-apk/app-release.apk`)
-- حجم: ۱۳.۶ مگابایت • `versionName 0.9.1` • `versionCode 23` • `minSdk 21` • `targetSdk 35`
-- `sha256`: `249c6256de16016fe8fbd3a3e162408f333b0d74b0c90d29ec46c51c25ce8c35`
+- حجم: ۱۳.۷ مگابایت • `versionName 0.9.1` • `versionCode 23` • `minSdk 21` • `targetSdk 35`
+- `sha256`: `ea36c5d0dd00996c87d4a89dcc6b1bb5082f7babe938a23fd691682acbfc6e05`
+- دو پاس OCR روی گوشی (تصویر اصلی + نسخهٔ خاکستری/کنتراست‌بالا) و انتخاب پاس بهتر.
 - محتوای بررسی‌شده با `unzip -l` و `aapt dump badging`: فقط `lib/armeabi-v7a/*`
   (`libapp.so`، `libflutter.so`، `libtesseract.so`، `libleptonica.so`، `libjpeg.so`،
   `libpngx.so`)، بدون کتابخانهٔ ۶۴بیتی/ایکس۸۶ (فیلتر `abiFilters 'armeabi-v7a'`)،

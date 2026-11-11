@@ -10,6 +10,9 @@ class TextPriceEngine {
   static final product = ProductText.product;
   static String normalize(String text) => text
       .replaceAll('\r', '')
+      // Bidi control marks come from the chat UI and from OCR; they are invisible
+      // in the source but split numbers, links and dates.
+      .replaceAll(RegExp('[\u200e\u200f\u202a-\u202e\u2066-\u2069]'), '')
       .split('\n')
       .map((s) => latin(s)
           .replaceAll('_', ' ')

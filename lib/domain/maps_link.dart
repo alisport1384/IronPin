@@ -62,6 +62,25 @@ final RegExp mapsUrlPattern = RegExp(
 
 bool isMapsUrl(String value) => mapsUrlPattern.hasMatch(latin(value));
 
+/// A link whose coordinates live behind a redirect (`maps.app.goo.gl/…`).
+bool isShortMapsUrl(String value) {
+  final v = latin(value).toLowerCase();
+  return v.contains('maps.app.goo.gl') ||
+      v.contains('goo.gl/maps') ||
+      v.contains('g.co/maps');
+}
+
+/// Short links of a text, de-duplicated, in the order they were written.
+List<String> shortMapsLinksIn(String text) {
+  final out = <String>[];
+  for (final m in mapsUrlPattern.allMatches(latin(text))) {
+    var url = m[0]!;
+    if (!url.startsWith('http')) url = 'https://$url';
+    if (isShortMapsUrl(url) && !out.contains(url)) out.add(url);
+  }
+  return out;
+}
+
 /// Every maps link of a text, with what can be read from it offline.
 List<MapsInfo> mapsLinksIn(String text) {
   final out = <MapsInfo>[];
