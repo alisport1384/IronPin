@@ -484,8 +484,18 @@ class MarketStore {
 
   static int _refreshLockSequence = 0;
 
+  /// How long a refresh lock stays valid without being renewed, and how often a
+  /// running refresh must renew it.
+  ///
+  /// The lease used to be 30 minutes and was never renewed, so one refresh that
+  /// the OS killed (app swiped away, screen off, a long picture scan) blocked
+  /// every later refresh for half an hour and the button looked dead. A working
+  /// refresh now renews its own lease; a dead one is forgotten in minutes.
+  static const Duration refreshLockLease = Duration(minutes: 5);
+  static const Duration refreshLockHeartbeat = Duration(minutes: 1);
+
   Future<String?> acquireRefreshLock(
-      {Duration lease = const Duration(minutes: 30)}) async {
+      {Duration lease = refreshLockLease}) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final owner = '$now-${identityHashCode(this)}-${++_refreshLockSequence}';
     return db.transaction((tx) async {
@@ -501,8 +511,52 @@ class MarketStore {
     });
   }
 
-  Future<void> releaseRefreshLock(String owner) async {
+  Future<void> releaseRefreshLock(String? owner) async {
     await db.delete('refresh_lock', where: 'owner=?', whereArgs: [owner]);
+  }
+
+  /// Extends the caller's own lease. Returns false when the lock is no longer
+  /// ours (released, or taken over after our lease expired), so the caller can
+  /// stop believing it is the only refresh running.
+  Future<bool> renewRefreshLock(String owner,
+      {Duration lease = refreshLockLease}) async {
+    final renewed = await db.update(
+        'refresh_lock',
+        {'expires_at': DateTime.now().millisecondsSinceEpoch + lease.inMilliseconds},
+        where: 'id=1 AND owner=?',
+        whereArgs: [owner]);
+    return renewed == 1;
+  }
+
+  /// When the lock currently held by someone else becomes free (`null` when the
+  /// archive holds no live lock). The UI uses it to say how long the user waits.
+  Future<DateTime?> refreshLockHolderExpiry() async {
+    final rows = await db.query('refresh_lock',
+        columns: ['expires_at'], where: 'id=1', limit: 1);
+    if (rows.isEmpty) return null;
+    final at = DateTime.fromMillisecondsSinceEpoch(rows.first['expires_at'] as int);
+    return at.isAfter(DateTime.now()) ? at : null;
+  }
+
+  /// Records what a source produced without claiming it failed.
+  ///
+  /// A source whose rows are all out of the window, or all prose, keeps its old
+  /// rows; the user still deserves to know why nothing changed, so the reason is
+  /// written into the source's status while `success_at`/`attempted_at` stay as
+  /// the last real outcome.
+  Future<void> note(String endpoint, String message, {int? touched}) async {
+    final old =
+        await db.query('sync', where: 'endpoint=?', whereArgs: [endpoint]);
+    final now = DateTime.now().toUtc().toIso8601String();
+    await db.insert(
+        'sync',
+        {
+          'endpoint': endpoint,
+          'attempted_at': old.firstOrNull?['attempted_at'] ?? now,
+          'success_at': old.firstOrNull?['success_at'],
+          'message': message,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> failure(String endpoint, String message) async {

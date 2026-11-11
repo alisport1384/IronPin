@@ -58,12 +58,15 @@ cp build/app/outputs/flutter-apk/app-release.apk \
 خروجی‌های تحویلی در `releases/` و با همین نام‌ها هستند؛ `.apk` در گیت ignore است و فقط
 فایل `SHA256SUMS` کامیت می‌شود.
 
-### تحویل ۰.۹.۱ — ۲۰ آبان ۱۴۰۵
+### تحویل ۰.۹.۱ — ۲۰ آبان ۱۴۰۵ (بازساخت پس از رفع اشکال نوسازی)
+
+این دو فایل همان نسخهٔ `0.9.1+23` هستند که پس از رفع اشکال «نوسازی فقط یک‌بار» دوباره
+ساخته شدند؛ هش‌های پیش از این بازساخت (`6f283c06…`/`d8edd312…`) معتبر نیستند.
 
 | فایل | معماری | حجم | sha256 |
 | --- | --- | ---: | --- |
-| `releases/app-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۰MB (۱۳٬۶۵۱٬۶۹۳ بایت) | `6f283c06ab01988eedec1086d47d6189006ae260ea09470370746de2959670f9` |
-| `releases/app-arm64-v8a-release.apk` | ۶۴ بیتی (`arm64-v8a`) | ۱۳.۶MB (۱۴٬۲۹۷٬۹۳۵ بایت) | `d8edd312ba4338d9e253aacd58c14a88659d93a5442e27df28bd9ecaa7aa9d3d` |
+| `releases/app-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۰MB (۱۳٬۶۵۵٬۵۲۴ بایت) | `8e124bc4debfe8b581f3229732d09e84ab33d3f05b1ba13ce6a772eeb17fc067` |
+| `releases/app-arm64-v8a-release.apk` | ۶۴ بیتی (`arm64-v8a`) | ۱۳.۶MB (۱۴٬۳۰۰٬۴۰۷ بایت) | `996eaf218db48fb40420a151e06158ff80e43d32d330c01e2d87b71aee0826d9` |
 
 هر دو: `versionName 0.9.1`، `versionCode 23`، `minSdk 21`، `targetSdk 35`، امضا با کلید
 آزمایشی Android، شامل `assets/tessdata/fas`+`eng` و فقط کتابخانه‌های معماری خودش.

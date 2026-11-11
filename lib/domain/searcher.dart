@@ -327,9 +327,18 @@ class Searcher {
     return hasPrice || announced || q.currency != 'نامشخص' || q.unit != 'unknown';
   }
 
+  /// Which of two copies of the same offer is the one to keep.
+  ///
+  /// On the same publication day the later read wins: a channel that re-issues
+  /// today's list with a corrected price must update the archive instead of being
+  /// thrown away in favour of the copy read an hour earlier. History keeps both
+  /// values; only the current row is replaced.
   static bool _newer(Quote a, Quote b) {
     final x = publishedOf(a), y = publishedOf(b);
-    if (x != null && y != null) return x.isAfter(y);
+    if (x != null && y != null) {
+      if (x.isAfter(y)) return true;
+      if (x.isBefore(y)) return false;
+    }
     return a.fetchedAt.isAfter(b.fetchedAt);
   }
 
@@ -349,7 +358,11 @@ class Searcher {
       part(q.unit),
       part(q.currency),
       part(q.sellerCity),
-      q.amount?.toStringAsFixed(0) ?? '',
+      // The amount is deliberately not part of the identity: the same product
+      // announced twice on the same day is one offer and the newer read replaces
+      // the older one. With the amount in the key, a corrected price either
+      // duplicated the product or was dropped as "not newer", so a refresh
+      // appeared to change nothing.
       q.publishedOfDay,
     ].join('|');
   }

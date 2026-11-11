@@ -21,6 +21,15 @@ String fmt(num? value, {int decimals = 0}) {
   return r;
 }
 
+/// «⟨…⟩ پیش» — how long ago something happened, in Persian.
+String fmtAgo(DateTime at, {DateTime? now}) {
+  final diff = (now ?? DateTime.now()).difference(at);
+  if (diff.inSeconds < 90) return 'همین حالا';
+  if (diff.inMinutes < 60) return '${fmt(diff.inMinutes)} دقیقه پیش';
+  if (diff.inHours < 24) return '${fmt(diff.inHours)} ساعت پیش';
+  return '${fmt(diff.inDays)} روز پیش';
+}
+
 Future<void> openLink(BuildContext context, String raw) async {
   final uri = Uri.tryParse(raw);
   if (uri == null || !['https', 'http', 'tel'].contains(uri.scheme)) return;

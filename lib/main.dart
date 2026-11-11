@@ -249,15 +249,16 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
                         color: teal, borderRadius: BorderRadius.circular(9)),
                     child: const Icon(Icons.view_in_ar, size: 23)),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Text('آیرون‌پین',
+                      const Text('آیرون‌پین',
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 19)),
-                      Text('بازار آهن، با منبع روشن',
-                          style: TextStyle(fontSize: 10, color: Colors.white70),
+                      Text(_headerSubtitle(c),
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.white70),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis)
                     ]))
@@ -265,7 +266,21 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
               actions: [
                 IconButton(
                     tooltip: 'نوسازی قیمت‌ها',
-                    onPressed: c.busy || c.transferring ? null : c.refresh,
+                    // Say what happened. A blocked refresh used to return
+                    // silently, so the button looked broken once the archive
+                    // had data.
+                    onPressed: c.busy || c.transferring
+                        ? null
+                        : () async {
+                            await c.refresh();
+                            if (!context.mounted) return;
+                            final reason = c.refreshBlockedReason;
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                duration: const Duration(seconds: 5),
+                                content: Text(reason.isEmpty
+                                    ? 'نوسازی انجام شد.'
+                                    : reason)));
+                          },
                     icon: c.busy
                         ? const SizedBox(
                             height: 21,
@@ -334,4 +349,14 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
               ]),
         );
       });
+}
+
+/// The second header line: what the app is, plus when the archive was last
+/// refreshed. Read from the archive, so it is right after a restart, after a
+/// background scan, and after a refresh blocked by another run.
+String _headerSubtitle(MarketController c) {
+  const base = 'بازار آهن، با منبع روشن';
+  final at = c.lastRefreshAt;
+  if (at == null) return base;
+  return '$base • آخرین نوسازی ${fmtAgo(at)}';
 }

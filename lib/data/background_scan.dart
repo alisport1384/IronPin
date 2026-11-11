@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
@@ -85,6 +86,7 @@ Future<bool> runBackgroundScan() async {
   final photos = PhotoScanner(
       client: client.client, engine: OcrEngine.platform());
   String? lease;
+  Timer? heartbeat;
   try {
     store = await MarketStore.open();
     if (await store.setting('autoRefresh') != 'true') return true;
@@ -113,6 +115,11 @@ Future<bool> runBackgroundScan() async {
     if (batch.sources.isEmpty) return true;
     lease = await store.acquireRefreshLock();
     if (lease == null) return true;
+    // Renew our own lease while this batch runs. Without it, a batch that the OS
+    // killed mid-scan held the lock until the lease ran out, and every later
+    // refresh (foreground or background) silently did nothing.
+    heartbeat = Timer.periodic(MarketStore.refreshLockHeartbeat,
+        (_) => unawaited(store!.renewRefreshLock(lease!)));
 
     var completed = 0;
     final days = int.tryParse(await store.setting('windowDays') ?? '') ?? 30;
@@ -135,7 +142,15 @@ Future<bool> runBackgroundScan() async {
                 now: DateTime.now(),
                 windowDays: days,
                 resolver: MapsResolver(client.client));
-        if (found.quotes.isEmpty) continue;
+        if (found.quotes.isEmpty) {
+          await store.note(
+              endpoint.id,
+              quotes.isEmpty
+                  ? 'اسکن پس‌زمینه ردیف قیمتی پیدا نکرد؛ داده قبلی حفظ شد.'
+                  : 'ردیف قابل‌ثبت نبود (بیرون از بازه: ${found.outOfWindow} • '
+                      'بی‌قیمت/بی‌محصول: ${found.noise})؛ داده قبلی حفظ شد.');
+          continue;
+        }
         await store.saveSnapshot(endpoint.id, found.quotes,
             replaceMissing: client.complete[endpoint.id] ?? true);
         completed++;
@@ -155,6 +170,7 @@ Future<bool> runBackgroundScan() async {
   } catch (_) {
     return false;
   } finally {
+    heartbeat?.cancel();
     client.close();
     if (lease != null && store != null) {
       try {
@@ -163,6 +179,9 @@ Future<bool> runBackgroundScan() async {
         // Lease expiry recovers if the database was interrupted.
       }
     }
-    if (store != null) await store.close();
+    // Deliberately no store.close() here. sqflite keeps one native handle per
+    // database path per process, so closing it from this background isolate also
+    // closed the handle the UI isolate was using: the next manual refresh then
+    // failed with database_closed and looked like "refresh stopped working".
   }
 }

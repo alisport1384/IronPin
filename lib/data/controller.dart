@@ -80,6 +80,16 @@ class MarketController extends ChangeNotifier {
   // still opt-in, because it is a candidate, not a registered source).
   Set<String> enabled = {for (final e in endpoints) e.id};
   bool busy = false, ready = false, autoRefresh = false, disposed = false;
+
+  /// Why the last refresh attempt did nothing (empty when it ran or was not
+  /// attempted). The button shows it, so a blocked refresh is never silent.
+  String refreshBlockedReason = '';
+
+  /// When the archive last finished a refresh, read from the archive itself so
+  /// it survives restarts and is the same in the foreground and background.
+  DateTime? lastRefreshAt;
+
+  Timer? _refreshHeartbeat;
   bool foreground = true;
   int scanIntervalMinutes = 30;
   String? lastBackgroundScan;
@@ -295,6 +305,8 @@ class MarketController extends ChangeNotifier {
     scanIntervalMinutes =
         int.tryParse(await store.setting('scanIntervalMinutes') ?? '') ?? 30;
     if (![15, 30, 60].contains(scanIntervalMinutes)) scanIntervalMinutes = 30;
+    lastRefreshAt = DateTime.tryParse(await store.setting('lastRefresh') ?? '')
+        ?.toLocal();
     lastBackgroundScan = await store.setting('lastBackgroundScan');
     lastBackgroundScanCount =
         int.tryParse(await store.setting('lastBackgroundScanCount') ?? '') ?? 0;
@@ -742,19 +754,45 @@ class MarketController extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    if (busy || transferring || disposed) return;
+    refreshBlockedReason = '';
+    if (busy || transferring || disposed) {
+      refreshBlockedReason = busy ? 'نوسازی همین حالا در حال اجراست.' : '';
+      _notify();
+      return;
+    }
     String? refreshLock;
     try {
       refreshLock = await store.acquireRefreshLock();
     } catch (error, stack) {
       AppLogger.instance.capture(error, stack, section: 'refresh_lock');
+      refreshBlockedReason = 'قفل نوسازی در آرشیو خوانده نشد؛ بعداً دوباره تلاش کنید.';
+      _notify();
       return;
     }
     if (refreshLock == null || busy || transferring || disposed) {
       if (refreshLock != null) await store.releaseRefreshLock(refreshLock);
+      if (refreshLock == null && !busy) {
+        // Another run holds the lock. Say how long it lasts instead of doing
+        // nothing: a 30-minute silent wait was read by the user as "the button
+        // stopped working".
+        final until = await store.refreshLockHolderExpiry();
+        final minutes = until == null
+            ? 0
+            : until.difference(DateTime.now()).inMinutes +
+                (until.difference(DateTime.now()).inSeconds % 60 > 0 ? 1 : 0);
+        refreshBlockedReason = minutes <= 0
+            ? 'نوسازی دیگری در حال اجراست؛ یک دقیقه دیگر دوباره تلاش کنید.'
+            : 'نوسازی دیگری در حال اجراست؛ $minutes دقیقه تا آزادشدن قفل.';
+      }
+      _notify();
       return;
     }
     busy = true;
+    // Keep our own lease alive while the scan runs; a refresh that dies leaves
+    // the lock to expire instead of blocking the next one for half an hour.
+    _refreshHeartbeat?.cancel();
+    _refreshHeartbeat = Timer.periodic(MarketStore.refreshLockHeartbeat,
+        (_) => unawaited(store.renewRefreshLock(refreshLock!)));
     // Drop retained answers and worker copies BEFORE allocating the next
     // archive. A refresh must not hold the old and new indices concurrently.
     rangeSession.invalidate();
@@ -798,6 +836,13 @@ class MarketController extends ChangeNotifier {
               'noise': found.noise,
               'outOfWindow': found.outOfWindow,
             });
+            // Rows are kept, but the source says why nothing new appeared.
+            await store.note(
+                e.id,
+                data.isEmpty
+                    ? 'متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد.'
+                    : 'ردیف قابل‌ثبت نبود (بیرون از بازه: ${found.outOfWindow} • '
+                        'بی‌قیمت/بی‌محصول: ${found.noise})؛ داده قبلی حفظ شد.');
             finished++;
             _notify();
             continue;
@@ -858,9 +903,14 @@ class MarketController extends ChangeNotifier {
         unawaited(AppLogger.instance.record('network', 'refresh_complete',
             {'completed': finished, 'cachedRows': quotes.length}));
       } finally {
+        _refreshHeartbeat?.cancel();
+        _refreshHeartbeat = null;
         try {
           await store.releaseRefreshLock(refreshLock);
         } finally {
+          lastRefreshAt =
+              DateTime.tryParse(await store.setting('lastRefresh') ?? '')
+                  ?.toLocal();
           busy = false;
           _notify();
           unawaited(prepareCandidates());
@@ -888,6 +938,8 @@ class MarketController extends ChangeNotifier {
     disposed = true;
     _watchTimer?.cancel();
     _watchTimer = null;
+    _refreshHeartbeat?.cancel();
+    _refreshHeartbeat = null;
 
     rangeSession.invalidate();
     RangeWorker.shared.dispose();

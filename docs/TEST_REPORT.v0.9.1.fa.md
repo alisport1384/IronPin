@@ -42,6 +42,10 @@ flutter test
 - `text_engine_test.dart`، `price_recovery_test.dart` — مبلغ/ارز/واحد/تاریخ و ردیف‌های
   چندقیمتی.
 - `sources_test.dart`، `background_scan_test.dart` — چرخش دسته، مرز بازه، ورودی خالی.
+- `refresh_lock_test.dart` — ۵ آزمون: قفل تازه جلوی نوسازی دوم را می‌گیرد و قفل منقضی
+  نمی‌گیرد، ضربان قفل را زنده نگه می‌دارد، نوسازی مسدود دلیل فارسی می‌دهد، نوسازی با
+  آرشیو پر دوباره اجرا می‌شود و قیمت تازه را جای قیمت قدیمی همان روز می‌نویسد، و منبع
+  تمام‌متن دلیل «قابل‌ثبت نبود» را می‌نویسد و ردیف‌های قبلی را نگه می‌دارد.
 
 ## ساخت APK
 
@@ -50,10 +54,10 @@ flutter build apk --release --target-platform android-arm
 ```
 
 - دو خروجی تحویلی (هر دو از یک کد و یک نسخه):
-  - `releases/app-armeabi-v7a-release.apk` — ۳۲ بیتی، ۱۳٬۶۵۱٬۶۹۳ بایت،
-    `sha256` = `6f283c06ab01988eedec1086d47d6189006ae260ea09470370746de2959670f9`
-  - `releases/app-arm64-v8a-release.apk` — ۶۴ بیتی، ۱۴٬۲۹۷٬۹۳۵ بایت،
-    `sha256` = `d8edd312ba4338d9e253aacd58c14a88659d93a5442e27df28bd9ecaa7aa9d3d`
+  - `releases/app-armeabi-v7a-release.apk` — ۳۲ بیتی، ۱۳٬۶۵۵٬۵۲۴ بایت،
+    `sha256` = `8e124bc4debfe8b581f3229732d09e84ab33d3f05b1ba13ce6a772eeb17fc067`
+  - `releases/app-arm64-v8a-release.apk` — ۶۴ بیتی، ۱۴٬۳۰۰٬۴۰۷ بایت،
+    `sha256` = `996eaf218db48fb40420a151e06158ff80e43d32d330c01e2d87b71aee0826d9`
 - `versionName 0.9.1` • `versionCode 23` • `minSdk 21` • `targetSdk 35`
 - فهرست کامل در `releases/SHA256SUMS` و روش ساخت/بررسی در `docs/BUILD.fa.md`.
 - محتوای هر دو با `unzip -l` بررسی شد: فایل ۳۲بیتی فقط `lib/armeabi-v7a/*` و فایل ۶۴بیتی
