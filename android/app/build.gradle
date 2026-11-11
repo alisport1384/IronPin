@@ -42,6 +42,12 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 21
         targetSdk = 35
+        // The delivered APK is 32-bit only, as requested. Without this filter the
+        // OCR library would drag its arm64/x86 copies into the same APK and leave
+        // a mixed-ABI package that cannot load on 64-bit phones.
+        ndk {
+            abiFilters 'armeabi-v7a'
+        }
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -53,6 +59,13 @@ android {
                 : signingConfigs.debug
         }
     }
+}
+
+dependencies {
+    // Offline Persian OCR. ML Kit's on-device text recognition has no Persian
+    // model, so Tesseract 5 with the `fas` trained data reads the picture on the
+    // phone itself (see OcrChannel.kt and android/app/src/main/assets/tessdata).
+    implementation 'cz.adaptech.tesseract4android:tesseract4android:4.8.0'
 }
 
 flutter {

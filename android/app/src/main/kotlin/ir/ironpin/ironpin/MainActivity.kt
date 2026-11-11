@@ -19,9 +19,11 @@ class MainActivity: FlutterActivity() {
     private val ioExecutor = Executors.newSingleThreadExecutor()
     private var pending: MethodChannel.Result? = null
     private var pendingPaths: List<String> = emptyList()
+    private var ocr: OcrChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        ocr = OcrChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ir.ironpin/storage").setMethodCallHandler { call, result ->
             when (call.method) {
                 "logDirectory" -> {
@@ -70,6 +72,7 @@ class MainActivity: FlutterActivity() {
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (ocr?.onActivityResult(requestCode, resultCode, data) == true) return
         if (requestCode == requestBackupExport || requestCode == requestBackupImport) {
             val result=pending ?: return
             pending=null
@@ -131,6 +134,7 @@ class MainActivity: FlutterActivity() {
         }
     }
     override fun onDestroy() {
+        ocr?.dispose(); ocr = null
         pending?.error("ACTIVITY_CLOSED","Export window closed",null);pending=null
         ioExecutor.shutdown()
         super.onDestroy()

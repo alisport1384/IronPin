@@ -50,3 +50,6 @@ android/key.properties
 *.apk
 *.aab
 research/*.log
+
+# Delivered 32-bit APK (built artifact, not source)
+/releases/*.apk

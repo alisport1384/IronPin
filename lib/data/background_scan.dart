@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../domain/searcher.dart';
 import 'sources.dart';
 import 'store.dart';
 
@@ -111,7 +112,14 @@ Future<bool> runBackgroundScan() async {
       try {
         final quotes =
             await client.fetch(endpoint, windowDays: days, pageLimit: 2);
-        await store.saveSnapshot(endpoint.id, quotes,
+        // The same searcher rules apply in the background: only in-window,
+        // product-bearing rows with a resolved place enter the archive, and an
+        // empty result never wipes the rows already stored.
+        final found = quotes.isEmpty
+            ? const SearcherResult([])
+            : Searcher.process(quotes, now: DateTime.now(), windowDays: days);
+        if (found.quotes.isEmpty) continue;
+        await store.saveSnapshot(endpoint.id, found.quotes,
             replaceMissing: client.complete[endpoint.id] ?? true);
         completed++;
       } catch (error) {

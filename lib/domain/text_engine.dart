@@ -231,6 +231,11 @@ class TextPriceEngine {
       DateTime? publishedAt,
       bool image = false,
       bool manual = false,
+      // When the text came out of a picture, the recognised confidence is part
+      // of the evidence: a low one keeps the row but marks its digits for
+      // review instead of pretending the amount was read cleanly.
+      double? ocrConfidence,
+      String ocrEngine = '',
       // Currency the source itself declares for its own prices (for example the
       // "قیمت‌ها به تومان" notice of a channel). It is used only when neither the
       // row nor its group states a currency, it is recorded as a source default,
@@ -480,6 +485,8 @@ class TextPriceEngine {
           'تاریخ معتبر در دسترس نیست',
         if (dateIssue.isNotEmpty) dateIssue,
         if (manual) 'متن ورودی کاربر؛ دریافت مستقل منبع تأیید نشده',
+        if (ocrConfidence != null && ocrConfidence < 0.75)
+          'اطمینان OCR ${(ocrConfidence * 100).round()}٪؛ ارقام نیازمند بازبینی',
       ];
       out.add(Quote(
           id: identity,
@@ -545,7 +552,12 @@ class TextPriceEngine {
                     : 'نامشخص',
             'وضعیت استخراج': issues.isEmpty ? 'صریح' : issues.join('؛ '),
             if (manual) 'ورودی دستی': 'بله',
-            if (image) 'قالب': 'متن همراه تصویر؛ تصویر OCR نشده'
+            if (image)
+              'قالب': ocrConfidence == null
+                  ? 'متن همراه تصویر؛ تصویر OCR نشده'
+                  : 'متن خوانده‌شده از تصویر',
+            if (ocrConfidence != null) 'اطمینان OCR': '${(ocrConfidence * 100).round()}٪',
+            if (ocrEngine.isNotEmpty) 'موتور OCR': ocrEngine,
           }));
       lastPriceIndex = index;
       pending = null;
@@ -567,14 +579,20 @@ class TextPriceEngine {
           sourceUrl: sourceUrl,
           sourceDateRaw: priceDate?.toIso8601String() ?? '',
           status: image
-              ? 'فهرست تصویری/متن فاقد مبلغ روشن؛ OCR انجام نشده'
+              ? ocrConfidence == null
+                  ? 'فهرست تصویری/متن فاقد مبلغ روشن؛ OCR انجام نشده'
+                  : 'متن تصویر خوانده شد ولی مبلغ یکتای قابل مقایسه پیدا نشد'
               : 'متن فاقد مبلغ یکتای قابل استخراج',
           details: {
             if (invalidDate) 'تاریخ نامعتبر': 'بله',
             'متن پیام': text,
             if (heading.isNotEmpty) 'سرعنوان گروه': heading,
             'زمان انتشار پیام': publishedAt?.toUtc().toIso8601String() ?? '',
-            'قالب': image ? 'تصویر' : 'متن',
+            'قالب': image
+                ? (ocrConfidence == null ? 'تصویر' : 'متن خوانده‌شده از تصویر')
+                : 'متن',
+            if (ocrConfidence != null) 'اطمینان OCR': '${(ocrConfidence * 100).round()}٪',
+            if (ocrEngine.isNotEmpty) 'موتور OCR': ocrEngine,
             'تحلیل متن': 'محلی v$version',
             if (manual) 'ورودی دستی': 'بله'
           }));

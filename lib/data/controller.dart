@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../domain/market.dart';
+import '../domain/ocr.dart';
 import '../domain/range_projection.dart';
+import '../domain/searcher.dart';
+import '../domain/text_engine.dart';
 import '../domain/range_worker.dart';
 import 'range_session.dart';
 import 'background_scan.dart';
@@ -20,6 +23,16 @@ class MarketController extends ChangeNotifier {
     // restores what the user saved.
     ..windowDays = defaultWindowDays;
   List<Quote> quotes = [];
+
+  /// Rows read from a picture the user picked. They enter the main archive like
+  /// any other row, under their own source id.
+  static const imageEndpoint = 'local-image';
+  static String get imageSourceName => 'تحلیل عکس';
+
+  /// Result of the last image analysis, shown on the info page.
+  String imageReport = '';
+  bool analyzingImage = false;
+  List<Quote> lastImageRows = const [];
   final List<SourceEndpoint> discoveredSources = [];
   List<SourceEndpoint> get availableEndpoints =>
       [...endpoints, ...discoveredSources];
@@ -71,6 +84,10 @@ class MarketController extends ChangeNotifier {
   bool foreground = true;
   int scanIntervalMinutes = 30;
   String? lastBackgroundScan;
+
+  /// Last foreground scan of the continuous watch (see [startForegroundWatch]).
+  DateTime? lastWatchScan;
+  Timer? _watchTimer;
   int lastBackgroundScanCount = 0;
   int finished = 0, historyRevision = 0;
   String get selectedCity => filter.city;
@@ -294,6 +311,7 @@ class MarketController extends ChangeNotifier {
     unawaited(prepareCandidates());
     unawaited(AppLogger.instance.record('lifecycle', 'market_ready',
         {'cachedRows': quotes.length, 'enabled': enabled.length}));
+    startForegroundWatch();
     _notify();
   }
 
@@ -624,6 +642,27 @@ class MarketController extends ChangeNotifier {
     _notify();
   }
 
+  /// Keeps the searcher scanning while the app is open.
+  ///
+  /// WorkManager cannot run more often than 15 minutes and Android does not
+  /// promise the exact time, so the only way to keep scanning continuously is a
+  /// foreground timer. It uses the same refresh (same lease, same rules), never
+  /// starts on top of a running refresh, and stops as soon as periodic scanning
+  /// is turned off.
+  void startForegroundWatch() {
+    _watchTimer?.cancel();
+    _watchTimer = null;
+    if (!autoRefresh || disposed) return;
+    _watchTimer =
+        Timer.periodic(Duration(minutes: scanIntervalMinutes), (_) {
+      if (disposed || busy || transferring || !autoRefresh || !foreground) {
+        return;
+      }
+      lastWatchScan = DateTime.now();
+      unawaited(refresh());
+    });
+  }
+
   Future<void> setAuto(bool value) async {
     final previous = autoRefresh;
     autoRefresh = value;
@@ -636,6 +675,7 @@ class MarketController extends ChangeNotifier {
       AppLogger.instance.capture(error, stack, section: 'background_scan');
       rethrow;
     }
+    startForegroundWatch();
     _notify();
   }
 
@@ -656,6 +696,7 @@ class MarketController extends ChangeNotifier {
       AppLogger.instance.capture(error, stack, section: 'background_scan');
       rethrow;
     }
+    startForegroundWatch();
     _notify();
   }
 
@@ -736,7 +777,25 @@ class MarketController extends ChangeNotifier {
         final e = queue[index++];
         try {
           final data = await client.fetch(e, windowDays: discoveryDays);
-          await store.saveSnapshot(e.id, data,
+          // One searcher decides what may enter the archive: inside the parent
+          // window, about a product, with its place resolved and one copy of
+          // each offer. A source that yields nothing usable keeps its previous
+          // rows instead of being wiped by prose.
+          final found = data.isEmpty
+              ? const SearcherResult([])
+              : Searcher.process(data,
+                  now: DateTime.now(), windowDays: discoveryDays);
+          if (found.quotes.isEmpty) {
+            await AppLogger.instance.record('search', 'no_rows', {
+              'endpoint': e.id,
+              'noise': found.noise,
+              'outOfWindow': found.outOfWindow,
+            });
+            finished++;
+            _notify();
+            continue;
+          }
+          await store.saveSnapshot(e.id, found.quotes,
               replaceMissing: client.complete[e.id] ?? true);
           // Fresh rows are derived at write time; drop the previous answers.
           // The index itself is rebuilt once, when the refresh finishes.
@@ -803,9 +862,90 @@ class MarketController extends ChangeNotifier {
     }
   }
 
+  /// Reads one picture end to end: picker → offline OCR (Persian) → the same
+  /// text analyzer the sources use → the same searcher → the main archive.
+  ///
+  /// Nothing is stored when the picture yields neither a product nor a price;
+  /// the caller receives a sentence that says exactly what happened.
+  Future<String> analyzeImage() async {
+    if (analyzingImage || disposed) return 'تحلیل تصویر در جریان است.';
+    analyzingImage = true;
+    imageReport = 'در حال خواندن تصویر…';
+    _notify();
+    var report = '';
+    try {
+      final engine = OcrEngine.platform();
+      final path = await engine.pickImage();
+      if (path == null || path.isEmpty) {
+        report = 'تصویری انتخاب نشد.';
+        return report;
+      }
+      final ocrResult = await engine.recognize(path);
+      if (ocrResult.isEmpty) {
+        report = ocrResult.error ?? 'متن خوانایی در تصویر پیدا نشد.';
+        return report;
+      }
+      final now = DateTime.now();
+      final text = Searcher.cleanOcrText(ocrResult.text);
+      // Tesseract reports a mean word confidence on some builds; when it does
+      // not, the text itself is scored, and that score is labelled as such.
+      final confidence = ocrResult.confidence ?? OcrQuality.score(text);
+      final confidenceLabel =
+          '${(confidence * 100).round()}٪${ocrResult.confidence == null ? ' (برآورد از متن)' : ''}';
+      final rows = TextPriceEngine.analyze(
+          text: text,
+          endpoint: imageEndpoint,
+          seller: imageSourceName,
+          sourceUrl: 'file:$path',
+          fetchedAt: now,
+          postId: 'image-${TextPriceEngine.key(text)}',
+          publishedAt: now,
+          image: true,
+          manual: true,
+          ocrConfidence: confidence,
+          ocrEngine: ocrResult.engine);
+      final found = Searcher.process(rows,
+          now: now, windowDays: discoveryDays, keepManualFallback: false);
+      lastImageRows = found.quotes;
+      if (found.quotes.isEmpty) {
+        report = 'متن تصویر خوانده شد (اطمینان $confidenceLabel) '
+            'ولی محصول یا قیمتی شناسایی نشد؛ چیزی ذخیره نشد.';
+        return report;
+      }
+      await store.saveSnapshot(imageEndpoint, found.quotes,
+          replaceMissing: false);
+      historyRevision++;
+      _indexStale = true;
+      await _publishEndpoint(imageEndpoint);
+      final places = found.quotes
+          .map((q) => q.sellerCity)
+          .where((c) => c.isNotEmpty && c != 'نامشخص')
+          .toSet();
+      report = '${found.kept} ردیف از تصویر ثبت شد؛ '
+          'اطمینان OCR $confidenceLabel'
+          '${places.isEmpty ? '' : '؛ شهر: ${places.join('، ')}'}';
+      unawaited(AppLogger.instance.record('image', 'analyzed', {
+        'rows': found.kept,
+        'noise': found.noise,
+        'confidence': confidence,
+      }));
+      return report;
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'image');
+      report = 'تحلیل تصویر کامل نشد؛ خطا ثبت شد و چیزی ذخیره نشد.';
+      return report;
+    } finally {
+      imageReport = report;
+      analyzingImage = false;
+      _notify();
+    }
+  }
+
   @override
   void dispose() {
     disposed = true;
+    _watchTimer?.cancel();
+    _watchTimer = null;
 
     rangeSession.invalidate();
     RangeWorker.shared.dispose();

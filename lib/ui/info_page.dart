@@ -192,6 +192,48 @@ class _InfoPageState extends State<InfoPage> {
             infoBox('ذخیره محلی و تصمیم ماهانه',
                 'داده‌های قبلی با نوسازی یا قطع اینترنت حذف نمی‌شوند. ابتدای هر ماه شمسی، هنگام استفاده از اپ درباره حفظ یا پاک‌سازی تاریخچه ماه‌های قبل سؤال می‌شود. قیمت جاری و تنظیمات باقی می‌مانند. حذف برنامه یا پاک‌کردن داده برنامه توسط Android می‌تواند این اطلاعات را حذف کند.'),
           ]),
+      ExpansionTile(
+          dense: true,
+          initiallyExpanded: c.imageReport.isNotEmpty,
+          title: const Text('تحلیل عکس با OCR فارسی',
+              style: TextStyle(fontSize: 12)),
+          children: [
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                          'تصویر قیمت/لیست محصول را انتخاب کنید. متن داخل تصویر با موتور فارسی همین دستگاه خوانده می‌شود، بعد محصول، قیمت، شماره تماس (برای شهر) و لینک نقشه تحلیل و در داده‌های اصلی ثبت می‌شود. تصویر جایی ارسال نمی‌شود.',
+                          style: TextStyle(color: muted, fontSize: 11)),
+                      const SizedBox(height: 8),
+                      FilledButton.icon(
+                          onPressed: c.analyzingImage
+                              ? null
+                              : () async {
+                                  final report = await c.analyzeImage();
+                                  if (!context.mounted) return;
+                                  setState(() {});
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(SnackBar(content: Text(report)));
+                                },
+                          icon: const Icon(Icons.image_search, size: 18),
+                          label: Text(c.analyzingImage
+                              ? 'در حال خواندن تصویر…'
+                              : 'انتخاب عکس و تحلیل')),
+                      if (c.imageReport.isNotEmpty)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(c.imageReport,
+                                style: const TextStyle(fontSize: 11))),
+                      for (final q in c.lastImageRows.take(8))
+                        Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                                '${q.title} • ${q.amount == null ? 'بدون مبلغ' : '${fmt(q.amount!)} ${q.currency}'} • ${q.sellerCity}',
+                                style: const TextStyle(fontSize: 11))),
+                    ])),
+          ]),
       SwitchListTile(
           title: const Text('ثبت لاگ محصولات و منابع'),
           subtitle:
