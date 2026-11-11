@@ -113,9 +113,9 @@
   پنجرهٔ والد، حذف تکراری، ترتیب، ویژگی‌های خانواده، ترمیم OCR).
 - ساخت دو معماری با یک کد و یک نسخه (`docs/BUILD.fa.md`):
   - `flutter build apk --release --target-platform android-arm` →
-    `releases/app-armeabi-v7a-release.apk` (۱۳٬۶۵۵٬۵۲۴ بایت)
+    `releases/app-armeabi-v7a-release.apk` (۱۳٬۶۵۵٬۹۹۶ بایت)
   - `flutter build apk --release --target-platform android-arm64` →
-    `releases/app-arm64-v8a-release.apk` (۱۴٬۳۰۰٬۴۰۷ بایت)
+    `releases/app-arm64-v8a-release.apk` (۱۴٬۳۰۰٬۷۵۵ بایت)
   - هر فایل فقط کتابخانه‌های معماری خودش + `tessdata/fas`+`eng` را دارد و با کلید
     آزمایشی Android امضا شده است. فهرست هش: `releases/SHA256SUMS`.
 - امضا: کلید آزمایشی Android (کلید اصلی صاحب برنامه در ریپو نیست).

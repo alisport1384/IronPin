@@ -54,10 +54,10 @@ flutter build apk --release --target-platform android-arm
 ```
 
 - دو خروجی تحویلی (هر دو از یک کد و یک نسخه):
-  - `releases/app-armeabi-v7a-release.apk` — ۳۲ بیتی، ۱۳٬۶۵۵٬۵۲۴ بایت،
-    `sha256` = `8e124bc4debfe8b581f3229732d09e84ab33d3f05b1ba13ce6a772eeb17fc067`
-  - `releases/app-arm64-v8a-release.apk` — ۶۴ بیتی، ۱۴٬۳۰۰٬۴۰۷ بایت،
-    `sha256` = `996eaf218db48fb40420a151e06158ff80e43d32d330c01e2d87b71aee0826d9`
+  - `releases/app-armeabi-v7a-release.apk` — ۳۲ بیتی، ۱۳٬۶۵۵٬۹۹۶ بایت،
+    `sha256` = `df9cc0f5a73f9128f2458bb3143f46ecc0a02d19f4e48f85a20961a59e218fb9`
+  - `releases/app-arm64-v8a-release.apk` — ۶۴ بیتی، ۱۴٬۳۰۰٬۷۵۵ بایت،
+    `sha256` = `2f94dbc488dbbea36f4aa725a5ed8404e383270e3f94290faa5ff36c465ad075`
 - `versionName 0.9.1` • `versionCode 23` • `minSdk 21` • `targetSdk 35`
 - فهرست کامل در `releases/SHA256SUMS` و روش ساخت/بررسی در `docs/BUILD.fa.md`.
 - محتوای هر دو با `unzip -l` بررسی شد: فایل ۳۲بیتی فقط `lib/armeabi-v7a/*` و فایل ۶۴بیتی
