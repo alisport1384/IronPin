@@ -253,10 +253,9 @@
 flutter pub get
 flutter analyze
 flutter test --concurrency=1
-# خروجی تأییدشدهٔ این نسخه: ARM ۳۲ بیتی
-flutter build apk --release --split-per-abi --target-platform android-arm
-# اختیاری؛ در این تحویل ARM64 ساخته/تأیید نشده است:
-# flutter build apk --release --split-per-abi --target-platform android-arm64
+# هر معماری جدا ساخته می‌شود (بدون --split-per-abi؛ با build.gradle این پروژه سازگار نیست)
+flutter build apk --release --target-platform android-arm     # ۳۲ بیتی
+flutter build apk --release --target-platform android-arm64   # ۶۴ بیتی
 ```
 
 خروجی‌ها:
