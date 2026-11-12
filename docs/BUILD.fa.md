@@ -58,6 +58,23 @@ cp build/app/outputs/flutter-apk/app-release.apk \
 خروجی‌های تحویلی در `releases/` و با همین نام‌ها هستند؛ `.apk` در گیت ignore است و فقط
 فایل `SHA256SUMS` کامیت می‌شود.
 
+### تحویل ۰.۹.۵ — ۲۱ آبان ۱۴۰۵ (سه اصلاح کاربر)
+
+| فایل | معماری | حجم | sha256 |
+| --- | --- | ---: | --- |
+| `IronPin-0.9.5-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۸MB (۱۳٬۸۰۹٬۸۳۹ بایت) | `34baec4202c3dd4fbbfc4850ebb12d7a3603cf6588c71b4f0fd1b920b39bfaed` |
+| `IronPin-0.9.5-arm64-v8a-release.apk` | ۶۴ بیتی (`arm64-v8a`) | ۱۴.۴MB (۱۴٬۴۳۸٬۵۲۰ بایت) | `48aa863b6d74fca0ee40868187ad3b9037ad56005751f149132f550507f056e8` |
+
+امضا با کلید پایدار `tool/sign_env.sh` (`CN=IronPin Local Sideload`، SHA-256
+گواهی `78ea381de95813163696c9592b9b2123eb2ebaffab200daa6df79a91b9299caf`)؛ چون
+کلید تحویل‌های قبلی در این محیط نیست، این فایل روی نسخهٔ نصب‌شدهٔ قبلی **ارتقایی
+نصب نمی‌شود**: اول «خروجی بکاپ کامل» از داخل برنامه، بعد حذف نسخهٔ قبلی و نصب این.
+هر دو فایل در [ریلیز v0.9.5](https://github.com/alisport1384/IronPin/releases/tag/v0.9.5)
+هستند. بررسی‌شده: `versionName 0.9.5`، `versionCode 27`، `minSdk 21`، `targetSdk 35`؛ هر
+فایل فقط کتابخانه‌های معماری خودش را دارد (`lib/armeabi-v7a/*` یا `lib/arm64-v8a/*`)
+و `assets/tessdata/{fas,eng}`؛ `flutter analyze` تمیز، ۴۸۲ آزمون موفق و همان ۴۸۲ با
+`test_on_another_day.sh 45` هم سبز.
+
 ### تحویل ۰.۹.۴ — ۲۱ آبان ۱۴۰۵ (اصلاح هوش جستجوگر ۲)
 
 | فایل | معماری | حجم | sha256 |
@@ -198,7 +215,7 @@ sha256sum releases/*.apk > releases/SHA256SUMS
 
 چه چیزی باید دیده شود:
 
-- `versionName 0.9.4`، `versionCode 26`، `sdkVersion 21`، `targetSdkVersion 35`.
+- `versionName 0.9.5`، `versionCode 27`، `sdkVersion 21`، `targetSdkVersion 35`.
 - فقط `lib/armeabi-v7a/*` در فایل ۳۲بیتی و فقط `lib/arm64-v8a/*` در فایل ۶۴بیتی،
   هر کدام شامل `libapp.so`، `libflutter.so`، `libtesseract.so`، `libleptonica.so`،
   `libjpeg.so`، `libpngx.so`.
@@ -209,7 +226,7 @@ sha256sum releases/*.apk > releases/SHA256SUMS
 
 ```bash
 flutter analyze --no-pub     # باید «No issues found!» بدهد
-flutter test --concurrency=1 # ۴۷۳ آزمون در ۰.۹.۴
+flutter test --concurrency=1 # ۴۸۲ آزمون در ۰.۹.۵
 bash tool/test_on_another_day.sh 45   # همان آزمون‌ها، انگار ۴۵ روز بعد است
 ```
 

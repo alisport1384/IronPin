@@ -183,8 +183,15 @@ class FinderProvider {
   final String id, title;
   final Uri Function(String query) url;
   final bool siteOperator;
+
+  /// How long this page may take. The domestic page (گردو) is a meta-search
+  /// that waits on its own upstream engines and routinely needs more than the
+  /// short timeout that fits the others; with one shared short timeout every
+  /// question to it timed out and the panel showed «از این اتصال در دسترس
+  /// نبود» although the page answers.
+  final Duration timeout;
   const FinderProvider(this.id, this.title, this.url,
-      {this.siteOperator = true});
+      {this.siteOperator = true, this.timeout = const Duration(seconds: 10)});
 }
 
 Uri _gerdooUrl(String q) => Uri.https('gerdoo.me', '/search/', {'query': q});
@@ -192,7 +199,8 @@ Uri _duckUrl(String q) => Uri.https('html.duckduckgo.com', '/html/', {'q': q});
 Uri _bingUrl(String q) =>
     Uri.https('www.bing.com', '/search', {'q': q, 'format': 'rss'});
 const finderProviders = [
-  FinderProvider('gerdoo', 'گردو', _gerdooUrl, siteOperator: false),
+  FinderProvider('gerdoo', 'گردو', _gerdooUrl,
+      siteOperator: false, timeout: Duration(seconds: 30)),
   FinderProvider('ddg', 'داک‌داک‌گو', _duckUrl),
   FinderProvider('bing', 'بینگ', _bingUrl)
 ];
@@ -798,14 +806,19 @@ class SourceFinder {
     final now = _now();
     _Fetched got;
     try {
-      got = await _get(p.url(task.value));
+      // Each page may take as long as it needs (see [FinderProvider.timeout]):
+      // the question must not be declared unreachable because a slow — but
+      // answering — page exceeded the short shared timeout.
+      got = await _get(p.url(task.value), within: p.timeout);
     } catch (_) {
       // This page cannot be reached from this network right now. It is left
       // alone for a while and the question goes to the next page; nothing is
-      // counted against the question.
+      // counted against the question. A short rest, not a long one: on a
+      // mobile network a first attempt often hangs, and «سه ساعت بعد» reads
+      // as «موتور جستجو کار نمی‌کند».
       final before = state.cooldown[p.id], note = state.providerNote[p.id];
-      _rest(p, now, 20 * 60, 'net',
-          'صفحه جستجوی ${p.title} از این اتصال در دسترس نبود؛ صفحه بعدی پرسیده می‌شود.');
+      _rest(p, now, 3 * 60, 'net',
+          'صفحه جستجوی ${p.title} پاسخ نداد؛ سه دقیقه بعد دوباره پرسیده می‌شود و تا آن زمان صفحه بعدی امتحان می‌شود.');
       return _Outcome(
           network: true,
           undo: () {
@@ -1100,7 +1113,7 @@ class SourceFinder {
   String report() {
     final s = state, now = _now(), b = StringBuffer();
     String ago(int at) => at == 0 ? '-' : '${(now - at) ~/ 60}m';
-    b.writeln('IronPin 0.9.4 finder • round ${s.round + 1} • '
+    b.writeln('IronPin 0.9.5 finder • round ${s.round + 1} • '
         'started ${ago(s.startedAt)} • online ${ago(s.lastOnlineAt)} • '
         'step ${ago(s.lastStepAt)}');
     b.writeln('questions answered ${s.searches} • pages read ${s.pages} • '

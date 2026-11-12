@@ -123,6 +123,13 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
   }
   final kept = unique.values.toList()
     ..sort((a, b) => (b.row.marketAt ?? 0).compareTo(a.row.marketAt ?? 0));
+  // The whole scope is one product, so its claims must agree in kilograms —
+  // the unit the trade converts per ton with. A claim ten times away from
+  // the middle claim carries a wrong digit: it is withheld from the averages
+  // and the candidates, with its reason recorded, while its announcement
+  // stays visible in the list above.
+  final agreedMiddle =
+      agreedKgMiddle([for (final item in kept) item.row.priceIn('kg')]);
   // One rendered row per announcement, like `buildAnswer` keeps them: the
   // candidates are the rows a user can actually see.
   final seenRows = <String>{};
@@ -157,6 +164,14 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
       const reason =
           'نمایش در اعلام‌ها؛ مبلغ/ارز/واحد یا تبدیل معتبر برای آمار ندارد';
       excluded[reason] = (excluded[reason] ?? 0) + 1;
+      continue;
+    }
+    // A number that cannot stand beside the product's other numbers (the
+    // «هر کیلو ۱۰۰ هزار، هر تن ۱۰ هزار» pair): neither claim may become an
+    // average or a candidate while they contradict each other.
+    if (kgDisagrees(agreedMiddle, item.row.priceIn('kg'))) {
+      excluded[kgDisagreementReason] =
+          (excluded[kgDisagreementReason] ?? 0) + 1;
       continue;
     }
     if (family == 'بولت' && item.row.productKey == null) {
@@ -289,24 +304,18 @@ RangeAnswer buildAnswer(
   {required String basis, required DateTime at, required int inputRows}) {
   final wires = projected.rows;
   final quotes = [for (final wire in wires) quoteFromWire(wire)];
-  // Which announcements can be counted, by identity of the rendered row.
-  final counted = <String>{};
-  for (final i in projected.announceIndices) {
-    final wire = wires[i];
-    counted.add('${wire['endpoint']}\u0001${wire['id']}');
-  }
-  final candidates = <CatalogueItem>[];
-  for (var i = 0; i < projected.candidates.length; i++) {
-    final wire = projected.candidates[i];
-    // Offarable means: inside the window and with a comparable price. A real
-    // announcement that has no number stays in the answer's counts, not here.
-    final key = '${wire['endpoint']}\u0001${wire['id']}';
-    if (counted.contains(key) || _hasComparablePrice(wire, basis)) {
-      candidates.add(
-          CatalogueItem('${wire['endpoint']}:${wire['id']}:$i', wire, at,
-              counted: counted.contains(key)));
-    }
-  }
+  // The candidates are exactly the rows the statistics are built from: a real
+  // announcement date inside the window and a comparable price in its unit.
+  // An offer without a date or without such a price is never offered here — it
+  // stays in the announcements and is counted under «علت نبودن در آمار» — so
+  // min, max and mean are taken from every candidate the tab lists, and every
+  // listed candidate is counted in them.
+  final candidates = <CatalogueItem>[
+    for (final i in projected.announceIndices)
+      CatalogueItem(
+          '${wires[i]['endpoint']}:${wires[i]['id']}:$i', wires[i], at,
+          counted: true)
+  ];
   final ranges = [
     for (final range in projected.ranges)
       PriceRange.computed(
@@ -568,21 +577,6 @@ bool _containsEvery(String text, Iterable<String> words) {
 }
 
 
-/// The comparable price of a rendered row, checked the way the money helpers do.
-bool _hasComparablePrice(Map<String, Object?> wire, String basis) {
-  final prices = wire['prices'];
-  final unit = wire['unit'] as String? ?? '';
-  final key = basis == 'original' || basis.isEmpty ? unit : basis;
-  // The row's own amount is a real price even when no per-unit conversion was
-  // written: without this fallback such a row was dropped from the candidates
-  // although the archive holds a number for it.
-  final raw = prices is Map && prices[key] != null
-      ? prices[key]
-      : wire['amount'];
-  final price = toman(raw is num ? raw.toDouble() : null,
-      wire['currency'] as String? ?? '');
-  return price != null && price.isFinite && price > 0;
-}
 
 /// Catalogue search text of a row, prepared once per confirmation.
 String catalogueSearch(Map<String, Object?> wire) =>

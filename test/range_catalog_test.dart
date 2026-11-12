@@ -183,7 +183,7 @@ void main() {
     }
   });
   testWidgets(
-      'an unavailable product is visible and selectable with reasons, not a fabricated range',
+      'a row without a price is withheld from the list and counted, not a fabricated range',
       (t) async {
     final store = await t.runAsync(() => MarketStore.open(
         dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi));
@@ -216,9 +216,14 @@ void main() {
     await t.scrollUntilVisible(find.text('رنج عددی قابل مقایسه نداریم'), 300,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('رنج عددی قابل مقایسه نداریم'), findsOneWidget);
-    await t.scrollUntilVisible(find.textContaining('محصول۰۰۸'), 300,
+    // The offer without a number is not rendered in «اعلام‌های نتیجه»; it is
+    // counted — and named — in «علت نبودن در آمار» instead.
+    await t.scrollUntilVisible(
+        find.textContaining('اعلام بدون قیمت نمایش داده نمی‌شود'), 300,
         scrollable: find.byType(Scrollable).first);
-    expect(find.textContaining('محصول۰۰۸'), findsOneWidget);
+    expect(find.textContaining('محصول۰۰۸'), findsNothing);
+    expect(find.textContaining('اعلام بدون قیمت نمایش داده نمی‌شود'),
+        findsOneWidget);
     expect(find.byType(RangeCost), findsNothing);
     expect(find.text('میانگین گرد‌شده'), findsNothing);
 

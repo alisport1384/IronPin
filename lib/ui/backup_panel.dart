@@ -36,7 +36,7 @@ class _BackupPanelState extends State<BackupPanel> {
                           contentPadding: EdgeInsets.zero,
                           value: restoreSettings,
                           title: const Text(
-                              'تنظیمات کاربری بکاپ، از جمله روشن/خاموش بودن منابع، جایگزین شوند.',
+                              'تنظیمات کاربری بکاپ، از جمله روشن/خاموش بودن منابع، جایگزین شوند. وضعیت هوش جستجوگر ۲ در هر حالت از فایل برمی‌گردد.',
                               style: TextStyle(fontSize: 12)),
                           onChanged: (v) =>
                               update(() => restoreSettings = v ?? false)),
@@ -100,7 +100,7 @@ class _BackupPanelState extends State<BackupPanel> {
           title: const Text('ورود و خروج بکاپ کامل'),
           children: [
             const Text(
-                'قیمت‌های جاری، تمام تاریخچه موجود، منابع، تنظیمات و وضعیت دریافت. '
+                'قیمت‌های جاری، تمام تاریخچه موجود، منابع، تنظیمات، وضعیت دریافت و وضعیت هوش جستجوگر ۲. '
                 'فایل محلی ironpin.jsonl؛ بدون حساب، سرور یا ارسال داده. لاگ‌های Markdown خروجی مستقل دارند. '
                 'سقف هر فایل ۵۱۲ مگابایت و یک میلیون رکورد است؛ فایل را ویرایش نکنید. '
                 'این بکاپ رمزگذاری‌شده نیست؛ در جای امن نگه دارید.',

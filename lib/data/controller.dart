@@ -135,9 +135,11 @@ class MarketController extends ChangeNotifier {
   Future<FinderReport?> runFinderNow({int maxSteps = 8}) async {
     if (disposed || busy || transferring || finder.running) return null;
     try {
+      // Long enough that a slow page can be tried and the next provider still
+      // gets its turn inside the same slice (گردو alone may need 30 s).
       final report = await finder.runSlice(
           maxSteps: maxSteps,
-          budget: const Duration(seconds: 30),
+          budget: const Duration(seconds: 60),
           cancelled: () => disposed || busy);
       finderReport = report;
       if (report.steps > 0) {
@@ -860,6 +862,24 @@ class MarketController extends ChangeNotifier {
       enabled.remove(id);
     }
     await store.setSetting('enabled', jsonEncode(enabled.toList()));
+    _notify();
+  }
+
+  /// One step for every source the list shows: the registered routes, the
+  /// channels added by hand or seen in posts, and the ones هوش جستجوگر ۲ got
+  /// accepted. «همه روشن» and «همه خاموش» act on all of them together, and
+  /// the choice is stored like any other, so a later run keeps it.
+  Future<void> setAllEnabled(bool value) async {
+    final ids = [for (final e in availableEndpoints) e.id];
+    if (value) {
+      enabled.addAll(ids);
+    } else {
+      enabled.removeAll(ids);
+    }
+    await store.setSetting('enabled', jsonEncode(enabled.toList()));
+    unawaited(AppLogger.instance.record(
+        'filter', value ? 'all_sources_on' : 'all_sources_off',
+        {'sources': ids.length}));
     _notify();
   }
 

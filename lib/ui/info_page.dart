@@ -22,7 +22,7 @@ class _InfoPageState extends State<InfoPage> {
     setState(() => exporting = true);
     try {
       final destination = await AppLogger.instance.export(summary: {
-        'version': '0.9.4',
+        'version': '0.9.5',
         'windowDays': widget.c.discoveryDays,
         'pricesWindow': widget.c.pricesWindow,
         'rangeWindow': widget.c.rangeWindow,
@@ -135,6 +135,15 @@ class _InfoPageState extends State<InfoPage> {
             (query.isEmpty ||
                 latin('${s['name']} ${s['coverage']}').contains(latin(query))))
         .toList();
+    // One card per name: routes that share a name — the same seller on two
+    // networks — are shown under that single name, each with its own switch.
+    final grouped = <String, List<SourceEndpoint>>{};
+    for (final e in c.availableEndpoints.where((e) =>
+        (query.isEmpty ||
+            latin('${e.name} ${e.url}').contains(latin(query))) &&
+        (city.isEmpty || e.sellerCity == city))) {
+      (grouped[e.name] ??= []).add(e);
+    }
     return ListView(padding: const EdgeInsets.all(20), children: [
       const Text('اطلاعات و منابع',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
@@ -285,46 +294,93 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: c.busy ? null : addSource,
           icon: const Icon(Icons.add_link),
           label: const Text('افزودن کانال عمومی')),
-      for (final e in c.availableEndpoints.where((e) =>
-          (query.isEmpty ||
-              latin('${e.name} ${e.url}').contains(latin(query))) &&
-          (city.isEmpty || e.sellerCity == city)))
+      const SizedBox(height: 8),
+      Row(children: [
+        Expanded(
+            child: OutlinedButton.icon(
+                onPressed: c.busy
+                    ? null
+                    : () async {
+                        await c.setAllEnabled(true);
+                        if (mounted) setState(() {});
+                      },
+                icon: const Icon(Icons.toggle_on_outlined, size: 18),
+                label: const Text('همه روشن'))),
+        const SizedBox(width: 8),
+        Expanded(
+            child: OutlinedButton.icon(
+                onPressed: c.busy
+                    ? null
+                    : () async {
+                        await c.setAllEnabled(false);
+                        if (mounted) setState(() {});
+                      },
+                icon: const Icon(Icons.toggle_off_outlined, size: 18),
+                label: const Text('همه خاموش'))),
+      ]),
+      const SizedBox(height: 6),
+      const Text(
+          'همه روشن و همه خاموش روی همهٔ منابع همین فهرست اعمال می‌شود؛ منابع ثبت‌شده، منابع افزوده‌شده و یافته‌های هوش جستجوگر ۲ را با هم شامل می‌شود و جستجو/فیلتر شهر روی این دو دکمه اثری ندارد.',
+          style: TextStyle(fontSize: 10, color: muted, height: 1.8)),
+      const SizedBox(height: 6),
+      // Sources that share one name — the same seller on two networks — are
+      // one card: the name is written once and each route keeps its own
+      // switch, status and link underneath it.
+      for (final entry in grouped.entries)
         Card(
             margin: const EdgeInsets.only(bottom: 3),
             child: ExpansionTile(
-                key: PageStorageKey('source:${e.id}'),
+                key: PageStorageKey('source:${entry.key}'),
                 dense: true,
                 visualDensity: const VisualDensity(vertical: -4),
                 tilePadding: const EdgeInsets.symmetric(horizontal: 10),
                 leading: Icon(Icons.circle,
-                    size: 8, color: c.enabled.contains(e.id) ? teal : muted),
-                title: Text(e.name,
+                    size: 8,
+                    color: entry.value.every((e) => c.enabled.contains(e.id))
+                        ? teal
+                        : entry.value.any((e) => c.enabled.contains(e.id))
+                            ? Colors.orange
+                            : muted),
+                title: Text(entry.key,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12)),
+                subtitle: entry.value.length == 1
+                    ? null
+                    : Text('${fmt(entry.value.length)} منبع با همین نام',
+                        style: const TextStyle(fontSize: 10, color: muted)),
                 childrenPadding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
-                  SwitchListTile(
-                      dense: true,
-                      title: const Text('دریافت از این منبع',
-                          style: TextStyle(fontSize: 11)),
-                      value: c.enabled.contains(e.id),
-                      onChanged: c.busy ? null : (v) => c.setEnabled(e.id, v)),
-                  Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                          '${c.states[e.id]?['message'] ?? 'هنوز آزموده نشده'}',
-                          style: const TextStyle(fontSize: 11))),
-                  if (c.states[e.id]?['success_at'] != null)
-                    Text(
-                        'آخرین دریافت موفق: ${dateLabel(DateTime.tryParse('${c.states[e.id]!['success_at']}'))}',
+                  for (final e in entry.value) ...[
+                    if (entry.value.length > 1)
+                      Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(e.url,
+                              style:
+                                  const TextStyle(fontSize: 10, color: teal))),
+                    SwitchListTile(
+                        dense: true,
+                        title: const Text('دریافت از این منبع',
+                            style: TextStyle(fontSize: 11)),
+                        value: c.enabled.contains(e.id),
+                        onChanged:
+                            c.busy ? null : (v) => c.setEnabled(e.id, v)),
+                    Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                            '${c.states[e.id]?['message'] ?? 'هنوز آزموده نشده'}',
+                            style: const TextStyle(fontSize: 11))),
+                    if (c.states[e.id]?['success_at'] != null)
+                      Text(
+                          'آخرین دریافت موفق: ${dateLabel(DateTime.tryParse('${c.states[e.id]!['success_at']}'))}',
+                          style: const TextStyle(fontSize: 10, color: muted)),
+                    Text('شهر دفتر: ${e.sellerCity}',
                         style: const TextStyle(fontSize: 10, color: muted)),
-                  Text('شهر دفتر: ${e.sellerCity}',
-                      style: const TextStyle(fontSize: 10, color: muted)),
-                  TextButton(
-                      onPressed: () => openLink(context, e.url),
-                      child: const Text('منبع اصلی',
-                          style: TextStyle(fontSize: 11)))
+                    TextButton(
+                        onPressed: () => openLink(context, e.url),
+                        child: const Text('منبع اصلی',
+                            style: TextStyle(fontSize: 11))),
+                  ]
                 ])),
       const SizedBox(height: 25),
       const Text('فروشندگان بر اساس شهر',
@@ -457,9 +513,9 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: () => showLicensePage(
               context: context,
               applicationName: 'IronPin',
-              applicationVersion: '0.9.4'),
+              applicationVersion: '0.9.5'),
           child: const Text('مجوزهای نرم‌افزار و داده')),
-      const Text('IronPin 0.9.4 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
+      const Text('IronPin 0.9.5 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: muted)),
       const SizedBox(height: 18),

@@ -1,8 +1,55 @@
 import 'city_scope.dart';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'market.dart';
 import 'money.dart';
 import 'product_schema.dart';
+
+/// The middle claim of one product's prices, on a kilogram scale.
+///
+/// A post that prices the same goods per kilogram and per ton must still be
+/// convertible to one number (the trade itself converts with ۱۰۰۰ کیلو در تن).
+/// With two claims that differ ten-thousand-fold at least one digit is a typo,
+/// and averaging either one would print a number no seller ever said. The
+/// geometric middle (the middle of the logarithms) is used so a single absurd
+/// claim cannot drag the centre towards itself.
+///
+/// Returns null when fewer than two claims can be converted to kilograms —
+/// nothing to compare, so nothing may be withheld.
+double? agreedKgMiddle(Iterable<double?> kgPrices) {
+  final logs = <double>[];
+  for (final price in kgPrices) {
+    if (price != null && price.isFinite && price > 0) {
+      logs.add(math.log(price));
+    }
+  }
+  if (logs.length < 2) return null;
+  logs.sort();
+  final n = logs.length;
+  final from = n.isOdd ? n ~/ 2 : n ~/ 2 - 1;
+  final take = n.isOdd ? 1 : 2;
+  return math.exp(
+      logs.sublist(from, from + take).fold<double>(0, (a, b) => a + b) / take);
+}
+
+/// How far a claim may sit from [agreedKgMiddle] and still be one of the
+/// product's prices. Sellers differ by tens of percent, even by a factor of
+/// two or four; ten times the middle — a whole extra digit — is past any
+/// honest spread and is a wrong number, not a market fact. (The pair
+/// «هر کیلو ۱۰۰ هزار / هر تن ۱۰ هزار» differs ten-thousand-fold.)
+const kgAgreementBand = 10.0;
+
+/// The reason recorded when a claim contradicts the product's other claims.
+const kgDisagreementReason =
+    'ادعای قیمت با دیگر ادعاهای همین محصول هم‌راستا نیست؛ در میانگین و کاندیدها نیست';
+
+/// Whether [kg] contradicts the middle claim; null when it cannot be judged.
+bool kgDisagrees(double? middle, double? kg) =>
+    middle != null &&
+    kg != null &&
+    kg.isFinite &&
+    kg > 0 &&
+    (kg > middle * kgAgreementBand || kg < middle / kgAgreementBand);
 
 /// Compiled once. These ran once per stored row, and `ProductFacts.of` runs
 /// three times per row on the archive read (see [exactProductKey]).
@@ -341,6 +388,11 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
   }
   final announcements = unique.values.toList()
     ..sort((a, b) => b.marketAt!.compareTo(a.marketAt!));
+  // Every claim of this product must at least be convertible to the same
+  // unit: a kilogram price and a ton price that disagree a thousand-fold
+  // cannot both be true, and neither may be printed as «میانگین».
+  final agreedMiddle =
+      agreedKgMiddle([for (final q in announcements) toman(q.priceFor('kg'), q.currency)]);
   final grouped = <String, List<Quote>>{};
   for (final q in announcements) {
     // A user-chosen unit wins; otherwise the row's own unit, then the unit its
@@ -363,6 +415,10 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
         price <= 0 ||
         price > 9000000000000000) {
       reject('نمایش در اعلام‌ها؛ مبلغ/ارز/واحد یا تبدیل معتبر برای آمار ندارد');
+      continue;
+    }
+    if (kgDisagrees(agreedMiddle, toman(q.priceFor('kg'), q.currency))) {
+      reject(kgDisagreementReason);
       continue;
     }
     final technicalKey = exactProductKey(q);

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import '../domain/market.dart';
+import '../domain/source_finder.dart';
 import 'app_logger.dart';
 import 'sources.dart';
 import 'store.dart';
@@ -262,6 +263,17 @@ class MarketBackup {
                 } else {
                   skipped++;
                 }
+              } else if (FinderState.settingKeys.contains(key) &&
+                  settings[key] != row['value']) {
+                // هوش جستجوگر ۲ process state, not a user preference: a backup
+                // that carries its queue, lists and seen links must load them
+                // back on every import, checkbox or not — otherwise an
+                // initialized phone could never receive the searcher's state
+                // from a file.
+                batch.update('settings', {'value': row['value']},
+                    where: 'key=?', whereArgs: [key]);
+                settings[key] = row['value'] as String;
+                addedSettings++;
               } else if (restoreSettings &&
                   !{
                     'autoRefresh',

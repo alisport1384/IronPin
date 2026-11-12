@@ -237,8 +237,20 @@ class _RangePageState extends State<RangePage> {
     }
     final entries = productFields[family]?.keys.toList() ?? <String>[];
     final needle = specNorm(search.text);
+    // «اعلام‌های نتیجه» lists offers the user can act on: a row without a
+    // number has nothing to compare and is left out here. It is still counted
+    // — and named — under «علت نبودن در آمار», so a shorter list is always
+    // explained rather than silent.
+    final hiddenUnpriced = result?.announcements
+            .where((q) =>
+                q.amount == null &&
+                specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
+                    .contains(needle))
+            .length ??
+        0;
     final shown = result?.announcements
             .where((q) =>
+                q.amount != null &&
                 specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
                     .contains(needle))
             .toList() ??
@@ -404,6 +416,10 @@ class _RangePageState extends State<RangePage> {
                     : () => openLink(context, q.sourceUrl)),
           Text(
               'نمایش ${fmt(shown.length < visible ? shown.length : visible)} از ${fmt(shown.length)} اعلام'),
+          if (hiddenUnpriced > 0)
+            Text(
+                '${fmt(hiddenUnpriced)} اعلام بدون قیمت نمایش داده نمی‌شود؛ در «علت نبودن در آمار» شمرده شده است',
+                style: const TextStyle(fontSize: 10, color: muted)),
           if (shown.length > visible)
             OutlinedButton(
                 onPressed: () => setState(() => visible += 40),
@@ -430,15 +446,15 @@ class _RangePageState extends State<RangePage> {
                           color: teal)),
                   subtitle: Text(faDigits(
                       '${p.example.specificationLabel} • ${p.example.seller}\n'
-                      '${sourceDay(p.example)}\n'
-                      '${p.counted ? 'قابل شمارش در رنج همین واحد' : p.unavailableReasons.join('؛ ')}')),
+                      '${dateLabel(p.example.marketAt, time: false)}\n'
+                      '${p.counted ? 'در آمار همین واحد حساب شده است' : p.unavailableReasons.join('؛ ')}')),
                   onTap: () => showDialog<void>(
                       context: context,
                       builder: (context) => AlertDialog(
                             title: Text(faDigits(p.example.title)),
                             content: SingleChildScrollView(
                                 child: Text(faDigits(
-                                    '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ انتخاب آن نرخ قدیمی یا نامعتبر را وارد آمار نمی‌کند.'))),
+                                    '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${p.counted ? 'در آمار همین واحد حساب شده است؛ میانگین، بالاترین و پایین‌ترین از همین فهرست گرفته می‌شود' : rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ برای بازهٔ انتخاب‌شده محاسبه شده است.'))),
                             actions: [
                               TextButton(
                                   onPressed: () => Navigator.pop(context),
