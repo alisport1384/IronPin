@@ -112,7 +112,10 @@ void main() {
     final store = await MarketStore.open(
         dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi);
     final c = MarketController(store)..quotes = [row(1), row(2, city: 'تهران')];
-    c.filter.recentWeek = false;
+    // The rows carry the fixed date of this file; the test is about the city.
+    c.filter
+      ..recentWeek = false
+      ..windowDays = 0;
     expect(c.filtered.length, 2);
     await c.setCity('مشهد');
     expect(c.filtered.map((q) => q.id).toList(), ['q1']);
@@ -313,6 +316,9 @@ void main() {
     final c = MarketController(store, client: client);
     try {
       await c.init();
+      // The recorded rows carry the fixed date of this file; the test is about
+      // the city never limiting what is acquired, not about the time window.
+      await c.setDiscoveryDays(0);
       await c.setCity('مشهد');
       final selected = [
         endpoints.firstWhere((e) => e.sellerCity == 'مشهد'),

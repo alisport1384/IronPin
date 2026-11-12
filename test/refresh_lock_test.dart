@@ -85,6 +85,9 @@ void main() {
         })));
     try {
       c.enabled = {'fardad-sheet'};
+      // The fixture has one fixed date; this test is about the second refresh
+      // writing, not about the age of the rows.
+      await c.setDiscoveryDays(0);
       await c.refresh();
       final first = c.quotes.length;
       expect(first, greaterThan(0));

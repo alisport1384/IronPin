@@ -8,6 +8,11 @@ import 'package:ironpin/domain/market.dart';
 import 'package:ironpin/domain/range_worker.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+// Announced an hour before the test runs. These tests are about publication
+// and memory, not about the age of a price; a fixed calendar date would drift
+// out of the app's 30-day window and fail them a month later.
+final _announced = DateTime.now().toUtc().subtract(const Duration(hours: 1));
+
 Quote offer(String endpoint, int n) => Quote(
       id: '$endpoint:$n',
       endpoint: endpoint,
@@ -18,8 +23,8 @@ Quote offer(String endpoint, int n) => Quote(
       amount: 100 + n.toDouble(),
       currency: 'تومان',
       sourceUrl: 'https://example.com/$n',
-      sourceDateRaw: '2026-11-09T08:00:00Z',
-      fetchedAt: DateTime.utc(2026, 11, 9, 9),
+      sourceDateRaw: _announced.toIso8601String(),
+      fetchedAt: _announced.add(const Duration(minutes: 30)),
     );
 
 class LocalClient extends SourceClient {

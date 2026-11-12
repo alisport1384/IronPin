@@ -78,6 +78,8 @@ void main() {
         endpoints.first,
         File('test/fixtures/melal_rebar.html').readAsStringSync(),
         DateTime.utc(2026, 11, 5));
+    // The fixture rows are dated; this test is about rendering them.
+    c.filter.windowDays = 0;
     await t.pumpWidget(IronPinApp(controller: c));
     await t.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 150)));

@@ -261,6 +261,9 @@ void main() {
     final c = MarketController(store)
       ..quotes =
           List.generate(8000, (i) => item(i, thickness: i.isEven ? '8' : '10'));
+    // The generated rows carry one fixed date; this test measures filtering,
+    // so the time window is left open.
+    c.filter.windowDays = 0;
     try {
       c.filtered;
       expect(c.filtering, isTrue);

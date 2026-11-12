@@ -63,9 +63,13 @@ void main() {
                 headers: {'content-type': 'text/html; charset=utf-8'}))));
     try {
       c.enabled = {'fardad-sheet'};
+      // The fixture carries one fixed date; the assertion is about what is
+      // read from the table, not about how old it is on the day the test runs.
+      await c.setDiscoveryDays(0);
       await c.refresh();
       c.filter
         ..recentWeek = false
+        ..windowDays = 0
         ..query = 'ورق3 مشهد';
       expect(c.filtered.length, 2);
       expect(
@@ -124,6 +128,11 @@ void main() {
           headers: {'content-type': 'text/html; charset=utf-8'});
     })));
     c.enabled = {'telegram-ghanbari', 'telegram-khabazzade'};
+    // The fixture posts are dated 2026-11-05. The test is about publishing a
+    // source before a slow one completes, so the windows are opened: with the
+    // real clock the same posts stop being "this week" on 2026-11-12 and leave
+    // the default month a few weeks later.
+    await c.setDiscoveryDays(0);
     c.addListener(() {
       if (c.busy && c.quotes.isNotEmpty && !visible.isCompleted) {
         visible.complete();
@@ -136,7 +145,8 @@ void main() {
       expect(gate.isCompleted, false);
       c.filter
         ..query = 'ورق3 مشهد'
-        ..recentWeek = true;
+        ..recentWeek = false
+        ..windowDays = 0;
       expect(c.filtered.length, 3);
       expect((await store.latest()).isNotEmpty, true);
     } finally {
