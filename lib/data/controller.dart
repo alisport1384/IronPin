@@ -11,6 +11,7 @@ import '../domain/searcher.dart';
 import '../domain/range_worker.dart';
 import 'range_session.dart';
 import 'background_scan.dart';
+import 'source_finder_io.dart';
 import 'sources.dart';
 import 'store.dart';
 import 'app_logger.dart';
@@ -33,8 +34,201 @@ class MarketController extends ChangeNotifier {
   int photosScanned = 0;
   String photoReport = '';
   final List<SourceEndpoint> discoveredSources = [];
-  List<SourceEndpoint> get availableEndpoints =>
-      [...endpoints, ...discoveredSources];
+
+  /// هوش جستجوگر ۲: builds the three lists of places that sell goods and
+  /// hands each completed list to the app (see `domain/source_finder.dart`).
+  late final SourceFinder finder = SourceFinder(store, client: client.client);
+
+  /// Sources of those lists that هوش جستجوگر ۱ accepted (at least one valid
+  /// row). They are ordinary routes from then on: listed, refreshed, and
+  /// switched off by the user like any other.
+  List<SourceEndpoint> finderSources = [];
+  bool finderEnabled = true;
+  FinderReport? finderReport;
+  Timer? _finderTimer;
+
+  List<SourceEndpoint> get availableEndpoints {
+    if (finderSources.isEmpty) return [...endpoints, ...discoveredSources];
+    final ids = <String>{};
+    return [
+      for (final e in [...endpoints, ...discoveredSources, ...finderSources])
+        if (ids.add(e.id)) e
+    ];
+  }
+
+  /// Switches on what هوش جستجوگر ۱ accepted since the last look — in this
+  /// run or in a background one.
+  Future<void> applyFinderAccepted() async {
+    finderSources = finder.acceptedEndpoints();
+    final ids = await finder.takeUnapplied();
+    if (ids.isEmpty) return;
+    enabled.addAll(ids);
+    await store.setSetting('enabled', jsonEncode(enabled.toList()));
+    unawaited(AppLogger.instance
+        .record('discovery', 'finder_sources_enabled', {'added': ids.length}));
+  }
+
+  Future<void> setFinderEnabled(bool value) async {
+    finderEnabled = value;
+    await store.setSetting('finder.enabled', '$value');
+    try {
+      await BackgroundScanScheduler.configureFinder(enabled: value);
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'finder');
+    }
+    if (value) {
+      startFinder(first: const Duration(seconds: 1));
+    } else {
+      _finderTimer?.cancel();
+      _finderTimer = null;
+    }
+    _notify();
+  }
+
+  /// Registers the background task that continues the lists whenever the
+  /// phone is online, also while the app is closed.
+  Future<void> scheduleFinder() async {
+    try {
+      await BackgroundScanScheduler.configureFinder(enabled: finderEnabled);
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'finder');
+    }
+  }
+
+  /// Keeps the list builder working while the app is open. Every tick is a
+  /// short, bounded slice; a tick that finds the phone offline simply waits
+  /// for the next one, so the work resumes by itself whenever it is online.
+  void startFinder({Duration first = const Duration(seconds: 6)}) {
+    _finderTimer?.cancel();
+    _finderTimer = null;
+    if (!finderEnabled || disposed) return;
+    _finderTimer = Timer(first, () => unawaited(_finderTick()));
+  }
+
+  Future<void> _finderTick() async {
+    _finderTimer = null;
+    if (disposed || !finderEnabled) return;
+    var wait = const Duration(seconds: 30);
+    if (!busy && !transferring && foreground) {
+      final report = await runFinderNow(maxSteps: 8);
+      if (report != null) {
+        wait = report.offline
+            ? const Duration(seconds: 90)
+            : report.idle
+                ? const Duration(minutes: 5)
+                : const Duration(seconds: 6);
+      }
+      // A completed list is handed over without waiting for a refresh.
+      if (report != null && !report.offline) {
+        final given = await deliverFinderNow(limit: 4);
+        if (given >= 0 && finder.handoffBatch(limit: 1).isNotEmpty) {
+          wait = const Duration(seconds: 6);
+        }
+      }
+    }
+    if (!disposed && finderEnabled) {
+      _finderTimer = Timer(wait, () => unawaited(_finderTick()));
+    }
+  }
+
+  /// One slice of the list builder, now. Never runs on top of a refresh.
+  Future<FinderReport?> runFinderNow({int maxSteps = 8}) async {
+    if (disposed || busy || transferring || finder.running) return null;
+    try {
+      final report = await finder.runSlice(
+          maxSteps: maxSteps,
+          budget: const Duration(seconds: 30),
+          cancelled: () => disposed || busy);
+      finderReport = report;
+      if (report.steps > 0) {
+        unawaited(AppLogger.instance.record('discovery', 'finder_slice', {
+          'steps': report.steps,
+          'offline': report.offline,
+          'found': finder.state.entries.length
+        }));
+      }
+      return report;
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'finder');
+      return null;
+    } finally {
+      _notify();
+    }
+  }
+
+  Future<void>? _delivery;
+  bool _stopDelivery = false;
+
+  /// Gives a few waiting entries of the completed lists to هوش جستجوگر ۱ now,
+  /// outside a refresh: the same reader, the same picture reading, the same
+  /// searcher. An accepted source appears among the routes at once. Returns
+  /// how many were accepted, or -1 when it could not run.
+  Future<int> deliverFinderNow({int limit = 4}) async {
+    if (disposed ||
+        busy ||
+        transferring ||
+        !finderEnabled ||
+        _delivery != null ||
+        finder.running) {
+      return -1;
+    }
+    final done = Completer<void>();
+    _delivery = done.future;
+    _stopDelivery = false;
+    String? lock;
+    var accepted = -1;
+    try {
+      await finder.sync();
+      if (finder.handoffBatch(limit: 1).isEmpty) return 0;
+      lock = await store.acquireRefreshLock();
+      if (lock == null) return -1;
+      accepted = await deliverFinderBatch(store, client, finder,
+          windowDays: discoveryDays,
+          limit: limit,
+          photos: photoScanner,
+          cancelled: () => disposed || _stopDelivery);
+      if (accepted > 0) {
+        await applyFinderAccepted();
+        rangeSession.invalidate();
+        historyRevision++;
+        await reload();
+        unawaited(AppLogger.instance
+            .record('discovery', 'finder_accepted', {'sources': accepted}));
+      }
+      return accepted;
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'finder');
+      return accepted;
+    } finally {
+      if (lock != null) {
+        try {
+          await store.releaseRefreshLock(lock);
+        } catch (_) {
+          // The lease expires by itself.
+        }
+      }
+      _delivery = null;
+      done.complete();
+      _notify();
+    }
+  }
+
+  /// Starting points for the list builder: the research lists shipped with
+  /// the app and the home pages of the sellers the app already reads.
+  Future<void> _seedFinder() async {
+    if (finder.state.seeded) return;
+    final candidates = <String>[
+      for (final key in const ['telegram_channels', 'other_channels', 'sources'])
+        for (final row in (registry[key] as List? ?? const []))
+          if (row is Map && row['url'] is String) row['url'] as String
+    ];
+    final pages = <String>{
+      for (final e in endpoints)
+        if (!const {'telegram', 'eitaa', 'bale', 'rubika'}.contains(e.parser))
+          Uri(scheme: 'https', host: Uri.parse(e.url).host, path: '/').toString()
+    };
+    await finder.seed(candidates: candidates, pages: pages);
+  }
   Future<void> rememberSources(Iterable<SourceEndpoint> found) async {
     final ids = availableEndpoints.map((e) => publicChannel(e.url)?.id).toSet();
     var changed = false;
@@ -264,12 +458,25 @@ class MarketController extends ChangeNotifier {
         AppLogger.instance.capture(error, stack, section: 'discovery');
       }
     }
+    finderEnabled = await store.setting('finder.enabled') != 'false';
+    try {
+      await finder.load(force: true);
+      finderSources = finder.acceptedEndpoints();
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'finder');
+    }
     final setting = await store.setting('enabled');
     if (setting != null) {
       enabled = (jsonDecode(setting) as List)
           .cast<String>()
           .where((id) => availableEndpoints.any((e) => e.id == id))
           .toSet();
+    }
+    try {
+      await applyFinderAccepted();
+      await _seedFinder();
+    } catch (error, stack) {
+      AppLogger.instance.capture(error, stack, section: 'finder');
     }
     if (await store.setting('sourcesVersion') != '2') {
       enabled.addAll(
@@ -718,6 +925,15 @@ class MarketController extends ChangeNotifier {
     lastBackgroundScan = await store.setting('lastBackgroundScan');
     lastBackgroundScanCount =
         int.tryParse(await store.setting('lastBackgroundScanCount') ?? '') ?? 0;
+    // A background run may have extended the lists or accepted a source.
+    if (!finder.running && !busy) {
+      try {
+        await finder.sync();
+        await applyFinderAccepted();
+      } catch (error, stack) {
+        AppLogger.instance.capture(error, stack, section: 'finder');
+      }
+    }
     _notify();
   }
 
@@ -819,6 +1035,15 @@ class MarketController extends ChangeNotifier {
       _notify();
       return;
     }
+    // A hand-over of the list builder holds the same lock for a moment; the
+    // refresh asks it to stop and waits, rather than telling the user that
+    // "another refresh is running".
+    final handing = _delivery;
+    if (handing != null) {
+      _stopDelivery = true;
+      await handing;
+      if (busy || disposed) return;
+    }
     String? refreshLock;
     try {
       refreshLock = await store.acquireRefreshLock();
@@ -870,6 +1095,43 @@ class MarketController extends ChangeNotifier {
     _notify();
     final queue =
         availableEndpoints.where((e) => enabled.contains(e.id)).toList();
+    // The completed lists of هوش جستجوگر ۲ are handed over here, a few entries
+    // per refresh: each is read by the same reader and judged by the same
+    // searcher as every other source, and only one that yields a valid row
+    // becomes a route of the app.
+    final handoff = <String, String>{};
+    if (finderEnabled) {
+      try {
+        await finder.sync();
+        final queued = {for (final e in queue) e.id};
+        var front = 0;
+        for (final h in finder.handoffBatch(limit: 12)) {
+          if (queued.add(h.endpoint.id)) {
+            // First in the queue: the user sees what the lists brought before
+            // the long tail of ordinary sources.
+            queue.insert(front++, h.endpoint);
+            handoff[h.endpoint.id] = h.entry.key;
+          } else {
+            // Already a route of the app (added by hand or found in a post).
+            await finder.verdict(h.entry.key,
+                rows: 1, note: 'از پیش در اتصال‌های برنامه بود');
+          }
+        }
+      } catch (error, stack) {
+        AppLogger.instance.capture(error, stack, section: 'finder');
+      }
+    }
+    Future<void> answer(SourceEndpoint e, int rows, String note) async {
+      final key = handoff[e.id];
+      if (key == null) return;
+      try {
+        await finder.verdict(key, rows: rows, note: note);
+        if (rows > 0) await applyFinderAccepted();
+      } catch (error, stack) {
+        AppLogger.instance.capture(error, stack, section: 'finder');
+      }
+    }
+
     var index = 0;
     Future<void> worker() async {
       while (index < queue.length && !disposed) {
@@ -895,6 +1157,20 @@ class MarketController extends ChangeNotifier {
               'noise': found.noise,
               'outOfWindow': found.outOfWindow,
             });
+            if (handoff.containsKey(e.id)) {
+              // A list entry that gave no valid row is not a route yet: the
+              // reason stays on the entry and nothing is written for it.
+              await answer(
+                  e,
+                  0,
+                  data.isEmpty
+                      ? 'ردیف قیمت در صفحه عمومی پیدا نشد'
+                      : 'ردیف قابل‌ثبت نبود (بیرون از بازه: ${found.outOfWindow} • '
+                          'بی‌قیمت/بی‌محصول: ${found.noise})');
+              finished++;
+              _progress();
+              continue;
+            }
             // Rows are kept, but the source says why nothing new appeared.
             await store.note(
                 e.id,
@@ -911,7 +1187,19 @@ class MarketController extends ChangeNotifier {
           // Fresh rows are derived at write time; drop the previous answers.
           // The index itself is rebuilt once, when the refresh finishes.
           _indexStale = true;
-          await rememberSources(client.discoveries[e.id] ?? []);
+          await answer(e, found.quotes.length,
+              'هوش جستجوگر ۱: ${found.quotes.length} ردیف معتبر');
+          final seen = client.discoveries[e.id] ?? const <SourceEndpoint>[];
+          await rememberSources(seen);
+          // The channels a source names in its own posts are candidates for
+          // the lists as well; they are read and judged like any other.
+          if (finderEnabled && seen.isNotEmpty) {
+            try {
+              await finder.offerLinks(seen.map((x) => x.url), from: e.url);
+            } catch (error, stack) {
+              AppLogger.instance.capture(error, stack, section: 'finder');
+            }
+          }
           historyRevision++;
           endpointRevisions.update(e.id, (n) => n + 1, ifAbsent: () => 1);
           // Publish this source's own rows immediately; all-ON must not wait for
@@ -923,11 +1211,20 @@ class MarketController extends ChangeNotifier {
           unawaited(_publishEndpoint(e.id).catchError((Object _) {}));
         } catch (error, stack) {
           AppLogger.instance.capture(error, stack, section: 'source');
-          await store.failure(
-              e.id,
-              error is FormatException
-                  ? error.message
-                  : 'خطا در اتصال/مهلت دریافت؛ داده قبلی حفظ شد.');
+          if (handoff.containsKey(e.id)) {
+            await answer(
+                e,
+                0,
+                error is FormatException
+                    ? error.message
+                    : 'خطا در اتصال/مهلت دریافت');
+          } else {
+            await store.failure(
+                e.id,
+                error is FormatException
+                    ? error.message
+                    : 'خطا در اتصال/مهلت دریافت؛ داده قبلی حفظ شد.');
+          }
         }
         finished++;
         _progress();
@@ -1007,6 +1304,8 @@ class MarketController extends ChangeNotifier {
     disposed = true;
     _watchTimer?.cancel();
     _watchTimer = null;
+    _finderTimer?.cancel();
+    _finderTimer = null;
     _refreshHeartbeat?.cancel();
     _refreshHeartbeat = null;
     _progressTimer?.cancel();

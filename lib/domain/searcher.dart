@@ -287,6 +287,37 @@ class Searcher {
     return result;
   }
 
+  /// The seller's place as one free text states it — a channel introduction
+  /// or the contact lines of a website — in the same order of evidence as
+  /// [resolvePlace]: the written address, then a map link, then the prefix of
+  /// a landline. A mobile number names no city and an empty text names none.
+  ///
+  /// هوش جستجوگر ۲ only collects such text; the place is decided here.
+  static ({String city, String basis}) placeOfText(String text) {
+    if (text.trim().isEmpty) return (city: '', basis: '');
+    final place = _placeOf(text);
+    if (place.addressCity.isNotEmpty) {
+      return (city: place.addressCity, basis: 'آدرس نوشته‌شده در متن');
+    }
+    if (place.mapsCity.isNotEmpty) {
+      return (
+        city: place.mapsCity,
+        basis: place.mapsFromCoordinates
+            ? 'مختصات لینک نقشه'
+            : 'نام مکان در لینک نقشه'
+      );
+    }
+    if (place.phoneCity.isNotEmpty) {
+      return (
+        city: place.phoneCity,
+        basis: place.phoneCounty
+            ? 'پیش‌شماره و رقم‌های شهرستان تلفن ثابت'
+            : 'پیش‌شماره تلفن ثابت${place.phoneFull ? '' : ' (ناقص)'}'
+      );
+    }
+    return (city: '', basis: '');
+  }
+
   static String _city(String value) {
     final c = value.trim();
     if (c.isEmpty ||

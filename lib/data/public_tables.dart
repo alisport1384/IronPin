@@ -7,6 +7,70 @@ import '../domain/product_text.dart';
 /// Header-driven tables, not a guessed endpoint or platform-specific JSON API.
 /// Only explicit table/cell currency is authoritative; page receipt is not rate time.
 class PublicTables {
+  static final _priceColumn = RegExp(r'^قیمت(?:\s|\(|$)');
+  // A column that describes the thing sold. A date column alone does not: a
+  // table of dates and prices is the history of one price, not a price list.
+  static final _attributeColumn = RegExp(
+      'سایز|ضخامت|برند|کارخانه|تولید کننده|استاندارد|آنالیز|محل تحویل|بارگیری|واحد|حالت|وزن|نام|محصول|کالا|شرح|ابعاد|طول|عرض|گرید');
+  static final _statisticColumn =
+      RegExp(r'^(?:میانگین|میانه|کمترین|بیشترین|بازه)(?:\s|$)');
+  static final _nameLabel = RegExp(r'^\s*نام\s*(?:کالا|محصول)\s*[:：]\s*');
+
+  // A title that announces figures about prices rather than prices on offer.
+  static final _statisticTitle =
+      RegExp('میانه|میانگین|نمودار|روند|مقایسه|تاریخچه|پیش‌بینی|پیش بینی');
+
+  /// The product a heading or a table caption names, without the words around
+  /// it: «قیمت میلگرد ۸» → «میلگرد 8», «قیمت تیرآهن ۱۴ به تفکیک کارخانه» →
+  /// «تیرآهن 14». Empty when the text names no product of the vocabulary or is
+  /// a sentence rather than a title.
+  static String ownerPhrase(String heading) {
+    final parts = latin(heading)
+        .split(RegExp(r'[|·•:؛(\[+]| - | – '))
+        .map((p) => p.trim())
+        .where((p) => ProductText.category(p).isNotEmpty);
+    if (parts.isEmpty) return '';
+    final phrase = parts.first
+        .replaceFirst(
+            RegExp(r'^(?:(?:جدول|لیست|آخرین)\s+)?قیمت\s+(?:(?:روز|امروز|خرید|فروش)\s+)?'),
+            '')
+        .replaceFirst(
+            RegExp(r'\s+(?:امروز|به تفکیک|در بازار|بازار|همه|تمام|کلیه)(?:\s.*)?$'),
+            '')
+        .trim();
+    // A title names its product first («میلگرد 8», «ورق سیاه»). A phrase
+    // that only mentions one («روند تغییرات قیمت پروفیل») is about something
+    // else — a trend, a comparison — and owns no rows.
+    return phrase.length > 48 ||
+            ProductText.product.matchAsPrefix(ProductText.normalize(phrase)) ==
+                null
+        ? ''
+        : phrase;
+  }
+
+  /// [headingOwned] is the reading for a seller's website nobody wrote an
+  /// adapter for. Such pages rarely repeat the product in every row: the
+  /// heading above the table (or its caption) says what the table lists, the
+  /// header says which column is the price, and the rows carry size, brand and
+  /// amount. In this mode
+  ///
+  /// * a header is a first/`thead`/all-`th` row with a «قیمت» column and at
+  ///   least one describing column; a table of averages and ranges is not a
+  ///   price list and is left alone;
+  /// * a row may name its product itself, in a hidden «نام کالا : …» cell, or
+  ///   inherit it from the table's caption or the nearest title before the
+  ///   table (a heading, or the `<header>` of its section) — written by the
+  ///   source in each case, and recorded as the basis; a title that announces
+  ///   a median, a chart or a comparison owns nothing;
+  /// * a one-cell row with a date («آخرین بروز رسانی : …») dates the table, and
+  ///   a unit written in the price header («قیمت (تومان/کیلو)») is the unit;
+  /// * when one heading owns several tables whose rows cannot be told apart
+  ///   (no brand, no product in the row), none of them is read: their
+  ///   difference is somewhere this reader cannot see.
+  ///
+  /// Nothing else changes: currency still comes only from the header or the
+  /// cell, an amount without it stays a text amount, and a date is never taken
+  /// from the time of reading.
   static List<Quote> read(
       {required String body,
       required String url,
@@ -15,17 +79,51 @@ class PublicTables {
       required String city,
       required String category,
       required DateTime fetchedAt,
-      bool inlinePriceUnits = false}) {
+      bool inlinePriceUnits = false,
+      bool headingOwned = false}) {
     final doc = html.parse(body), out = <Quote>[];
     DateTime? precedingDate;
     String rawDate = '', sheetKind = '';
     String precedingTax = 'نامشخص';
     var tableIndex = 0;
     final seen = <String, int>{};
+    // Heading-owned reading: the product phrase of the nearest heading that
+    // names one, and the tables that depend on it alone.
+    var owner = '';
+    final owned = <String, List<List<Quote>>>{};
     void table(Element table) {
       final rows = table.querySelectorAll('tr');
       List<String>? headers;
+      final caption = headingOwned
+          ? ownerPhrase(table.querySelector('caption')?.text ?? '')
+          : '';
+      // Of a caption and the heading before the table, the one that says
+      // more: «تیرآهن 14» rather than «تیرآهن».
+      final tableOwner = caption.isEmpty || owner.contains(caption)
+          ? owner
+          : caption;
+      DateTime? tableDate;
+      var tableDateRaw = '';
+      if (headingOwned) {
+        for (final row in rows) {
+          final only = row.children
+              .where((e) => e.localName == 'th' || e.localName == 'td')
+              .toList();
+          if (only.length != 1) continue;
+          final t = latin(only.single.text);
+          if (t.length < 200 &&
+              RegExp('بروز|به روز|تاریخ').hasMatch(t) &&
+              TextPriceEngine.datePattern.hasMatch(t)) {
+            tableDate = TextPriceEngine.dateIn(t);
+            tableDateRaw = TextPriceEngine.datePattern.stringMatch(t) ?? '';
+            if (tableDate != null) break;
+          }
+        }
+      }
+      final local = <Quote>[];
+      var inherited = false, rowIndex = -1;
       for (final row in rows) {
+        rowIndex++;
         final cells = row.children
             .where((e) => e.localName == 'th' || e.localName == 'td')
             .toList();
@@ -44,7 +142,25 @@ class PublicTables {
           headers = text;
           continue;
         }
-        if (headers == null || cells.length != headers.length) continue;
+        if (headingOwned &&
+            headers == null &&
+            text.length >= 2 &&
+            (rowIndex == 0 ||
+                row.parent?.localName == 'thead' ||
+                cells.every((c) => c.localName == 'th')) &&
+            text.any(_priceColumn.hasMatch) &&
+            text.any((s) =>
+                !_priceColumn.hasMatch(s) && _attributeColumn.hasMatch(s)) &&
+            !text.any(_statisticColumn.hasMatch)) {
+          headers = text;
+          continue;
+        }
+        if (headers == null) continue;
+        // A hidden detail cell after the described columns is still the row.
+        if (cells.length != headers.length &&
+            !(headingOwned && cells.length > headers.length)) {
+          continue;
+        }
         String field(String pattern) {
           final i = headers!.indexWhere((h) => RegExp(pattern).hasMatch(h));
           return i < 0 ? '' : text[i];
@@ -57,6 +173,27 @@ class PublicTables {
                         ProductText.category(s) == category))
                 .firstOrNull ??
             '';
+        var titleBasis = '';
+        if (headingOwned) {
+          final named = title.replaceFirst(_nameLabel, '');
+          if (named != title) {
+            title = named;
+            titleBasis = 'سلول نام کالا در همان ردیف';
+          } else if (title.isEmpty && tableOwner.isNotEmpty) {
+            // The heading names the product; the row adds what tells it apart.
+            final size = field(r'^(?:سایز|ابعاد)'),
+                maker = field('برند|کارخانه|تولید کننده');
+            title = [
+              tableOwner,
+              if (size.isNotEmpty && !tableOwner.contains(size)) size,
+              if (maker.isNotEmpty && !tableOwner.contains(maker)) maker
+            ].join(' ');
+            titleBasis = tableOwner == caption
+                ? 'عنوان جدول'
+                : 'سرعنوان پیش از جدول';
+            if (maker.isEmpty) inherited = true;
+          }
+        }
         if (title.isEmpty) continue;
         final heading = cells
             .expand((c) => c.querySelectorAll('h3,h4'))
@@ -95,11 +232,13 @@ class PublicTables {
         final spec = ProductText.spec(title, categoryHint: rowCategory);
         final unitText = field(r'^واحد(?:\s|$)');
         final cellUnit = parseUnit(unitText);
+        final headerUnit =
+            headingOwned ? TextPriceEngine.priceUnit(priceHeader) : 'unknown';
         final unit = cellUnit != 'unknown'
             ? cellUnit
             : inlinePriceUnits
                 ? TextPriceEngine.priceUnit(price)
-                : 'unknown';
+                : headerUnit;
         final thicknessRaw = field('ضخامت');
         final thickness = number(thicknessRaw)?.toString() ?? spec.thickness;
         final width = field('عرض'), length = field('طول');
@@ -113,8 +252,9 @@ class PublicTables {
                     ? '$length × $width'
                     : '');
         final rowDate = field('تاریخ|بروزرسانی|به روز'),
-            announced =
-                rowDate.isNotEmpty ? sourceDate(rowDate) : precedingDate;
+            announced = rowDate.isNotEmpty
+                ? sourceDate(rowDate)
+                : (tableDate ?? precedingDate);
         final brand = field('برند|کارخانه|تولید کننده'),
             grade = field('گرید|استاندارد');
         final scope = table.querySelector('caption')?.text ?? '';
@@ -129,7 +269,7 @@ class PublicTables {
           if (unit == 'unknown') 'واحد قیمت تصریح نشده',
           if (announced == null) 'تاریخ نرخ نامشخص'
         ];
-        out.add(Quote(
+        local.add(Quote(
             id: '$endpoint:${TextPriceEngine.key(identity)}:$count',
             endpoint: endpoint,
             seller: seller,
@@ -177,20 +317,32 @@ class PublicTables {
                   ? 'نامشخص'
                   : cellUnit != 'unknown'
                       ? 'سلول واحد جدول'
-                      : 'عبارت صریح هر واحد در سلول قیمت',
+                      : inlinePriceUnits
+                          ? 'عبارت صریح هر واحد در سلول قیمت'
+                          : 'واحد نوشته‌شده در سرستون قیمت',
               'مبنای تاریخ': announced == null
                   ? 'نامشخص'
                   : rowDate.isNotEmpty
                       ? 'تاریخ ردیف جدول'
-                      : 'تاریخ صریح پیش از جدول',
+                      : tableDate != null
+                          ? 'تاریخ نوشته‌شده درون جدول'
+                          : 'تاریخ صریح پیش از جدول',
               if (announced != null) 'دقت تاریخ نرخ': 'روز',
-              if (rawDate.isNotEmpty)
+              if (titleBasis.isNotEmpty) 'مبنای نام کالا': titleBasis,
+              if (rowDate.isEmpty && tableDate != null)
+                'تاریخ متن منبع': tableDateRaw
+              else if (rawDate.isNotEmpty)
                 'تاریخ متن منبع': rowDate.isNotEmpty ? rowDate : rawDate,
               'شاهد ردیف': text.join(' | '),
               'حدود منبع': 'جدول عمومی؛ انتشار مستقل پیام در دسترس نیست'
             }));
       }
       tableIndex++;
+      if (inherited) {
+        owned.putIfAbsent(tableOwner, () => []).add(local);
+      } else {
+        out.addAll(local);
+      }
     }
 
     void visit(Node node) {
@@ -208,6 +360,19 @@ class PublicTables {
           precedingDate = null;
           rawDate = '';
           precedingTax = 'نامشخص';
+        }
+        // The title of what follows: a heading, or the <header> a section
+        // gives itself. One that names a product owns the tables after it;
+        // one that announces a median, a chart or a comparison disowns them.
+        if (headingOwned &&
+            text.length < 160 &&
+            RegExp(r'^(?:h[1-6]|header)$').hasMatch(node.localName ?? '')) {
+          if (_statisticTitle.hasMatch(text)) {
+            owner = '';
+          } else {
+            final phrase = ownerPhrase(node.text);
+            if (phrase.isNotEmpty) owner = phrase;
+          }
         }
         if (text.length < 120 && TextPriceEngine.tax(text) != 'نامشخص') {
           precedingTax = TextPriceEngine.tax(text);
@@ -239,6 +404,11 @@ class PublicTables {
     }
 
     visit(doc.body ?? doc);
+    for (final tables in owned.values) {
+      // One heading, one indistinguishable table: its rows are that product.
+      // Several: what separates them is not written where it can be read.
+      if (tables.length == 1) out.addAll(tables.single);
+    }
     return out;
   }
 }

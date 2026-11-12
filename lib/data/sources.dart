@@ -505,6 +505,17 @@ class SourceParser {
           category: e.category,
           fetchedAt: fetchedAt,
           inlinePriceUnits: e.parser == 'rahsakht-table'),
+      // A website found by هوش جستجوگر ۲: no adapter was written for it, so
+      // the table is read under its own heading (see [PublicTables.read]).
+      'site-table' => PublicTables.read(
+          body: body,
+          url: e.url,
+          endpoint: e.id,
+          seller: e.name,
+          city: e.sellerCity,
+          category: e.category,
+          fetchedAt: fetchedAt,
+          headingOwned: true),
       'melal' => melal(e, body, fetchedAt),
       'asre' => asre(e, body, fetchedAt),
       'telegram' => telegram(e, body, fetchedAt),

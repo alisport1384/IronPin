@@ -4,6 +4,7 @@ import '../data/controller.dart';
 import '../data/sources.dart';
 import '../domain/market.dart';
 import 'common.dart';
+import 'finder_panel.dart';
 import 'prices_page.dart';
 import 'backup_panel.dart';
 
@@ -21,7 +22,7 @@ class _InfoPageState extends State<InfoPage> {
     setState(() => exporting = true);
     try {
       final destination = await AppLogger.instance.export(summary: {
-        'version': '0.9.2',
+        'version': '0.9.4',
         'windowDays': widget.c.discoveryDays,
         'pricesWindow': widget.c.pricesWindow,
         'rangeWindow': widget.c.rangeWindow,
@@ -274,10 +275,11 @@ class _InfoPageState extends State<InfoPage> {
           style: const TextStyle(fontSize: 11, color: muted)),
       infoBox('شهر فقط فیلتر نمایش است',
           'دفتر، بارگیری، محل تولید و اشاره صریح همان کالا بررسی می‌شوند؛ اطلاعات شهرهای دیگر نمایش یا محاسبه نمی‌شوند. دریافت از همه منابع فعال، مستقل از شهر ادامه دارد. شهر نامعلوم حدس زده نمی‌شود.'),
+      FinderPanel(c: c),
       const Text('اتصال‌های قابل نوسازی',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
       const Text(
-          'فعالسازی منبع به معنی موفقیت دریافت نیست. مبلغ استخراج‌شده با واحد نامعلوم دیده می‌شود ولی تبدیل و رتبه‌بندی عددی ندارد. لینک‌های کشف‌شده تا انتخاب شما خاموش‌اند. روبیکا ممکن است فقط معرفی کانال برگرداند؛ این وضعیت خطای خواندن پیام ثبت می‌شود، نه نرخ فرضی.',
+          'فعالسازی منبع به معنی موفقیت دریافت نیست. مبلغ استخراج‌شده با واحد نامعلوم دیده می‌شود ولی تبدیل و رتبه‌بندی عددی ندارد. لینک‌هایی که فقط در پست‌ها دیده شده‌اند تا انتخاب شما خاموش‌اند؛ منبعی که هوش جستجوگر ۲ پیدا کند و هوش جستجوگر ۱ از آن ردیف معتبر بخواند، خودکار روشن می‌شود و از همین فهرست قابل خاموش‌کردن است. روبیکا ممکن است فقط معرفی کانال برگرداند؛ این وضعیت خطای خواندن پیام ثبت می‌شود، نه نرخ فرضی.',
           style: TextStyle(fontSize: 11, color: muted, height: 1.8)),
       OutlinedButton.icon(
           onPressed: c.busy ? null : addSource,
@@ -455,9 +457,9 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: () => showLicensePage(
               context: context,
               applicationName: 'IronPin',
-              applicationVersion: '0.9.2'),
+              applicationVersion: '0.9.4'),
           child: const Text('مجوزهای نرم‌افزار و داده')),
-      const Text('IronPin 0.9.2 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
+      const Text('IronPin 0.9.4 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: muted)),
       const SizedBox(height: 18),

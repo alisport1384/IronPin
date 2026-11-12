@@ -100,6 +100,9 @@ class _BootstrapState extends State<Bootstrap> {
         await store.close();
         return;
       }
+      // هوش جستجوگر ۲ starts with the app and continues whenever it is online.
+      c.startFinder();
+      unawaited(c.scheduleFinder());
       setState(() => controller = c);
     } catch (e, stack) {
       AppLogger.instance.capture(e, stack, section: 'startup');

@@ -500,8 +500,10 @@ void _validateRecord(Map<String, dynamic> record) {
       final key = row['key'], value = row['value'] as String;
       if (key == 'enabled') {
         final list = jsonDecode(value);
+        // 82 registered routes, up to 60 added by hand or seen in posts and
+        // up to 150 accepted from the lists of هوش جستجوگر ۲.
         if (list is! List ||
-            list.length > 200 ||
+            list.length > 400 ||
             !list.every((e) => e is String && e.length <= 512)) {
           throw const FormatException('تنظیم منابع فعال معتبر نیست.');
         }

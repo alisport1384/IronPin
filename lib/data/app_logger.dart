@@ -143,7 +143,7 @@ class AppLogger {
     _pending = _pending.then((_) async {
       if (!enabled) return;
       try {
-        const header = '# IronPin — session log | 0.9.2\n';
+        const header = '# IronPin — session log | 0.9.4\n';
         final newFile = _active == null ||
             !await _active!.exists() ||
             await _active!.length() + bytes.length > fileBytes;
@@ -207,7 +207,7 @@ class AppLogger {
           _previousCheckpoint = await file.readAsString();
         }
       }
-      final text = '# IronPin runtime | 0.9.2\n${jsonEncode({
+      final text = '# IronPin runtime | 0.9.4\n${jsonEncode({
             'at': DateTime.now().toUtc().toIso8601String(),
             'stage': stage,
             'rows': rows,
@@ -265,7 +265,7 @@ class AppLogger {
   Future<void> _writeSummary(Map<String, Object?> summary) async {
     final file = File('${_directory!.path}/IronPin-session-'
         '${DateTime.now().microsecondsSinceEpoch}-${_serial++}.md');
-    final buffer = StringBuffer('# IronPin — session summary | 0.9.2\n')
+    final buffer = StringBuffer('# IronPin — session summary | 0.9.4\n')
       ..writeln('generated: ${DateTime.now().toUtc().toIso8601String()}')
       ..writeln('log switch: ${enabled ? 'on' : 'off'}')
       ..writeln('directory: ${_directory!.path}');

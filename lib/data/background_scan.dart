@@ -8,11 +8,14 @@ import '../domain/maps_resolver.dart';
 import '../domain/ocr.dart';
 import '../domain/photo_scan.dart';
 import '../domain/searcher.dart';
+import 'source_finder_io.dart';
 import 'sources.dart';
 import 'store.dart';
 
 const _taskName = 'ironpin.periodic.public-scan';
 const _uniqueName = 'ironpin-periodic-public-scan';
+const _finderTask = 'ironpin.periodic.source-finder';
+const _finderUnique = 'ironpin-periodic-source-finder';
 
 class ScanBatch {
   final List<SourceEndpoint> sources;
@@ -35,6 +38,7 @@ ScanBatch selectScanBatch(List<SourceEndpoint> enabled, int cursor,
 void callbackDispatcher() {
   WidgetsFlutterBinding.ensureInitialized();
   Workmanager().executeTask((task, inputData) async {
+    if (task == _finderTask) return runFinderBackground();
     if (task != _taskName) return true;
     return runBackgroundScan();
   });
@@ -73,6 +77,70 @@ class BackgroundScanScheduler {
       constraints: Constraints(networkType: NetworkType.connected),
     );
   }
+
+  /// The list builder's own task: every half hour, only with a network. It is
+  /// independent of the periodic price scan, which the user may keep off.
+  static Future<void> configureFinder({required bool enabled}) async {
+    if (configureOverride != null) return;
+    await initialize();
+    if (!enabled) {
+      await Workmanager().cancelByUniqueName(_finderUnique);
+      return;
+    }
+    await Workmanager().registerPeriodicTask(
+      _finderUnique,
+      _finderTask,
+      existingWorkPolicy: ExistingWorkPolicy.keep,
+      frequency: const Duration(minutes: 30),
+      initialDelay: const Duration(minutes: 2),
+      constraints: Constraints(networkType: NetworkType.connected),
+    );
+  }
+}
+
+/// Continues the lists of هوش جستجوگر ۲ while the app is closed.
+///
+/// WorkManager starts it only when the phone has a network, so "every time it
+/// is online" needs no connectivity plugin: a run that still cannot reach
+/// anything undoes its attempts and waits for the next one.
+Future<bool> runFinderBackground() async {
+  MarketStore? store;
+  final client = SourceClient(maxChannelPages: 2);
+  String? lease;
+  Timer? heartbeat;
+  try {
+    store = await MarketStore.open();
+    if (await store.setting('finder.enabled') == 'false') return true;
+    final finder = SourceFinder(store, client: client.client);
+    await finder.runSlice(
+        maxSteps: 14, budget: const Duration(seconds: 50));
+    // Without the picture reader only website tables can be judged fairly;
+    // channels wait for the app to be open.
+    if (finder.handoffBatch(limit: 1, where: (e) => e.kind == 'site').isEmpty) {
+      return true;
+    }
+    lease = await store.acquireRefreshLock();
+    if (lease == null) return true;
+    heartbeat = Timer.periodic(MarketStore.refreshLockHeartbeat,
+        (_) => unawaited(store!.renewRefreshLock(lease!)));
+    final days = int.tryParse(await store.setting('windowDays') ?? '') ?? 30;
+    await deliverFinderBatch(store, client, finder,
+        windowDays: days, limit: 3, sitesOnly: true);
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    heartbeat?.cancel();
+    client.close();
+    if (lease != null && store != null) {
+      try {
+        await store.releaseRefreshLock(lease);
+      } catch (_) {
+        // Lease expiry recovers if the database was interrupted.
+      }
+    }
+    // No store.close(): the UI isolate shares the same native handle.
+  }
 }
 
 /// Executes one OS-scheduled batch. The same persisted lease protects against
@@ -107,8 +175,30 @@ Future<bool> runBackgroundScan() async {
         // Bad discovery metadata never adds a route or blocks registered work.
       }
     }
-    final all = [...endpoints, ...discovered];
-    final enabled = all.where((e) => enabledIds.contains(e.id)).toList();
+    // Sources the list builder found and هوش جستجوگر ۱ accepted are routes
+    // too; one accepted while the app was closed is read here even before
+    // the app has switched it on.
+    final finder = SourceFinder(store, client: client.client);
+    var finderOn = false;
+    final fresh = <String>{};
+    final accepted = <SourceEndpoint>[];
+    try {
+      finderOn = await store.setting('finder.enabled') != 'false';
+      await finder.load();
+      accepted.addAll(finder.acceptedEndpoints());
+      fresh.addAll(
+          finder.acceptedEndpoints(onlyUnapplied: true).map((e) => e.id));
+    } catch (_) {
+      // A damaged list never blocks the registered routes.
+    }
+    final ids = <String>{};
+    final all = [
+      for (final e in [...endpoints, ...discovered, ...accepted])
+        if (ids.add(e.id)) e
+    ];
+    final enabled = all
+        .where((e) => enabledIds.contains(e.id) || fresh.contains(e.id))
+        .toList();
     final cursor =
         int.tryParse(await store.setting('backgroundScanCursor') ?? '') ?? 0;
     final batch = selectScanBatch(enabled, cursor, size: 16);
@@ -160,6 +250,14 @@ Future<bool> runBackgroundScan() async {
             error is FormatException
                 ? error.message
                 : 'خطا در اسکن پس‌زمینه؛ داده قبلی حفظ شد.');
+      }
+    }
+    if (finderOn) {
+      try {
+        await deliverFinderBatch(store, client, finder,
+            windowDays: days, limit: 3, sitesOnly: true);
+      } catch (_) {
+        // Hand-over is retried by the next run.
       }
     }
     await store.setSetting('backgroundScanCursor', '${batch.nextCursor}');

@@ -1,0 +1,1233 @@
+{
+ "at": "2026-11-11T19:20:37.499549Z",
+ "slices": [
+  {
+   "slice": 1,
+   "steps": 12,
+   "offline": false,
+   "searches": 4,
+   "pages": 3,
+   "queue": 48,
+   "lists": [
+    38,
+    3,
+    0
+   ],
+   "confirmed": [
+    3,
+    0,
+    0
+   ],
+   "cooldown": [],
+   "error": ""
+  },
+  {
+   "slice": 2,
+   "steps": 9,
+   "offline": false,
+   "searches": 7,
+   "pages": 3,
+   "queue": 45,
+   "lists": [
+    59,
+    3,
+    0
+   ],
+   "confirmed": [
+    3,
+    0,
+    0
+   ],
+   "cooldown": [
+    "h:tehran-ahan.com",
+    "h:assen.ir",
+    "h:kilooton.com",
+    "h:ahantime.com",
+    "h:emroozahan.com"
+   ],
+   "error": ""
+  },
+  {
+   "slice": 3,
+   "steps": 11,
+   "offline": false,
+   "searches": 10,
+   "pages": 6,
+   "queue": 42,
+   "lists": [
+    80,
+    5,
+    0
+   ],
+   "confirmed": [
+    6,
+    0,
+    0
+   ],
+   "cooldown": [
+    "h:tehran-ahan.com",
+    "h:assen.ir",
+    "h:kilooton.com",
+    "h:ahantime.com",
+    "h:emroozahan.com",
+    "h:fiahan.com"
+   ],
+   "error": ""
+  },
+  {
+   "slice": 4,
+   "steps": 11,
+   "offline": false,
+   "searches": 14,
+   "pages": 8,
+   "queue": 38,
+   "lists": [
+    97,
+    5,
+    1
+   ],
+   "confirmed": [
+    8,
+    0,
+    0
+   ],
+   "cooldown": [
+    "h:tehran-ahan.com",
+    "h:assen.ir",
+    "h:kilooton.com",
+    "h:ahantime.com",
+    "h:emroozahan.com",
+    "h:fiahan.com",
+    "h:markazeahan.com",
+    "h:ahanprice.com",
+    "h:neginfoolad.ir",
+    "h:choobro.ir"
+   ],
+   "error": ""
+  },
+  {
+   "slice": 5,
+   "steps": 9,
+   "offline": false,
+   "searches": 16,
+   "pages": 9,
+   "queue": 36,
+   "lists": [
+    107,
+    5,
+    1
+   ],
+   "confirmed": [
+    9,
+    0,
+    0
+   ],
+   "cooldown": [
+    "h:tehran-ahan.com",
+    "h:assen.ir",
+    "h:kilooton.com",
+    "h:ahantime.com",
+    "h:emroozahan.com",
+    "h:fiahan.com",
+    "h:markazeahan.com",
+    "h:ahanprice.com",
+    "h:neginfoolad.ir",
+    "h:choobro.ir",
+    "h:chardongeh.com"
+   ],
+   "error": ""
+  }
+ ],
+ "entries": [
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/product-category/round-bar",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "state": "ok",
+   "name": "قیمت میلگرد امروز | خرید میلگرد آجدار (20 آبان 1405)",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://assen.ir/category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://foolad24.com/products/rebars/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "state": "ok",
+   "name": "قیمت میلگرد امروز (آبان ۱۴۰۵) | خرید میلگرد آجدار | فولاد ۲۴",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF-8",
+   "state": "ok",
+   "name": "قیمت میلگرد 8 امروز؛ لیست قیمت میلگرد 8 ساده و آجدار",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://kilooton.com/catalog/rebar",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahantime.com/prices/rebar",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://emroozahan.com/price/rebar/size-16",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://fiahan.com/rebar",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت میلگرد امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D9%86%D8%A8%D8%B4%DB%8C-%D9%88-%D9%86%D8%A7%D9%88%D8%AF%D8%A7%D9%86%DB%8C/%D9%86%D8%A8%D8%B4%DB%8C",
+   "state": "new",
+   "name": "قیمت نبشی",
+   "from": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D9%86%D8%A8%D8%B4%DB%8C-%D9%88-%D9%86%D8%A7%D9%88%D8%AF%D8%A7%D9%86%DB%8C/%D9%86%D8%A7%D9%88%D8%AF%D8%A7%D9%86%DB%8C",
+   "state": "new",
+   "name": "قیمت ناودانی",
+   "from": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D8%A7%D9%86%D9%88%D8%A7%D8%B9-%D9%88%D8%B1%D9%82",
+   "state": "new",
+   "name": "قیمت انواع ورق",
+   "from": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/steelchart",
+   "state": "new",
+   "name": "نمودار قیمت آهن آلات",
+   "from": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://markazeahan.com/product-category/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86-%D9%88-%D9%87%D8%A7%D8%B4/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86-16",
+   "state": "ok",
+   "name": "قیمت تیرآهن 16 امروز | تیرآهن سایز 16 تمام کارخانه ها",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86-%D9%88-%D9%87%D8%A7%D8%B4/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86",
+   "state": "ok",
+   "name": "قیمت تیرآهن امروز | خرید تیرآهن (20 آبان 1405)",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://emroozahan.com/price/beam",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanprice.com/Price/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://neginfoolad.ir/%D8%A2%D9%87%D9%86-%D8%A2%D9%84%D8%A7%D8%AA/%D8%AA%DB%8C%D8%B1-%D8%A2%D9%87%D9%86/%D9%82%DB%8C%D9%85%D8%AA-%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://alanchand.com/steel-price/beam",
+   "state": "ok",
+   "name": "قیمت تیرآهن امروز + نمودار و قیمت کارخانه‌ها | الان چند؟",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://kilooton.com/catalog/ipe",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/product-category/beams",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت تیرآهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://foolad24.com/products/rebars",
+   "state": "new",
+   "name": "قیمت میلگرد",
+   "from": "https://foolad24.com/products/rebars/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://choobro.ir/price-list-mdf",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ورق امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/product-category/sheet",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ورق امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://markazeahan.com/product-category/%D9%88%D8%B1%D9%82",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ورق امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://chardongeh.com/mdf-price-list",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ورق امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://markazeahan.com/product-category/%D9%88%D8%B1%D9%82-%D8%B3%DB%8C%D8%A7%D9%87",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ورق امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahantime.com/prices/sheet",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ورق امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D8%A7%D9%86%D9%88%D8%A7%D8%B9-%D9%BE%D8%B1%D9%88%D9%81%DB%8C%D9%84/%D9%BE%D8%B1%D9%88%D9%81%DB%8C%D9%84",
+   "state": "ok",
+   "name": "قیمت پروفیل امروز | قیمت قوطی آهن (20 آبان 1405)",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://emroozahan.com/price/iron-profile-tube/light",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sabaprofile.com/price/profile",
+   "state": "ok",
+   "name": "قیمت پروفیل امروز [20 آبان 1405] | قیمت قوطی و پروفیل آهن",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/product-category/tube",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahantime.com/prices/profile/profil-sotuni",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://markazeahan.com/product-category/%D9%82%D9%88%D8%B7%DB%8C-%D9%BE%D8%B1%D9%88%D9%81%DB%8C%D9%84",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://foolad24.com/products/profiles/box-profile/size/100x40",
+   "state": "ok",
+   "name": "قیمت قوطی و پروفیل سایز 100*40 امروز (آبان ۱۴۰۵) | فولاد ۲۴",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahantime.com/prices/profile",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://emroozahan.com/price/iron-profile-tube/heavy",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت پروفیل امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://emroozahan.com/price/pipe-price",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت لوله امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://markazeahan.com/product-category/%D9%84%D9%88%D9%84%D9%87",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت لوله امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://loolehetesalat.com/%D9%84%DB%8C%D8%B3%D8%AA-%D9%82%DB%8C%D9%85%D8%AA-%D9%84%D9%88%D9%84%D9%87-%D8%A2%D8%B0%DB%8C%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت لوله امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sepandarlooleh.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت لوله امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/product-category/pipe",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت لوله امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahantime.com/prices/pipe",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت لوله امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://hamiransteel.com/iron-tools/angle",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://markazeahan.com/product-category/%D9%86%D8%A8%D8%B4%DB%8C",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/product-category/angel",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahantaslimi.com/%D9%82%DB%8C%D9%85%D8%AA-%D9%86%D8%A8%D8%B4%DB%8C",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://kilooton.com/catalog/equal-angle",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://arazfoolad.ir/page/%D9%82%DB%8C%D9%85%D8%AA-%D9%86%D8%A8%D8%B4%DB%8C/%D9%82%DB%8C%D9%85%D8%AA-%D9%86%D8%A8%D8%B4%DB%8C",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://chakkosh.com/%D9%84%DB%8C%D8%B3%D8%AA-%D9%82%DB%8C%D9%85%D8%AA-%D9%86%D8%A8%D8%B4%DB%8C",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahaneiffel.com/page/191/%D9%82%DB%8C%D9%85%D8%AA-%D8%B1%D9%88%D8%B2-%D9%86%D8%A8%D8%B4%DB%8C",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت نبشی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://alanchand.com/steel-price/channel",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ناودانی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://kilooton.com/catalog/ue-channel",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ناودانی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://kilooton.com/catalog/upn-channel",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ناودانی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanchee.com/price-stud",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ناودانی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanjam.com/%D9%86%D8%A7%D9%88%D8%AF%D8%A7%D9%86%DB%8C",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ناودانی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/product-category/channel",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ناودانی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://hamiransteel.com/iron-tools/channel",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت ناودانی امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://markazeahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahan100.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://alanchand.com/steel-price",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ayeghariya.com/%D9%82%DB%8C%D9%85%D8%AA-%D8%A2%D9%87%D9%86-%D8%A7%D9%85%D8%B1%D9%88%D8%B2",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahantime.com/prices",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahaninja.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanvar.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن امروز",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://iran-tejarat.com/k-%D8%AE%D8%B1%DB%8C%D8%AF-%D9%88-%D9%81%D8%B1%D9%88%D8%B4-%D8%A2%D9%87%D9%86-%D8%A2%D9%84%D8%A7%D8%AA.html",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: فروش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanprice.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: فروش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://digiahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: فروش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sheypoor.com/l/%D8%A2%D9%87%D9%86_%D8%A2%D9%84%D8%A7%D8%AA",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: فروش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://emroozahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: فروش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanja.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: فروش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://alanchand.com/commodity-exchange/steel/billet",
+   "state": "new",
+   "name": "قیمت شمش فولادبورس کالا · ۱۸ آبان ۱۴۰۵",
+   "from": "https://alanchand.com/steel-price/beam",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://alanchand.com/steel-price/rebar",
+   "state": "new",
+   "name": "قیمت میلگردبازار تهران · میانهٔ ۱۴",
+   "from": "https://alanchand.com/steel-price/beam",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://alanchand.com/steel-price/black-sheet",
+   "state": "new",
+   "name": "قیمت ورق سیاهبازار تهران · میانهٔ ۳ میل",
+   "from": "https://alanchand.com/steel-price/beam",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanpakhsh.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: پخش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanpakhsh.com/iron-price-archives",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: پخش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://iromart.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: پخش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://esfahanahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: پخش آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://gahar.ir/%D9%84%DB%8C%D8%B3%D8%AA-%D9%82%DB%8C%D9%85%D8%AA-%D8%A2%D9%87%D9%86-%D8%A2%D9%84%D8%A7%D8%AA-%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86-%D8%8C-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF-%D8%8C-%D9%BE%D8%B1",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: لیست قیمت آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://torinet.ir/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: لیست قیمت آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://parsianahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: لیست قیمت آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://foolad24.com/products",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: لیست قیمت آهن آلات",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://novinpars.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://mashhad-ahan.ir/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanjavidan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://radmanahan.ir/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://behtarino.com/r/%D8%A2%D9%87%D9%86-%D9%81%D8%B1%D9%88%D8%B4%DB%8C/%D9%85%D8%B4%D9%87%D8%AF",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://asanahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sakhtemanqom.ir/%D9%84%DB%8C%D8%B3%D8%AA-%D9%88-%D8%A7%D8%B7%D9%84%D8%A7%D8%B9%D8%A7%D8%AA-%DA%A9%D8%A7%D9%85%D9%84-%D8%A2%D9%87%D9%86-%D9%81%D8%B1%D9%88%D8%B4%DB%8C-%D9%87%D8%A7%DB%8C-%D9%85%D8%B4%D9%87%D8%AF",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://digiahan.com/Storedetail/1rekr7/%D8%A2%D9%87%D9%86-%D9%81%D8%B1%D9%88%D8%B4%DB%8C-%D8%AC%D9%87%D8%A7%D9%86%DB%8C%D8%A7%D9%86-%D8%8C-%D9%85%D8%B4%D9%87%D8%AF",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی مشهد",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://tehran-ahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن تهران",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sabaprofile.com/price/scaffolding-pipe",
+   "state": "new",
+   "name": "قیمت لوله داربست",
+   "from": "https://sabaprofile.com/price/profile",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sabaprofile.com/price/gas-pipe",
+   "state": "new",
+   "name": "قیمت لوله گاز",
+   "from": "https://sabaprofile.com/price/profile",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sabaprofile.com/%D9%BE%D8%B1%D9%88%D9%81%DB%8C%D9%84-%D8%B3%D8%A8%DA%A9",
+   "state": "new",
+   "name": "قیمت پروفیل سبک",
+   "from": "https://sabaprofile.com/price/profile",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://sabaprofile.com/%D9%82%DB%8C%D9%85%D8%AA-%D9%BE%D8%B1%D9%88%D9%81%DB%8C%D9%84-%D8%B3%D8%A8%DA%A9",
+   "state": "new",
+   "name": "قیمت پروفیل مبلی",
+   "from": "https://sabaprofile.com/price/profile",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://foolad24.com/products/profiles",
+   "state": "new",
+   "name": "قیمت پروفیل",
+   "from": "https://foolad24.com/products/profiles/box-profile/size/100x40",
+   "depth": 1
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://behtarino.com/r/%D8%A2%D9%87%D9%86-%D9%81%D8%B1%D9%88%D8%B4%DB%8C/%D8%AA%D9%87%D8%B1%D8%A7%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی تهران",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahaneiffel.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی تهران",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://behtarino.com/r/%D8%A2%D9%87%D9%86-%D9%81%D8%B1%D9%88%D8%B4%DB%8C/%D8%AA%D9%87%D8%B1%D8%A7%D9%86/%D9%85%D8%B1%DA%A9%D8%B2-%D8%AA%D9%87%D8%B1%D8%A7%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی تهران",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanmehrad.ir/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی تهران",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://doctorahan.com/%D8%A2%D9%87%D9%86-%D9%81%D8%B1%D9%88%D8%B4%DB%8C-%D8%AF%D8%B1-%D8%AA%D9%87%D8%B1%D8%A7%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی تهران",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://iron-shop.ir/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: آهن فروشی تهران",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://bourse-ahan.com/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن اصفهان",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF-%D8%A7%D8%B5%D9%81%D9%87%D8%A7%D9%86",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن اصفهان",
+   "depth": 0
+  },
+  {
+   "part": 0,
+   "kind": "site",
+   "url": "https://ahanan.ir/",
+   "state": "new",
+   "name": "",
+   "from": "جستجو: قیمت آهن اصفهان",
+   "depth": 0
+  },
+  {
+   "part": 1,
+   "kind": "instagram",
+   "url": "https://www.instagram.com/ahanonline/",
+   "state": "unreadable",
+   "name": "",
+   "from": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84",
+   "depth": 1
+  },
+  {
+   "part": 1,
+   "kind": "telegram",
+   "url": "https://t.me/foolad_24",
+   "state": "new",
+   "name": "",
+   "from": "https://foolad24.com/products/rebars/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "depth": 1
+  },
+  {
+   "part": 1,
+   "kind": "instagram",
+   "url": "https://www.instagram.com/foolad24/",
+   "state": "unreadable",
+   "name": "",
+   "from": "https://foolad24.com/products/rebars/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "depth": 1
+  },
+  {
+   "part": 1,
+   "kind": "telegram",
+   "url": "https://t.me/alanchandcom",
+   "state": "new",
+   "name": "",
+   "from": "https://alanchand.com/steel-price/beam",
+   "depth": 1
+  },
+  {
+   "part": 1,
+   "kind": "instagram",
+   "url": "https://www.instagram.com/alanchandcom/",
+   "state": "unreadable",
+   "name": "",
+   "from": "https://alanchand.com/steel-price/beam",
+   "depth": 1
+  },
+  {
+   "part": 2,
+   "kind": "bale",
+   "url": "https://ble.ir/Sabaprofile_mobli",
+   "state": "new",
+   "name": "",
+   "from": "https://sabaprofile.com/price/profile",
+   "depth": 1
+  }
+ ],
+ "handedToSearcher1": [
+  {
+   "url": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "kind": "site",
+   "name": "قیمت میلگرد امروز | خرید میلگرد آجدار (20 آبان 1405)",
+   "city": "",
+   "cityBasis": "",
+   "error": "متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد."
+  },
+  {
+   "url": "https://foolad24.com/products/rebars/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF",
+   "kind": "site",
+   "name": "قیمت میلگرد امروز (آبان ۱۴۰۵) | خرید میلگرد آجدار | فولاد ۲۴",
+   "city": "",
+   "cityBasis": "",
+   "error": "متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد."
+  },
+  {
+   "url": "https://ahanonline.com/product-category/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%82%DB%8C%D9%85%D8%AA-%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF/%D9%85%DB%8C%D9%84%DA%AF%D8%B1%D8%AF-8",
+   "kind": "site",
+   "name": "قیمت میلگرد 8 امروز؛ لیست قیمت میلگرد 8 ساده و آجدار",
+   "city": "تهران",
+   "cityBasis": "پیش‌شماره تلفن ثابت",
+   "error": "متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد."
+  },
+  {
+   "url": "https://ahanonline.com/product-category/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86-%D9%88-%D9%87%D8%A7%D8%B4/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86-16",
+   "kind": "site",
+   "name": "قیمت تیرآهن 16 امروز | تیرآهن سایز 16 تمام کارخانه ها",
+   "city": "تهران",
+   "cityBasis": "پیش‌شماره تلفن ثابت",
+   "error": "متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد."
+  },
+  {
+   "url": "https://ahanonline.com/product-category/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86-%D9%88-%D9%87%D8%A7%D8%B4/%D8%AA%DB%8C%D8%B1%D8%A2%D9%87%D9%86",
+   "kind": "site",
+   "name": "قیمت تیرآهن امروز | خرید تیرآهن (20 آبان 1405)",
+   "city": "",
+   "cityBasis": "",
+   "error": "متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد."
+  },
+  {
+   "url": "https://alanchand.com/steel-price/beam",
+   "kind": "site",
+   "name": "قیمت تیرآهن امروز + نمودار و قیمت کارخانه‌ها | الان چند؟",
+   "city": "",
+   "cityBasis": "",
+   "error": "متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد."
+  },
+  {
+   "url": "https://ahanonline.com/product-category/%D8%A7%D9%86%D9%88%D8%A7%D8%B9-%D9%BE%D8%B1%D9%88%D9%81%DB%8C%D9%84/%D9%BE%D8%B1%D9%88%D9%81%DB%8C%D9%84",
+   "kind": "site",
+   "name": "قیمت پروفیل امروز | قیمت قوطی آهن (20 آبان 1405)",
+   "city": "",
+   "cityBasis": "",
+   "error": "متن پیام/ردیف قیمت در پاسخ عمومی پیدا نشد؛ داده قبلی حفظ شد."
+  },
+  {
+   "url": "https://sabaprofile.com/price/profile",
+   "kind": "site",
+   "name": "قیمت پروفیل امروز [20 آبان 1405] | قیمت قوطی و پروفیل آهن",
+   "city": "تهران",
+   "cityBasis": "پیش‌شماره تلفن ثابت (ناقص)",
+   "fetchedRows": 69,
+   "validRows": 69,
+   "categories": {
+    "پروفیل": 69
+   },
+   "cities": [
+    "تهران"
+   ]
+  }
+ ]
+}
