@@ -1,4 +1,4 @@
-# سند ساخت آیرون‌پین — نسخهٔ ۰.۹.۱
+# سند ساخت آیرون‌پین — نسخهٔ ۰.۹.۴
 
 این سند دقیقاً همان مراحلی است که برای ساخت APKهای تحویلی اجرا شده؛ اگر روی ماشین دیگری
 تکرار شود باید همان دو فایل با همان اجزا ساخته شود.
@@ -57,6 +57,67 @@ cp build/app/outputs/flutter-apk/app-release.apk \
 
 خروجی‌های تحویلی در `releases/` و با همین نام‌ها هستند؛ `.apk` در گیت ignore است و فقط
 فایل `SHA256SUMS` کامیت می‌شود.
+
+### تحویل ۰.۹.۴ — ۲۱ آبان ۱۴۰۵ (اصلاح هوش جستجوگر ۲)
+
+| فایل | معماری | حجم | sha256 |
+| --- | --- | ---: | --- |
+| `IronPin-0.9.4-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۲MB (۱۳٬۸۰۸٬۱۰۸ بایت) | `83565bef37fe923099f6be5450a5b217558bb363e9272f9d203831b15d22201f` |
+| `IronPin-0.9.4-arm64-v8a-release.apk` | ۶۴ بیتی (`arm64-v8a`) | ۱۳.۸MB (۱۴٬۴۳۶٬۹۱۰ بایت) | `71a79ef3324ec07b08a4893ca7f22e69a5ec941063f9336bd0fb2f28e2196291` |
+
+هر دو فایل در [ریلیز v0.9.4](https://github.com/alisport1384/IronPin/releases/tag/v0.9.4)
+هستند و **هر دو با همان کلید ثابت** امضا شده‌اند.
+
+بررسی‌شده روی هر دو فایل: `versionName 0.9.4`، `versionCode 26`، `minSdk 21`،
+`targetSdk 35`؛ هر فایل فقط کتابخانه‌های معماری خودش را دارد (شش کتابخانه)؛
+`assets/tessdata/fas`+`eng`؛ امضای v1 و v2 معتبر؛ نشانه‌های کد تازه (`gerdoo.me`،
+`site-table`، `mychannels.ir`) در `libapp.so`.
+
+- **همان کلید ۰.۹.۳** (`CN=IronPin Local Sideload`، اثر انگشت SHA-256
+  `dd80c370…597ddf7a`) و `versionCode` بالاتر: روی ۰.۹.۳ نصب می‌شود و داده‌ها می‌مانند. روی
+  نسخه‌های پیش از ۰.۹.۳ (کلید دیگر) باید اول پشتیبان گرفت و نسخهٔ قبلی را حذف کرد.
+- ساخت با `bash tool/build_low_memory.sh android-arm` و
+  `bash tool/build_low_memory.sh android-arm64`. در محیط تازه، بار اول نگهبان حافظه مرحلهٔ
+  گریدل را متوقف کرد (گریدل هنوز وابستگی‌ها را دانلود و آماده می‌کرد)؛ اجرای دوبارهٔ همان
+  دستور با کش آماده در ۲۱ تا ۲۷ ثانیه تمام شد. **اگر بار اول متوقف شد، همان دستور را دوباره
+  اجرا کنید.**
+- GitHub Actions هم با هر push هر دو معماری را می‌سازد و محتوایشان را بررسی می‌کند، ولی آن
+  فایل‌ها با کلید آزمایشیِ همان اجرا امضا می‌شوند؛ فایل‌های ریلیز از ساخت دستی با کلید ثابت
+  می‌آیند.
+
+### تحویل ۰.۹.۳ — ۲۰ آبان ۱۴۰۵ (هوش جستجوگر ۲)
+
+فقط معماری درخواست‌شده ساخته شد.
+
+| فایل | معماری | حجم | sha256 |
+| --- | --- | ---: | --- |
+| `IronPin-0.9.3-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۱MB (۱۳٬۷۸۲٬۵۳۴ بایت) | `5800de8e6563dc6d164efcd595f19ef3ff6d50354da9c09439b819873bcd4be7` |
+
+بررسی‌شده روی خود فایل: `versionName 0.9.3`، `versionCode 25`، `minSdk 21`، `targetSdk 35`،
+`native-code: armeabi-v7a`؛ فقط `lib/armeabi-v7a/` با `libapp.so`، `libflutter.so`،
+`libtesseract.so`، `libleptonica.so`، `libjpeg.so`، `libpngx.so`؛ `assets/tessdata/fas`+`eng`؛
+امضای v1 و v2 معتبر. نشانه‌های کد تازه (`finder.meta`، `ironpin.periodic.source-finder`،
+`html.duckduckgo.com`) در `libapp.so` هست.
+
+- امضا با کلید محلی `tool/sign_env.sh` است (`CN=IronPin Local Sideload`، اثر انگشت SHA-256
+  `dd80c370…597ddf7a`)، نه کلید آزمایشی Android و نه کلید رسمی صاحب برنامه. این کلید در پوشهٔ
+  `keys/` کنار پروژه و بیرون از گیت می‌ماند؛ ساخت‌های بعدی از همین محیط با همین کلید امضا
+  می‌شوند و روی هم نصب می‌شوند.
+- با کلید تحویل‌های قبلی یکی نیست: اول از داخل برنامه پشتیبان بگیرید، بعد نسخهٔ قبلی را حذف
+  و این را نصب کنید.
+- نسخهٔ ۶۴ بیتی ساخته نشد. با push، GitHub Actions هر دو معماری را می‌سازد.
+
+**ساخت روی میزبان ۲ گیگابایتی بدون swap.** تلاش اول (`flutter build apk` یک‌جا) ماشین را حدود
+۴۰ دقیقه قفل کرد و با کشتن فرایندها تمام شد: کامپایلر Dart و JVM گریدل با هم در حافظه جا
+نمی‌شوند. ساخت موفق دو مرحله‌ای بود — اول AOT به‌تنهایی (حدود ۳۰ ثانیه)، بعد بسته‌بندی گریدل
+(۵۹ تا ۹۱ ثانیه؛ کمترین حافظهٔ آزادِ دیده‌شده ۲۸۱MB). فایل تحویلی با همین دستور ساخته شد:
+
+```bash
+bash tool/build_low_memory.sh android-arm
+```
+
+مرحلهٔ اول همان آرگومان‌هایی را می‌دهد که افزونهٔ گریدل Flutter می‌دهد، پس گریدل خروجی را
+به‌روز می‌بیند و دوباره کامپایل نمی‌کند (پوشهٔ `.dart_tool/flutter_build/<هش>` در هر دو یکی بود).
 
 ### تحویل ۰.۹.۲ — ۲۰ آبان ۱۴۰۵
 
@@ -137,7 +198,7 @@ sha256sum releases/*.apk > releases/SHA256SUMS
 
 چه چیزی باید دیده شود:
 
-- `versionName 0.9.2`، `versionCode 24`، `sdkVersion 21`، `targetSdkVersion 35`.
+- `versionName 0.9.4`، `versionCode 26`، `sdkVersion 21`، `targetSdkVersion 35`.
 - فقط `lib/armeabi-v7a/*` در فایل ۳۲بیتی و فقط `lib/arm64-v8a/*` در فایل ۶۴بیتی،
   هر کدام شامل `libapp.so`، `libflutter.so`، `libtesseract.so`، `libleptonica.so`،
   `libjpeg.so`، `libpngx.so`.
@@ -148,7 +209,8 @@ sha256sum releases/*.apk > releases/SHA256SUMS
 
 ```bash
 flutter analyze --no-pub     # باید «No issues found!» بدهد
-flutter test                 # ۴۰۶ آزمون
+flutter test --concurrency=1 # ۴۷۳ آزمون در ۰.۹.۴
+bash tool/test_on_another_day.sh 45   # همان آزمون‌ها، انگار ۴۵ روز بعد است
 ```
 
 ## ۷) خطاهای واقعیِ دیده‌شده و درمانشان
@@ -160,6 +222,8 @@ flutter test                 # ۴۰۶ آزمون
 | `Could not find cz.adaptech...tesseract4android` | نبود مخزن JitPack | `maven { url "https://jitpack.io" }` در `android/build.gradle` |
 | `Unresolved reference: utf8Text` | نام گتر در Tesseract4Android | `engine.getUTF8Text()` |
 | `Install Android SDK Build-Tools 33/34` وسط ساخت | وابستگی AARها | اجازهٔ نصب خودکار `sdkmanager` (اتصال اینترنت در ساخت) |
+| آزمونی که دیروز سبز بود امروز می‌شکند، بدون تغییر کد | ردیفِ تاریخ‌ثابتِ fixture از پنجرهٔ زمانی بیرون رفته | پنجره را در آن آزمون باز کنید؛ با `tool/test_on_another_day.sh` بقیه را هم پیدا کنید |
+| ماشین قفل می‌شود و `Gradle task assembleRelease failed with exit code -9` | ۲GB بدون swap: کامپایلر Dart و JVM گریدل هم‌زمان | `bash tool/build_low_memory.sh android-arm` (AOT جدا، بعد گریدل، با نگهبان حافظه) |
 
 ## ۸) آنچه این سند ثابت نمی‌کند
 
