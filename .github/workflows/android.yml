@@ -130,7 +130,9 @@ jobs:
               echo "::error::$apk has the wrong versionName"; exit 1; }
             echo "$badging" | grep -q "native-code: '$1'" || {
               echo "::error::$apk does not declare $1"; exit 1; }
-            "$build_tools/apksigner" verify --print-certs "$apk" \
+            # apksigner writes the certificate block to stderr, so both
+            # streams are captured; the digest below is read from this file.
+            "$build_tools/apksigner" verify --print-certs "$apk" 2>&1 \
               | tee "apk-out/$1-certs.txt"
             echo "$apk: only $1, OCR library and language data present"
           }
@@ -151,8 +153,13 @@ jobs:
       - name: Prepare the release notes
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          cert=$(grep -m1 'Signer #1 certificate SHA-256 digest:' apk-out/armeabi-v7a-certs.txt \
-                 | sed 's/.*digest: *//')
+          cert=$(grep -m1 -i 'certificate SHA-256 digest' apk-out/armeabi-v7a-certs.txt \
+                 | sed 's/.*digest: *//' | tr -d ' ')
+          if [ -z "$cert" ]; then
+            echo "::error::the signing certificate digest was not captured"
+            exit 1
+          fi
+          sums=$(sed 's/^/`/; s/  /`  \`/; s/$/`/' apk-out/SHA256SUMS.txt)
           {
             echo "## آیرون‌پین ${IRONPIN_VERSION_FA} — هر دو معماری"
             echo
@@ -161,8 +168,11 @@ jobs:
             echo "| \`IronPin-${IRONPIN_VERSION}-armeabi-v7a-release.apk\` | ۳۲ بیتی | گوشی‌های قدیمی‌تر و ارزان‌تر | $(stat -c%s apk-out/IronPin-${IRONPIN_VERSION}-armeabi-v7a-release.apk) بایت |"
             echo "| \`IronPin-${IRONPIN_VERSION}-arm64-v8a-release.apk\` | ۶۴ بیتی | بیشتر گوشی‌های امروز | $(stat -c%s apk-out/IronPin-${IRONPIN_VERSION}-arm64-v8a-release.apk) بایت |"
             echo
-            echo "هر دو فایل از یک درخت، یک نسخهٔ Flutter و یک کلید امضا ساخته شده‌اند؛"
-            echo "هش‌ها در \`SHA256SUMS.txt\` است."
+            echo "هر دو فایل از یک درخت، یک نسخهٔ Flutter و یک کلید امضا ساخته شده‌اند."
+            echo
+            echo "هش SHA-256:"
+            echo
+            echo "$sums"
             echo
             echo "### نصب"
             echo

@@ -85,6 +85,19 @@ git tag v0.9.6 && git push origin v0.9.6
 `IronPin-0.9.6-arm64-v8a-release.apk` و `SHA256SUMS.txt`. یادداشت ریلیز (اندازه، هش‌ها،
 اثر انگشت گواهی) خودکار از همان فایل‌ها ساخته می‌شود.
 
+| فایل | معماری | حجم | sha256 |
+| --- | --- | ---: | --- |
+| `IronPin-0.9.6-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۸MB (۱۳٬۸۳۹٬۶۸۰ بایت) | `3f4012d37000f0c137cd07aa9842c1335ca47f62d669c7602d8f86ecbebe5950` |
+| `IronPin-0.9.6-arm64-v8a-release.apk` | ۶۴ بیتی (`arm64-v8a`) | ۱۴.۵MB (۱۴٬۴۶۶٬۸۸۴ بایت) | `0c47c017e70d1021822abf00efb05e98a5769c2f36fc9668b256950b40c3cea1` |
+
+بررسی‌شده با `sha256sum -c`، `keytool -printcert -jarfile` و بررسی محتوای APK در خودِ
+اجرا: `versionName 0.9.6`، `versionCode 28`، فقط کتابخانهٔ معماری خودِ هر فایل و
+`assets/tessdata/{fas,eng}`. هر دو با **یک گواهی** امضا شده‌اند:
+`CN=IronPin Sideload`، SHA-256
+`16fe4f741ea3ac5c54612fa0361a29f389ac535a9400b202329ce4bde494c4ee`. کلید در
+`.ironpin/ironpin-release.jks` (بیرون از ریپو) و در چهار secret همین ریپو نگه داشته
+می‌شود؛ تا وقتی این کلید هست، نسخه‌های بعدی روی همین نصب ارتقا می‌شوند.
+
 ### تحویل ۰.۹.۵ — ۲۱ آبان ۱۴۰۵ (سه اصلاح کاربر)
 
 | فایل | معماری | حجم | sha256 |
