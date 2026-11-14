@@ -1,25 +1,43 @@
-name: Android checks and test APKs
+name: Android checks and release APKs
+
+# One pipeline, three duties:
+#   1. every push / pull request  -> static analysis, all offline tests, both APKs
+#   2. every push / tag           -> the two APKs and SHA256SUMS.txt as artifacts
+#   3. a `v*` tag                 -> the same two files as a published release
+#
+# The release files are built here and nowhere else, so both architectures come
+# from one tree, one Flutter version and one signing key. The key lives in the
+# `IRONPIN_*` secrets; without them Gradle silently falls back to the debug key
+# (android/app/build.gradle) and a warning is printed instead of a failure.
 on:
   push:
+    branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
+
 permissions:
-  contents: read
+  contents: write
+
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: stable
           cache: true
+
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test --concurrency=1
@@ -29,7 +47,37 @@ jobs:
           version=$(sed -nE 's/^version: *([0-9.]+).*/\1/p' pubspec.yaml)
           test -n "$version"
           echo "IRONPIN_VERSION=$version" >> "$GITHUB_ENV"
+          # Persian digits for the release title and the notes.
+          python3 - "$version" <<'PY' >> "$GITHUB_ENV"
+          import sys
+          fa = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+          print("IRONPIN_VERSION_FA=" + sys.argv[1].translate(fa))
+          PY
           mkdir -p apk-out
+
+      # The same key on every run, so a new APK installs over the previous one
+      # and the local archive survives the upgrade. Base64 keeps the binary
+      # store intact through the secret store.
+      - name: Prepare the signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.IRONPIN_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.IRONPIN_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.IRONPIN_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.IRONPIN_KEY_ALIAS }}
+        run: |
+          if [ -z "${KEYSTORE_B64}" ]; then
+            echo "::warning::no IRONPIN_KEYSTORE_BASE64 secret: Gradle signs with the debug key"
+            exit 0
+          fi
+          keystore="$RUNNER_TEMP/ironpin-release.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          {
+            echo "IRONPIN_KEYSTORE=$keystore"
+            echo "IRONPIN_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "IRONPIN_KEY_ALIAS=$KEY_ALIAS"
+            echo "IRONPIN_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
 
       # One architecture per build, two builds.
       #
@@ -51,10 +99,17 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk \
              "apk-out/IronPin-${IRONPIN_VERSION}-arm64-v8a-release.apk"
 
-      # A package that carries libraries of the other architecture, or lacks the
-      # OCR library or its language data, must fail here and not on a phone.
+      # A package that carries libraries of the other architecture, lacks the
+      # OCR library or its language data, or is not signed, must fail here and
+      # not on a phone.
       - name: Check what each APK contains
         run: |
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          build_tools=$(ls -d "$sdk"/build-tools/* 2>/dev/null | sort -V | tail -1)
+          if [ -z "$build_tools" ] || [ ! -x "$build_tools/aapt2" ]; then
+            echo "::error::no aapt2 under $sdk/build-tools"
+            exit 1
+          fi
           check() {
             apk="apk-out/IronPin-${IRONPIN_VERSION}-$1-release.apk"
             unzip -Z1 "$apk" > listing.txt
@@ -70,6 +125,13 @@ jobs:
                 exit 1
               }
             done
+            badging=$("$build_tools/aapt2" dump badging "$apk")
+            echo "$badging" | grep -q "versionName='${IRONPIN_VERSION}'" || {
+              echo "::error::$apk has the wrong versionName"; exit 1; }
+            echo "$badging" | grep -q "native-code: '$1'" || {
+              echo "::error::$apk does not declare $1"; exit 1; }
+            "$build_tools/apksigner" verify --print-certs "$apk" \
+              | tee "apk-out/$1-certs.txt"
             echo "$apk: only $1, OCR library and language data present"
           }
           check armeabi-v7a
@@ -78,8 +140,53 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: IronPin-test-release-APKs
+          name: IronPin-${{ env.IRONPIN_VERSION }}-release-APKs
           path: |
             apk-out/*.apk
             apk-out/SHA256SUMS.txt
           if-no-files-found: error
+
+      # The release notes carry the measured facts of this very run: sizes,
+      # hashes and the signing certificate, all read from the files above.
+      - name: Prepare the release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cert=$(grep -m1 'Signer #1 certificate SHA-256 digest:' apk-out/armeabi-v7a-certs.txt \
+                 | sed 's/.*digest: *//')
+          {
+            echo "## آیرون‌پین ${IRONPIN_VERSION_FA} — هر دو معماری"
+            echo
+            echo "| فایل | معماری | برای | حجم |"
+            echo "| --- | --- | --- | ---: |"
+            echo "| \`IronPin-${IRONPIN_VERSION}-armeabi-v7a-release.apk\` | ۳۲ بیتی | گوشی‌های قدیمی‌تر و ارزان‌تر | $(stat -c%s apk-out/IronPin-${IRONPIN_VERSION}-armeabi-v7a-release.apk) بایت |"
+            echo "| \`IronPin-${IRONPIN_VERSION}-arm64-v8a-release.apk\` | ۶۴ بیتی | بیشتر گوشی‌های امروز | $(stat -c%s apk-out/IronPin-${IRONPIN_VERSION}-arm64-v8a-release.apk) بایت |"
+            echo
+            echo "هر دو فایل از یک درخت، یک نسخهٔ Flutter و یک کلید امضا ساخته شده‌اند؛"
+            echo "هش‌ها در \`SHA256SUMS.txt\` است."
+            echo
+            echo "### نصب"
+            echo
+            echo "۱. پیش از هر تغییری از داخل برنامه «پشتیبان کامل» بگیرید."
+            echo "۲. اگر نسخهٔ نصب‌شده با کلید دیگری امضا شده، اندروید نصب روی آن را رد می‌کند؛"
+            echo "   در آن صورت نسخهٔ قبلی را حذف کنید و بعد این فایل را نصب کنید."
+            echo "۳. بعد از نصب، همان فایل پشتیبان را بازیابی کنید."
+            echo
+            echo "### امضا"
+            echo
+            echo "گواهی SHA-256: \`${cert}\`"
+            echo
+            echo "فقط کتابخانهٔ معماری خودِ هر فایل در آن است و مدل‌های آفلاین OCR فارسی و انگلیسی"
+            echo "همراهش هست؛ هیچ کتابخانهٔ ۶۴بیتی در فایل ۳۲بیتی نیست."
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Publish both architectures on the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: آیرون‌پین ${{ env.IRONPIN_VERSION_FA }} — ARMv7 و ARM64
+          body_path: release-notes.md
+          files: |
+            apk-out/*.apk
+            apk-out/SHA256SUMS.txt
+          fail_on_unmatched_files: true
