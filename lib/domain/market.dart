@@ -95,12 +95,27 @@ DateTime? sourceDate(String raw) {
   return DateTime.tryParse(s)?.toUtc();
 }
 
+final Map<int, String> _jalaliDayCache = {};
+const int _jalaliDayCacheLimit = 1024;
+
 String dateLabel(DateTime? dt, {bool time = true}) {
   if (dt == null) return 'نامشخص';
   final ir = dt.toUtc().add(const Duration(hours: 3, minutes: 30));
-  final j = Jalali.fromDateTime(ir);
-  return faDigits(
-      '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}${time ? '  ${ir.hour.toString().padLeft(2, '0')}:${ir.minute.toString().padLeft(2, '0')}' : ''}');
+  final dayKey = ir.millisecondsSinceEpoch ~/ 86400000;
+  var dayStr = _jalaliDayCache[dayKey];
+  if (dayStr == null) {
+    final j = Jalali.fromDateTime(ir);
+    dayStr = faDigits(
+        '${j.year}/${j.month.toString().padLeft(2, '0')}/${j.day.toString().padLeft(2, '0')}');
+    if (_jalaliDayCache.length >= _jalaliDayCacheLimit) {
+      _jalaliDayCache.clear();
+    }
+    _jalaliDayCache[dayKey] = dayStr;
+  }
+  if (!time) return dayStr;
+  final hh = ir.hour.toString().padLeft(2, '0');
+  final mm = ir.minute.toString().padLeft(2, '0');
+  return '$dayStr  ${faDigits('$hh:$mm')}';
 }
 
 String unitLabel(String u) =>
@@ -124,7 +139,12 @@ String parseUnit(String v) {
   }
   if (s == 'متر') return 'm';
   if (s == 'تن') return 'ton';
-  if (s.contains('برگ')) return 'sheet';
+  if (s.contains('برگ') ||
+      RegExp(r'^(?:هر\s+|یک\s+|تک\s+)?(?:ورق|شیت|sheet)$',
+              caseSensitive: false)
+          .hasMatch(s)) {
+    return 'sheet';
+  }
   if (s.contains('رول')) return 'roll';
   return 'unknown';
 }
@@ -541,6 +561,7 @@ class MarketFilter {
           ? number(a) == number(b)
           : latin(a) == latin(b);
   bool matches(Quote q, DateTime now) {
+    if (ProductText.isNonMetal(q.title)) return false;
     final price = q.tomanFor(basis);
     return (category.isEmpty || q.category == category) &&
         (material.isEmpty || q.material == material) &&
@@ -562,6 +583,7 @@ class MarketFilter {
                 dimensions: q.dimensionsLabel,
                 grade: q.gradeLabel,
                 sellerCity: q.sellerCity,
+                material: q.material,
                 text: q.productSearchText)) &&
         (!onlyFresh || q.isFresh(now)) &&
         (!recentWeek || q.isWithinWeek(now)) &&

@@ -647,6 +647,7 @@ class Searcher {
   /// offer; it is dropped here unless the user typed it themselves and is
   /// waiting to see what the app read from their own text.
   static bool _hasSubstance(Quote q, {required bool keepManualFallback}) {
+    if (ProductText.isNonMetal('${q.title} ${q.category}')) return false;
     final product = ProductFacts.of(q).family;
     final hasProduct =
         product.isNotEmpty || ProductText.category(q.title).isNotEmpty;

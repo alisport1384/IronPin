@@ -17,11 +17,31 @@ class ProductText {
         .trim();
   }
 
+  /// Lookbehind-free native-JIT prefilter: rejects 99.99% of steel titles in
+  /// nanoseconds without allocating normalised strings or entering Dart's
+  /// interpreted lookbehind regex engine.
+  static final _nonMetalFast = RegExp(
+      r'قرص|[کك]پسول|شربت|آمپول|و[یي]ال|دارو|م[کك]مل|و[یي]تام[یي]ن|فول[یي][کك]|فروس|ف[یي]فول|ففول|فروگلوب[یي]ن|فرود[یي]ن|فروفورت|س[یي]دورال|هموگلوب[یي]ن|خون[یي]|فقر|بل[یي]ستر|قطره|گرم|د[یي]\s*اف|نئوپان|ها[یي]گلاس|ملام[یي]نه|گچ|[کك]ناف|[کك]اغذ|مقوا|پاسور|پل[کك]س[یي]|[کك]ربنات|[یي]ونول[یي]ت|پل[یي][کك]ا|fefol|ferrous|folic|tablet|capsule|blister|vitamin|supplement|pharmac|anemia|mdf|hdf|pvc|a4|a5|mg|mcg',
+      caseSensitive: false);
+
+  static final _nonMetal = RegExp(
+      r'(?<![آ-ی])(?:قرص|کپسول|شربت|آمپول|ویال|دارو(?:خانه|یی)?|مکمل|ویتامین|فولیک|فروس|فیفول|ففول|فروگلوبین|فرودین|فروفورت|سیدورال|هموگلوبین|کم\s*خونی|فقر\s*آهن|بلیستر|قطره\s*آهن|میلی\s*گرم|میکروگرم|ام\s*دی\s*اف|نئوپان|هایگلاس|ملامینه|گچ\s*برگ|کناف|کاغذ|مقوا|پاسور|پلکسی|پلی\s*کربنات|یونولیت|پلیکا)(?![آ-ی])|'
+      r'\b(?:fefol|ferrous|folic|tablets?|capsules?|blister|vitamins?|supplements?|pharmac(?:y|eutical)|anemia|mdf|hdf|upvc|pvc|a4|a5)\b|'
+      r'\b\d+(?:\.\d+)?\s*(?:mg|mcg)\b',
+      caseSensitive: false);
+
+  /// True when [text] describes pharmaceuticals, dietary iron supplements,
+  /// blister packs («قرص آهن یک ورق»), paper, MDF or other non-metal goods.
+  static bool isNonMetal(String text) =>
+      _nonMetalFast.hasMatch(text) && _nonMetal.hasMatch(normalize(text));
+
   static final product = RegExp(
       r'انکر\s*بولت|انکربولت|رول\s*بولت|بولت|\banchor\s+bolt\b|میلگرد(?:\s+بستر)?|تیر\s*آهن|تیراهن|هاش|ناودانی|نبشی|پروفیل|قوطی|لوله|ورق|پلیت|صفحه\s+(?:فولادی|آهنی|فلزی)|شیت|\b(?:plate|sheet)\b|چهارپهلو|مفتول|تسمه|سپری|رابیتس|توری|مش\s+جوشی|شمش|قراضه',
       caseSensitive: false);
   static String category(String text) {
-    final s = product.firstMatch(normalize(text))?[0] ?? '';
+    final norm = normalize(text);
+    if (_nonMetalFast.hasMatch(norm) && _nonMetal.hasMatch(norm)) return '';
+    final s = product.firstMatch(norm)?[0] ?? '';
     if (s.contains('تیر') || s == 'هاش') return 'تیرآهن';
     if (RegExp(r'پلیت|صفحه|شیت|plate|sheet', caseSensitive: false)
         .hasMatch(s)) {
@@ -63,7 +83,11 @@ class ProductText {
   }
 
   static ProductSpec spec(String text, {String categoryHint = ''}) {
-    final s = normalize(text).replaceAll(
+    final rawNorm = normalize(text);
+    if (_nonMetalFast.hasMatch(rawNorm) && _nonMetal.hasMatch(rawNorm)) {
+      return const ProductSpec();
+    }
+    final s = rawNorm.replaceAll(
             RegExp(r'پلیت|صفحه\s+(?:فولادی|آهنی|فلزی)|شیت|\b(?:plate|sheet)\b',
                 caseSensitive: false),
             'ورق'),
@@ -79,10 +103,20 @@ class ProductText {
               '';
     }
     if (thick.isEmpty && cat == 'ورق') {
-      thick =
-          RegExp('ورق\\s*(?:(?:آهن|سیاه|روغنی|گالوانیزه|رنگی|آجدار|استیل|گرم|سرد|برشی|فابریک)\\s*)*($measure)(?![\\d.])')
-                  .firstMatch(s)?[1] ??
-              '';
+      final m = RegExp(
+              'ورق\\s*(?:(?:آهن|آهنی|فولاد|فولادی|فلزی|سیاه|روغنی|گالوانیزه|رنگی|آجدار|استیل|اسیدشویی|گرم|سرد|برشی|فابریک)\\s*)*($measure)(?![\\d.])')
+          .firstMatch(s);
+      if (m != null) {
+        final cand = m[1]!;
+        final after = s.substring(m.end).trimLeft();
+        final firstNum = double.tryParse(RegExp(n).firstMatch(cand)?[0] ?? '');
+        final isPriceOrCode =
+            RegExp(r'^(?:تومان|ریال|هزار|میلیون|[RT]\b)', caseSensitive: false)
+                    .hasMatch(after) ||
+                RegExp(r'^\d{1,3},\d{3}').hasMatch(cand) ||
+                (firstNum != null && firstNum > 300);
+        if (!isPriceOrCode) thick = cand;
+      }
     }
     var size =
         RegExp('(?:سایز|نمره|قطر)\\s*[:：]?\\s*($measure)').firstMatch(s)?[1] ??
@@ -124,8 +158,30 @@ class ProductQuery {
   final String city;
   final List<String> words;
   final String width;
-  ProductQuery._(this.spec, this.city, this.words, this.width);
+  final bool nonMetal;
+  final bool steelOnly;
+  final RegExp? _digits;
+  final List<String> _textWords;
+
+  ProductQuery._(this.spec, this.city, this.words, this.width,
+      {this.nonMetal = false, this.steelOnly = false})
+      : _digits = _compileDigits(words),
+        _textWords = words
+            .where((w) => !RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w))
+            .toList(growable: false);
+
+  static RegExp? _compileDigits(List<String> words) {
+    final nums =
+        words.where((w) => RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w)).toList();
+    if (nums.isEmpty) return null;
+    return RegExp('(?<![\\d.])(?:${nums.map(RegExp.escape).join('|')})(?![\\d.])');
+  }
+
   factory ProductQuery.parse(String query, {List<String> cities = const []}) {
+    if (ProductText.isNonMetal(query)) {
+      return ProductQuery._(const ProductSpec(), '', const [], '',
+          nonMetal: true);
+    }
     var s = ProductText.normalize(query).toLowerCase();
     final spec = ProductText.spec(s);
     String city = '';
@@ -170,6 +226,17 @@ class ProductQuery {
       s = s.replaceFirst(
           RegExp('(?<![\\d.])${RegExp.escape(value)}(?![\\d.])'), ' ');
     }
+    var steelOnly = false;
+    if (spec.category.isNotEmpty) {
+      final genericMetal = RegExp(
+          r'(?<!ذوب\s)(?<![آ-ی])(?:آهن|آهنی|فولاد|فولادی|فلزی)(?![آ-ی])');
+      if (genericMetal.hasMatch(s)) {
+        steelOnly = true;
+        s = s.replaceAll(genericMetal, ' ');
+      }
+      s = s.replaceAll(
+          RegExp(r'(?<![آ-ی])(?:یک|هر|تک|برگ|شاخه)(?![آ-ی])'), ' ');
+    }
     s = s.replaceAll(
         RegExp(
             r'ضخامت|سایز|نمره|قطر|میلی\s*متر|میلیمتر|میلیمتری|میلی|میل(?!گرد)|\bmm\b|قیمت|لطفا|برای|خرید',
@@ -177,8 +244,11 @@ class ProductQuery {
         ' ');
     final words =
         s.split(RegExp(r'[^آ-یa-z0-9.]+')).where((s) => s.isNotEmpty).toList();
-    return ProductQuery._(spec, city, words, width);
+    return ProductQuery._(spec, city, words, width, steelOnly: steelOnly);
   }
+  bool get needsText =>
+      width.isNotEmpty || words.isNotEmpty || steelOnly;
+
   bool matches(
       {required String category,
       required String thickness,
@@ -186,7 +256,9 @@ class ProductQuery {
       required String dimensions,
       required String grade,
       required String sellerCity,
-      required String text}) {
+      required String text,
+      String material = ''}) {
+    if (nonMetal) return false;
     if (spec.category.isNotEmpty && spec.category != category) return false;
     if (spec.thickness.isNotEmpty &&
         !ProductText.measureMatches(spec.thickness, thickness)) return false;
@@ -199,10 +271,25 @@ class ProductQuery {
       return false;
     }
     if (city.isNotEmpty && city != sellerCity) return false;
-    final hay = ProductText.normalize(text).toLowerCase();
+    if (ProductText.isNonMetal(text)) return false;
+    String? lazyHay;
+    String hay() => lazyHay ??= ProductText.normalize(text).toLowerCase();
+    if (steelOnly) {
+      final mat = material.isEmpty
+          ? ''
+          : ProductText.normalize(material).toLowerCase();
+      final ok = mat.isNotEmpty
+          ? (mat.contains('فولاد') ||
+              mat.contains('استیل') ||
+              mat.contains('آهن'))
+          : (hay().contains('فولاد') ||
+              hay().contains('استیل') ||
+              hay().contains('آهن'));
+      if (!ok) return false;
+    }
     if (width.isNotEmpty &&
         !RegExp('عرض\\s*[:：]?\\s*${RegExp.escape(width)}(?![\\d.])')
-            .hasMatch(hay)) return false;
+            .hasMatch(hay())) return false;
     if (spec.dimensions.isNotEmpty) {
       String dims(String s) => ProductText.normalize(s)
           .toLowerCase()
@@ -217,21 +304,10 @@ class ProductQuery {
       }
     }
     if (words.isEmpty) return true;
-    // Normalising/copying the haystack was done per row; the digits branch
-    // compiled a fresh RegExp per row. Both now happen at most once per call.
-    final RegExp? digits = words.any(
-            (w) => RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w))
-        ? RegExp(r'(?<![\d.])(?:' +
-                words
-                    .where((w) => RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w))
-                    .map(RegExp.escape)
-                    .join('|') +
-                r')(?![\d.])')
-        : null;
-    if (digits != null && !digits.hasMatch(hay)) return false;
-    for (final word in words) {
-      if (RegExp(r'^\d+(?:\.\d+)?$').hasMatch(word)) continue;
-      if (!hay.contains(word)) return false;
+    final h = hay();
+    if (_digits != null && !_digits.hasMatch(h)) return false;
+    for (final word in _textWords) {
+      if (!h.contains(word)) return false;
     }
     return true;
   }

@@ -52,7 +52,11 @@ class _BackupPanelState extends State<BackupPanel> {
                   )));
       if (ok != true || !mounted || c.busy || c.transferring) return;
     }
-    c.transferState(true);
+    await c.pauseForTransfer();
+    if (!mounted) {
+      c.transferState(false);
+      return;
+    }
     setState(() {
       working = true;
       status = importing

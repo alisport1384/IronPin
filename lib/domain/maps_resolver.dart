@@ -26,7 +26,7 @@ class MapsResolver {
   MapsResolver(this.client,
       {this.timeout = const Duration(seconds: 7), this.maxHops = 5});
 
-  static const _agent = 'IronPin/0.9.5 (public link resolution)';
+  static const _agent = 'IronPin/0.9.6 (public link resolution)';
 
   /// Answers of this app run, keyed by the link as written. `null` is a real
   /// answer too ("could not be opened") and is not asked again for a while.

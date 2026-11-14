@@ -4,6 +4,7 @@ import 'market.dart';
 import 'money.dart';
 import 'price_range.dart';
 import 'product_schema.dart';
+import 'product_text.dart';
 import 'row_facts.dart';
 
 /// One comparable price row of a confirmed range answer.
@@ -36,25 +37,39 @@ class RangeRow {
 /// family test, same `ProductFacts.matches`, same 48-hour window, same one entry
 /// per announcement, newest receipt wins), then each unit is a pure projection of
 /// that set. No payload is parsed and no `Quote` is built here.
-/// The index rows of one snapshot, expanded once: every row's facts and its
-/// comparable wire form. A new question (other product, city or unit) then only
-/// filters this list instead of re-expanding every row.
+/// The index rows of one snapshot, grouped by family once and deduplicating
+/// shared row maps. Wire maps are built lazily only for rows inside the target
+/// family and time window, keeping memory bounded even at 100,000+ rows.
 class PreparedIndex {
-  final List<RowFacts> facts;
-  final List<Map<String, Object?>> wires;
-  PreparedIndex(this.facts, this.wires);
-  int get length => facts.length;
+  final int length;
+  final Map<String, List<({int source, RowFacts row})>> _byFamily;
+  PreparedIndex(List<RowFacts> facts, [List<Map<String, Object?>> _ = const []])
+      : length = facts.length,
+        _byFamily = _groupFacts(facts);
+  const PreparedIndex._(this.length, this._byFamily);
+
+  static Map<String, List<({int source, RowFacts row})>> _groupFacts(
+      List<RowFacts> facts) {
+    final out = <String, List<({int source, RowFacts row})>>{};
+    for (var i = 0; i < facts.length; i++) {
+      (out[facts[i].family] ??= []).add((source: i, row: facts[i]));
+    }
+    return out;
+  }
+
+  List<({int source, RowFacts row})> forFamily(String family) =>
+      _byFamily[family] ?? const [];
 }
 
 PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
-  final facts = <RowFacts>[];
-  final wires = <Map<String, Object?>>[];
-  for (final raw in indexRows) {
-    final row = RowFacts.fromRow(raw);
-    facts.add(row);
-    wires.add(row.toWire());
+  final cache = Map<Map<String, Object?>, RowFacts>.identity();
+  final byFamily = <String, List<({int source, RowFacts row})>>{};
+  for (var i = 0; i < indexRows.length; i++) {
+    final raw = indexRows[i];
+    final row = cache.putIfAbsent(raw, () => RowFacts.fromRow(raw));
+    (byFamily[row.family] ??= []).add((source: i, row: row));
   }
-  return PreparedIndex(facts, wires);
+  return PreparedIndex._(indexRows.length, byFamily);
 }
 
 ({List<Map<String, Object?>> rows, List<Map<String, Object?>> ranges,
@@ -68,14 +83,25 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
   required String city,
   required int nowMs,
   int windowMs = 48 * 3600 * 1000,
-}) =>
-    projectPrepared(prepare(indexRows),
-        family: family,
-        fields: fields,
-        basis: basis,
-        city: city,
-        nowMs: nowMs,
-        windowMs: windowMs);
+}) {
+  final cache = Map<Map<String, Object?>, RowFacts>.identity();
+  final matching = <({int source, RowFacts row})>[];
+  for (var i = 0; i < indexRows.length; i++) {
+    final raw = indexRows[i];
+    if (raw['family'] != family) continue;
+    final row = cache.putIfAbsent(raw, () => RowFacts.fromRow(raw));
+    matching.add((source: i, row: row));
+  }
+  return projectPrepared(
+    PreparedIndex._(indexRows.length, {if (matching.isNotEmpty) family: matching}),
+    family: family,
+    fields: fields,
+    basis: basis,
+    city: city,
+    nowMs: nowMs,
+    windowMs: windowMs,
+  );
+}
 
 /// Same answer as [project], over an index that is already expanded.
 ({List<Map<String, Object?>> rows, List<Map<String, Object?>> ranges,
@@ -101,9 +127,10 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
   // Selection is the whole local catalogue of the scope — old, undated and
   // unpriced rows included — while the statistics stay strictly 48 hours.
   final catalog = <String, ({RowFacts row, int fetchedAt})>{};
-  final facts = index.facts, wires = index.wires;
-  for (var source = 0; source < facts.length; source++) {
-    final row = facts[source];
+  final wireCache = Map<RowFacts, Map<String, Object?>>.identity();
+  for (final entry in index.forFamily(family)) {
+    final source = entry.source;
+    final row = entry.row;
     if (!row.admits(family, constraints, boundary)) continue;
     final fetchedAt = row.fetchedAt;
     // One selectable entry per stored offer, however often it was re-received.
@@ -114,8 +141,8 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
     }
     final marketAt = row.marketAt;
     if (marketAt == null || marketAt > nowMs || marketAt < since) continue;
-    final value =
-        RangeRow.of(row, source: source, basis: basis, wire: wires[source]);
+    final wire = wireCache.putIfAbsent(row, () => row.toWire());
+    final value = RangeRow.of(row, source: source, basis: basis, wire: wire);
     final previous = unique[value.key];
     if (previous == null || previous.row.fetchedAt <= row.fetchedAt) {
       unique[value.key] = (row: row, value: value);
@@ -360,6 +387,7 @@ class CandidateScope {
   final String cityKind;
   final bool onlyFresh, includeUnpriced;
   final double? minPrice, maxPrice;
+  final List<String> queryCities;
 
   const CandidateScope({
     required this.basis,
@@ -381,6 +409,7 @@ class CandidateScope {
     this.includeUnpriced = false,
     this.minPrice,
     this.maxPrice,
+    this.queryCities = const ['مشهد', 'تهران', 'اصفهان', 'تبریز', 'نیشابور'],
   });
 
   /// The columns this scope cannot decide from index values alone.
@@ -406,17 +435,9 @@ class CandidateScope {
   final since = nowMs - scope.maxAgeDays * 24 * 3600 * 1000;
   final future = nowMs + 5 * 60 * 1000;
   final basis = scope.basis;
-  final needle = specNorm(scope.query);
-  // Search words of the classic query, split and normalised once: the row is
-  // tested per word, never re-split per row.
-  final words = needle.isEmpty
-      ? const <String>[]
-      : needle.split(RegExp(r'[^آ-یa-z0-9.]+')).where((w) => w.isNotEmpty).toList();
-  final digits = words.where((w) => RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w));
-  final digitRe = digits.isEmpty
+  final intent = scope.query.trim().isEmpty
       ? null
-      : RegExp('(?<![\\d.])(?:${digits.map(RegExp.escape).join('|')})(?![\\d.])');
-  final textWords = words.where((w) => !RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w));
+      : ProductQuery.parse(scope.query, cities: scope.queryCities);
   final grade = latin(scope.grade).toUpperCase();
   final sizeWanted = number(scope.size);
   final thicknessWanted = number(scope.thickness);
@@ -435,6 +456,8 @@ class CandidateScope {
   final slot = <String, int>{};
   final held = <String, int>{};
   for (final raw in indexRows) {
+    final title = raw['title'] as String? ?? '';
+    if (ProductText.isNonMetal(title)) continue;
     final identity = '${raw['endpoint']}\u0001${raw['id']}';
     final seen = slot[identity];
     if (seen == null && !held.containsKey(identity)) {
@@ -527,13 +550,29 @@ class CandidateScope {
       continue;
     }
     if (scope.onlyFresh && !_fresh(raw, nowMs)) continue;
-    if (digitRe != null &&
-        !digitRe.hasMatch(raw['search'] as String? ?? '')) {
-      continue;
-    }
-    if (textWords.isNotEmpty &&
-        !_containsEvery(raw['search'] as String? ?? '', textWords)) {
-      continue;
+    if (intent != null) {
+      if (intent.nonMetal) continue;
+      final cat = raw['category'] as String? ?? '';
+      if (intent.spec.category.isNotEmpty && intent.spec.category != cat) {
+        continue;
+      }
+      final searchHay = intent.words.isEmpty && intent.width.isEmpty
+          ? title
+          : '${raw['search'] ?? ''} $cat ${raw['material'] ?? ''} '
+              '${raw['brand'] ?? ''} ${raw['seller_city'] ?? ''} '
+              '${raw['loading'] ?? ''} ${raw['loading_city'] ?? ''} '
+              '${raw['terms'] ?? ''} ${raw['tax'] ?? ''}';
+      if (!intent.matches(
+          category: cat,
+          thickness: raw['thickness_label'] as String? ?? '',
+          size: raw['size_label'] as String? ?? '',
+          dimensions: raw['dimensions_label'] as String? ?? '',
+          grade: raw['grade_label'] as String? ?? '',
+          sellerCity: raw['seller_city'] as String? ?? '',
+          material: raw['material'] as String? ?? '',
+          text: searchHay)) {
+        continue;
+      }
     }
     // Nothing is materialised here: the passing index rows themselves go to the
     // list, which copies the columns it draws as it renders them.
@@ -565,15 +604,6 @@ bool _fresh(Map<String, Object?> raw, int nowMs) {
   if (at == null) return false;
   final age = nowMs - at;
   return age >= -5 * 60 * 1000 && age <= 30 * 3600 * 1000;
-}
-
-/// Every search word present in the stored search text; the text was normalised
-/// with the same `specNorm` the classic query normalises with.
-bool _containsEvery(String text, Iterable<String> words) {
-  for (final word in words) {
-    if (!text.contains(word)) return false;
-  }
-  return true;
 }
 
 

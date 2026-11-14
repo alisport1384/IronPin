@@ -47,7 +47,7 @@ class _ChartPageState extends State<ChartPage> {
   void load(String id) {
     if (selected != id) historyLimit = 1000;
     selected = id;
-    final quote = widget.c.quotes.where((q) => q.id == id).firstOrNull;
+    final quote = widget.c.quoteById(id);
     loadedKey = historyKey(quote?.endpoint ?? '');
     unawaited(AppLogger.instance.record('chart', 'series_selected'));
     future = widget.c.store.history(id,
@@ -55,8 +55,7 @@ class _ChartPageState extends State<ChartPage> {
             ? null
             : DateTime.now().toUtc().subtract(Duration(days: days)),
         limit: historyLimit);
-    lastSignature =
-        widget.c.quotes.where((q) => q.id == id).firstOrNull?.signature ?? '';
+    lastSignature = quote?.signature ?? '';
   }
 
   @override
@@ -78,11 +77,25 @@ class _ChartPageState extends State<ChartPage> {
                 icon: Icons.show_chart))
       ]);
     }
-    if (!options.any((q) => q.id == selected)) {
+    Quote? found;
+    if (selected != null) {
+      final candidate = widget.c.quoteById(selected!);
+      if (candidate != null && options.contains(candidate)) {
+        found = candidate;
+      } else {
+        for (final q in options) {
+          if (q.id == selected) {
+            found = q;
+            break;
+          }
+        }
+      }
+    }
+    if (found == null) {
       selected = options.first.id;
       future = null;
     }
-    final current = options.firstWhere((q) => q.id == selected);
+    final Quote current = found ?? options.first;
     if (future == null ||
         lastSignature != current.signature ||
         loadedKey != historyKey(current.endpoint)) {
@@ -188,17 +201,18 @@ class _ChartPageState extends State<ChartPage> {
                                   SizedBox(
                                       height: 220,
                                       width: double.infinity,
-                                      child: CustomPaint(
-                                          painter: PriceChartPainter(
-                                              series
-                                                  .map((q) =>
-                                                      q.tomanFor(f.basis)!)
-                                                  .toList(),
-                                              series
-                                                  .map((q) => q.fetchedAt
-                                                      .millisecondsSinceEpoch
-                                                      .toDouble())
-                                                  .toList()))),
+                                      child: RepaintBoundary(
+                                          child: CustomPaint(
+                                              painter: PriceChartPainter(
+                                                  series
+                                                      .map((q) =>
+                                                          q.tomanFor(f.basis)!)
+                                                      .toList(),
+                                                  series
+                                                      .map((q) => q.fetchedAt
+                                                          .millisecondsSinceEpoch
+                                                          .toDouble())
+                                                      .toList())))),
                                   Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
@@ -279,6 +293,23 @@ class PriceChartPainter extends CustomPainter {
       final i = indices[j], previous = indices[j - 1];
       line.lineTo(point(i).dx, point(previous).dy);
       line.lineTo(point(i).dx, point(i).dy);
+    }
+    if (indices.length > 1) {
+      final lastPt = point(indices.last);
+      final firstPt = point(0);
+      final fill = Path.from(line)
+        ..lineTo(lastPt.dx, top + height)
+        ..lineTo(firstPt.dx, top + height)
+        ..close();
+      canvas.drawPath(
+          fill,
+          Paint()
+            ..shader = LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [teal.withOpacity(.18), teal.withOpacity(.0)])
+                .createShader(
+                    Rect.fromLTWH(left, top, width.toDouble(), height)));
     }
     canvas.drawPath(
         line,

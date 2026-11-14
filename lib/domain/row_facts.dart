@@ -110,7 +110,8 @@ class RowFacts {
   /// rebuild is a bounded upgrade, not a re-read of the archive.
   ///
   /// `v5` adds `amount_raw`, the amount as the source wrote it.
-  static const derive = 'v5';
+  /// `v6` upgrades `payloadFingerprint` to 96-bit collision-free keys.
+  static const derive = 'v6';
 
   /// True when a stored row carries every column this version writes.
   static bool isCurrent(Map<String, Object?> row) =>
@@ -143,7 +144,9 @@ class RowFacts {
       terms: q.terms,
       status: q.status,
       specification: q.specificationLabel,
-      searchText: specNorm('${q.title} ${q.specificationLabel} ${q.seller}'),
+      searchText: specNorm('${q.title} ${q.category} ${q.material} ${q.brand} '
+          '${q.specificationLabel} ${q.seller} ${q.sellerCity} '
+          '${q.loading} ${q.loadingCity} ${q.terms} ${q.tax}'),
       sourceUrl: q.sourceUrl,
       haystack: ProductText.normalize('${q.sellerCity} ${q.title} '
           '${q.specificationLabel} ${q.seller}'),
@@ -379,12 +382,21 @@ String _clean(String value) =>
 /// Stable cheap fingerprint of a payload: the index is keyed by it, so an edited
 /// payload is re-derived and an untouched one is never parsed again.
 String payloadFingerprint(String payload) {
-  var hash = 0x811c9dc5;
-  for (var i = 0; i < payload.length; i++) {
-    hash ^= payload.codeUnitAt(i);
-    hash = (hash * 0x01000193) & 0xffffffff;
+  var h1 = 0x811c9dc5;
+  var h2 = 0x9e3779b9;
+  var h3 = 0x85ebca6b;
+  final len = payload.length;
+  for (var i = 0; i < len; i++) {
+    final cu = payload.codeUnitAt(i);
+    h1 = ((h1 ^ cu) * 0x01000193) & 0xffffffff;
+    h2 = ((h2 + cu + (i & 0xff)) * 0x045d9f3b) & 0xffffffff;
+    h3 = (((h3 ^ (cu * 31)) << 5) | (h3 >>> 27)) & 0xffffffff;
+    h3 = (h3 + h1) & 0xffffffff;
   }
-  return '${payload.length.toRadixString(36)}-${hash.toRadixString(36)}';
+  return '${len.toRadixString(36)}-'
+      '${h1.toRadixString(36)}-'
+      '${h2.toRadixString(36)}-'
+      '${h3.toRadixString(36)}';
 }
 
 /// The rendered shape of a row, copied straight from the derived columns.
@@ -424,11 +436,101 @@ Map<String, Object?> wireFromRow(Map<String, Object?> row) => {
     };
 
 /// The rendered card of one **stored** row (snake_case columns), the shape the
-/// prices tab builds. The column names of the index are not the names a `Quote`
-/// reads, so the two conversions stay in one place: a card built from a stored
-/// row carries its real date, its real receipt time and its real origin link.
-Quote quoteFromStoredRow(Map<String, Object?> row) =>
-    quoteFromWire(wireFromRow(row));
+/// prices tab builds. Built directly without allocating an intermediate wire
+/// map, preserving pre-derived size/thickness/dimensions/grade labels so cards
+/// never re-run title regexes on scroll.
+Quote quoteFromStoredRow(Map<String, Object?> row) {
+  String? nonEmpty(String key) {
+    final v = row[key] as String?;
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
+  final marketAt = row['market_at'] as int?;
+  final amountRaw = row['amount_raw'] as String? ?? '';
+  return Quote(
+    id: row['id'] as String,
+    endpoint: row['endpoint'] as String,
+    seller: row['seller'] as String? ?? '',
+    sellerCity: row['seller_city'] as String? ?? '',
+    title: row['title'] as String? ?? '',
+    category: row['category'] as String? ?? '',
+    brand: row['brand'] as String? ?? '',
+    material: row['material'] as String? ?? '',
+    tax: row['tax'] as String? ?? '',
+    terms: row['terms'] as String? ?? '',
+    status: row['status'] as String? ?? '',
+    unit: row['unit'] as String? ?? '',
+    amount: (row['amount'] as num?)?.toDouble(),
+    currency: row['currency'] as String? ?? '',
+    size: nonEmpty('size_label'),
+    thickness: nonEmpty('thickness_label'),
+    dimensions: nonEmpty('dimensions_label'),
+    grade: nonEmpty('grade_label'),
+    fetchedAt: DateTime.fromMillisecondsSinceEpoch(
+        (row['fetched_at'] as int?) ?? 0,
+        isUtc: true),
+    sourceUrl: row['source_url'] as String? ?? '',
+    sourceDateRaw: row['source_date_raw'] as String? ?? '',
+    details: {
+      if (marketAt != null)
+        'زمان انتشار پیام':
+            DateTime.fromMillisecondsSinceEpoch(marketAt, isUtc: true)
+                .toIso8601String(),
+      if (amountRaw.isNotEmpty) 'مبلغ استخراج‌شده': amountRaw,
+    },
+  );
+}
+
+/// Exact equivalent of `quoteFromStoredRow(row).comparisonGroup(basis)`,
+/// computed from stored index columns without allocating a [Quote].
+String storedRowComparisonGroup(Map<String, Object?> row, String basis) {
+  final category = row['category'] as String? ?? '';
+  final material = row['material'] as String? ?? '';
+  final brand = row['brand'] as String? ?? '';
+  final title = row['title'] as String? ?? '';
+  final spec = row['specification'] as String? ?? '';
+  final id = row['id'] as String? ?? '';
+  final unit = row['unit'] as String? ?? '';
+  final amount = (row['amount'] as num?)?.toDouble();
+  final currency = row['currency'] as String? ?? '';
+  final tax = row['tax'] as String? ?? '';
+  final terms = row['terms'] as String? ?? '';
+  final hasToman = amount != null &&
+      amount.isFinite &&
+      amount > 0 &&
+      (currency == 'تومان' || currency == 'ریال');
+  return '$category | $material | '
+      '${brand.isEmpty ? 'برند نامشخص:$title' : brand} | '
+      '${spec.isEmpty ? 'مشخصات نامشخص:$id' : spec} |  |  | '
+      '${basis == 'kg' ? 'kg' : unit} | '
+      '${hasToman ? 'تومان' : currency} | $tax | $terms';
+}
+
+/// Exact equivalent of `quoteFromStoredRow(row).tomanFor(basis)`, computed
+/// directly from stored index columns without allocating a [Quote].
+double? storedRowTomanFor(Map<String, Object?> row, String basis) {
+  final amount = (row['amount'] as num?)?.toDouble();
+  final currency = row['currency'] as String? ?? '';
+  double? inToman(double? v) {
+    if (v == null || !v.isFinite || v <= 0) return null;
+    if (currency == 'تومان') return v;
+    if (currency == 'ریال') return v / 10.0;
+    return null;
+  }
+
+  if (basis == 'original') return inToman(amount);
+  final unit = row['unit'] as String? ?? '';
+  if (basis == unit) return inToman(amount);
+  if (basis == 'kg' && unit == 'ton') {
+    final t = inToman(amount);
+    return t == null ? null : t / 1000.0;
+  }
+  if (basis == 'ton' && unit == 'kg') {
+    final t = inToman(amount);
+    return t == null ? null : t * 1000.0;
+  }
+  return _unpackPrices(row['prices'] as String? ?? '')[basis];
+}
 
 /// Rebuilds a `Quote` for a row that is actually rendered, with the values the
 /// index kept; the payload is not consulted (it holds no extra visible field).

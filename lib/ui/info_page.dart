@@ -22,7 +22,7 @@ class _InfoPageState extends State<InfoPage> {
     setState(() => exporting = true);
     try {
       final destination = await AppLogger.instance.export(summary: {
-        'version': '0.9.5',
+        'version': '0.9.6',
         'windowDays': widget.c.discoveryDays,
         'pricesWindow': widget.c.pricesWindow,
         'rangeWindow': widget.c.rangeWindow,
@@ -105,6 +105,17 @@ class _InfoPageState extends State<InfoPage> {
   Widget build(BuildContext context) {
     final c = widget.c;
     final city = c.selectedCity;
+    final qNorm = query.isEmpty ? '' : latin(query);
+    final cityPattern = city.isEmpty
+        ? null
+        : RegExp('(?<![آ-یA-Za-z])${RegExp.escape(latin(city))}(?![آ-یA-Za-z])');
+    final cityUrls = city.isEmpty
+        ? const <String>{}
+        : <String>{
+            for (final e in c.availableEndpoints)
+              if (e.sellerCity == city)
+                e.url.replaceAll('/s/', '/').toLowerCase()
+          };
     bool inCity(Map row) {
       if (city.isEmpty) return true;
       final explicit = latin([
@@ -114,33 +125,29 @@ class _InfoPageState extends State<InfoPage> {
         row['name'],
         row['title']
       ].whereType<String>().join(' '));
-      if (RegExp('(?<![آ-یA-Za-z])${RegExp.escape(city)}(?![آ-یA-Za-z])')
-          .hasMatch(explicit)) return true;
+      if (cityPattern!.hasMatch(explicit)) return true;
       final url = '${row['url'] ?? ''}'.replaceAll('/s/', '/').toLowerCase();
-      return c.availableEndpoints.any((e) =>
-          e.sellerCity == city &&
-          e.url.replaceAll('/s/', '/').toLowerCase() == url);
+      return cityUrls.contains(url);
     }
 
     final offices = sellers
         .where((s) =>
             (city.isEmpty || s['city'] == city) &&
-            (query.isEmpty || latin(s.values.join(' ')).contains(latin(query))))
+            (qNorm.isEmpty || latin(s.values.join(' ')).contains(qNorm)))
         .toList()
       ..sort((a, b) =>
           (a['city'] == 'مشهد' ? 0 : 1).compareTo(b['city'] == 'مشهد' ? 0 : 1));
     final sites = (c.registry['sources'] as List? ?? [])
         .where((s) =>
             inCity(s) &&
-            (query.isEmpty ||
-                latin('${s['name']} ${s['coverage']}').contains(latin(query))))
+            (qNorm.isEmpty ||
+                latin('${s['name']} ${s['coverage']}').contains(qNorm)))
         .toList();
     // One card per name: routes that share a name — the same seller on two
     // networks — are shown under that single name, each with its own switch.
     final grouped = <String, List<SourceEndpoint>>{};
     for (final e in c.availableEndpoints.where((e) =>
-        (query.isEmpty ||
-            latin('${e.name} ${e.url}').contains(latin(query))) &&
+        (qNorm.isEmpty || latin('${e.name} ${e.url}').contains(qNorm)) &&
         (city.isEmpty || e.sellerCity == city))) {
       (grouped[e.name] ??= []).add(e);
     }
@@ -329,8 +336,8 @@ class _InfoPageState extends State<InfoPage> {
       for (final entry in grouped.entries)
         Card(
             margin: const EdgeInsets.only(bottom: 3),
-            child: ExpansionTile(
-                key: PageStorageKey('source:${entry.key}'),
+            child: _LazyExpansionTile(
+                storageKey: 'source:${entry.key}',
                 dense: true,
                 visualDensity: const VisualDensity(vertical: -4),
                 tilePadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -350,7 +357,7 @@ class _InfoPageState extends State<InfoPage> {
                     : Text('${fmt(entry.value.length)} منبع با همین نام',
                         style: const TextStyle(fontSize: 10, color: muted)),
                 childrenPadding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
+                builder: () => [
                   for (final e in entry.value) ...[
                     if (entry.value.length > 1)
                       Padding(
@@ -394,13 +401,13 @@ class _InfoPageState extends State<InfoPage> {
       for (final s in offices)
         Card(
             margin: const EdgeInsets.only(bottom: 3),
-            child: ExpansionTile(
+            child: _LazyExpansionTile(
                 dense: true,
                 visualDensity: const VisualDensity(vertical: -4),
                 title: Text('${s['name']} • ${s['city']}',
                     style: const TextStyle(fontSize: 12)),
                 childrenPadding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
+                builder: () => [
                   Text(s['address']!,
                       style: const TextStyle(fontSize: 11, height: 1.7)),
                   Text(s['status']!,
@@ -426,28 +433,28 @@ class _InfoPageState extends State<InfoPage> {
           style: TextStyle(fontSize: 11, color: muted, height: 1.8)),
       for (final s in sites)
         Card(
-            child: ExpansionTile(
+            child: _LazyExpansionTile(
                 title: Text(s['name'],
                     style: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.bold)),
                 dense: true,
                 visualDensity: const VisualDensity(vertical: -4),
                 childrenPadding: const EdgeInsets.all(16),
-                children: [
-              Text(s['priority'],
-                  style: const TextStyle(fontSize: 10, color: muted)),
-              Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(s['coverage'],
-                      style: const TextStyle(fontSize: 12, height: 1.8))),
-              const SizedBox(height: 8),
-              Text(s['note'],
-                  style: const TextStyle(fontSize: 12, height: 1.8)),
-              TextButton.icon(
-                  onPressed: () => openLink(context, s['url']),
-                  icon: const Icon(Icons.open_in_new, size: 17),
-                  label: const Text('بازکردن منبع'))
-            ])),
+                builder: () => [
+                  Text(s['priority'],
+                      style: const TextStyle(fontSize: 10, color: muted)),
+                  Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(s['coverage'],
+                          style: const TextStyle(fontSize: 12, height: 1.8))),
+                  const SizedBox(height: 8),
+                  Text(s['note'],
+                      style: const TextStyle(fontSize: 12, height: 1.8)),
+                  TextButton.icon(
+                      onPressed: () => openLink(context, s['url']),
+                      icon: const Icon(Icons.open_in_new, size: 17),
+                      label: const Text('بازکردن منبع'))
+                ])),
       const SizedBox(height: 24),
       const Text('پیام‌رسان‌های ایران و راه‌های فروش',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
@@ -467,17 +474,17 @@ class _InfoPageState extends State<InfoPage> {
           (x) =>
               (platform.isEmpty || x['platform'] == platform) &&
               (city.isEmpty || (x['city'] ?? 'نامشخص') == city) &&
-              (query.isEmpty ||
-                  latin('${x['owner']} ${x['url']}').contains(latin(query)))))
+              (qNorm.isEmpty ||
+                  latin('${x['owner']} ${x['url']}').contains(qNorm))))
         Card(
             margin: const EdgeInsets.only(bottom: 3),
-            child: ExpansionTile(
+            child: _LazyExpansionTile(
                 dense: true,
                 visualDensity: const VisualDensity(vertical: -4),
                 title: Text('${ch['owner']} • ${ch['platform']}',
                     style: const TextStyle(fontSize: 12)),
                 childrenPadding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
+                builder: () => [
                   Text(
                       '${ch['city'] ?? 'نامشخص'} • ${ch['kind'] ?? 'لینک معرفی‌شده'}\n${ch['status']}',
                       style: const TextStyle(fontSize: 11, height: 1.7)),
@@ -485,27 +492,34 @@ class _InfoPageState extends State<InfoPage> {
                       onPressed: () => openLink(context, ch['url']),
                       child: const Text('بازکردن منبع'))
                 ])),
-      ExpansionTile(title: const Text('کانال‌های تلگرام تحقیق'), children: [
-        for (final ch in (c.registry['telegram_channels'] as List? ?? [])
-            .where((x) => inCity(x)))
-          ListTile(
-              title: Text('${ch['owner']} / ${ch['handle']}',
-                  style: const TextStyle(fontSize: 12)),
-              subtitle: Text(
-                  '${ch['coverage']}\n${ch['status']} • مشاهده تحقیق: ${ch['latest_visible_date']}',
-                  style: const TextStyle(fontSize: 10)),
-              trailing: const Icon(Icons.open_in_new, size: 16),
-              onTap: () => openLink(context, ch['url']))
-      ]),
-      ExpansionTile(title: const Text('لینک‌های محصول و کارخانه'), children: [
-        for (final p in (c.registry['product_pages'] as List? ?? [])
-            .where((x) => inCity(x)))
-          ListTile(
-              title: Text(p['title'], style: const TextStyle(fontSize: 12)),
-              subtitle: Text(p['group'], style: const TextStyle(fontSize: 10)),
-              trailing: const Icon(Icons.open_in_new, size: 16),
-              onTap: () => openLink(context, p['url']))
-      ]),
+      _LazyExpansionTile(
+          title: const Text('کانال‌های تلگرام تحقیق'),
+          builder: () => [
+                for (final ch
+                    in (c.registry['telegram_channels'] as List? ?? [])
+                        .where((x) => inCity(x)))
+                  ListTile(
+                      title: Text('${ch['owner']} / ${ch['handle']}',
+                          style: const TextStyle(fontSize: 12)),
+                      subtitle: Text(
+                          '${ch['coverage']}\n${ch['status']} • مشاهده تحقیق: ${ch['latest_visible_date']}',
+                          style: const TextStyle(fontSize: 10)),
+                      trailing: const Icon(Icons.open_in_new, size: 16),
+                      onTap: () => openLink(context, ch['url']))
+              ]),
+      _LazyExpansionTile(
+          title: const Text('لینک‌های محصول و کارخانه'),
+          builder: () => [
+                for (final p in (c.registry['product_pages'] as List? ?? [])
+                    .where((x) => inCity(x)))
+                  ListTile(
+                      title: Text(p['title'],
+                          style: const TextStyle(fontSize: 12)),
+                      subtitle: Text(p['group'],
+                          style: const TextStyle(fontSize: 10)),
+                      trailing: const Icon(Icons.open_in_new, size: 16),
+                      onTap: () => openLink(context, p['url']))
+              ]),
       const SizedBox(height: 20),
       infoBox('حریم خصوصی و اعتبار',
           'بدون ورود، بدون توکن GitHub، بدون ارسال تاریخچه به سرور پروژه. اتصال مستقیم به سایت‌ها IP دستگاه را در اختیار همان سایت می‌گذارد. برای خرید، واحد، مالیات، موجودی، تسویه و حمل را با فروشنده تایید کنید.'),
@@ -513,12 +527,66 @@ class _InfoPageState extends State<InfoPage> {
           onPressed: () => showLicensePage(
               context: context,
               applicationName: 'IronPin',
-              applicationVersion: '0.9.5'),
+              applicationVersion: '0.9.6'),
           child: const Text('مجوزهای نرم‌افزار و داده')),
-      const Text('IronPin 0.9.5 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
+      const Text('IronPin 0.9.6 • تحلیل محلی • پژوهش: ۱۶ آبان ۱۴۰۵',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: muted)),
       const SizedBox(height: 18),
     ]);
+  }
+}
+
+class _LazyExpansionTile extends StatefulWidget {
+  final String? storageKey;
+  final Widget title;
+  final Widget? subtitle;
+  final Widget? leading;
+  final bool dense;
+  final VisualDensity? visualDensity;
+  final EdgeInsetsGeometry? tilePadding;
+  final EdgeInsetsGeometry? childrenPadding;
+  final List<Widget> Function() builder;
+
+  const _LazyExpansionTile({
+    this.storageKey,
+    required this.title,
+    this.subtitle,
+    this.leading,
+    this.dense = false,
+    this.visualDensity,
+    this.tilePadding,
+    this.childrenPadding,
+    required this.builder,
+  });
+
+  @override
+  State<_LazyExpansionTile> createState() => _LazyExpansionTileState();
+}
+
+class _LazyExpansionTileState extends State<_LazyExpansionTile> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final stored = widget.storageKey == null
+        ? null
+        : PageStorage.maybeOf(context)
+            ?.readState(context, identifier: PageStorageKey(widget.storageKey!));
+    final open = _expanded || stored == true;
+    return ExpansionTile(
+      key: widget.storageKey == null ? null : PageStorageKey(widget.storageKey!),
+      dense: widget.dense,
+      visualDensity: widget.visualDensity,
+      tilePadding: widget.tilePadding,
+      childrenPadding: widget.childrenPadding,
+      leading: widget.leading,
+      title: widget.title,
+      subtitle: widget.subtitle,
+      onExpansionChanged: (v) {
+        if (_expanded != v) setState(() => _expanded = v);
+      },
+      children: open ? widget.builder() : const <Widget>[],
+    );
   }
 }

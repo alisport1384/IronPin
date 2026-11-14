@@ -436,17 +436,14 @@ class SourceFinder {
 
   Future<void> load({bool force = false}) async {
     if (_loaded && !force) return;
-    final values = <String, String?>{};
-    for (final key in FinderState.settingKeys) {
-      values[key] = await store.setting(key);
-    }
+    final found = await store.settingsMap(FinderState.settingKeys);
+    final values = <String, String?>{
+      for (final key in FinderState.settingKeys) key: found[key]
+    };
     state = FinderState.fromSettings(values);
     _stored
       ..clear()
-      ..addAll({
-        for (final e in values.entries)
-          if (e.value != null) e.key: e.value!
-      });
+      ..addAll(found);
     _loaded = true;
   }
 
@@ -468,7 +465,10 @@ class SourceFinder {
 
   Future<void> _saving = Future<void>.value();
 
-  /// Writes only what changed; the small record with the revision goes last.
+  /// Waits for any queued persistence transaction to finish before backup/close.
+  Future<void> flush() => _saving.catchError((Object _) {});
+
+  /// Writes all changed keys atomically inside one SQLite transaction.
   /// Saves are queued one behind the other, so a verdict recorded by a
   /// refresh and a step finishing at the same moment cannot interleave.
   Future<void> save() {
@@ -476,12 +476,15 @@ class SourceFinder {
     state.writer = _writer;
     final values = state.toSettings();
     return _saving = _saving.catchError((Object _) {}).then((_) async {
+      final changed = <String, String>{};
       for (final key in FinderState.settingKeys.reversed) {
         final value = values[key]!;
         if (_stored[key] == value) continue;
-        await store.setSetting(key, value);
-        _stored[key] = value;
+        changed[key] = value;
       }
+      if (changed.isEmpty) return;
+      await store.setSettings(changed);
+      _stored.addAll(changed);
     });
   }
 
@@ -1039,19 +1042,7 @@ class SourceFinder {
 
   /// The source the app reads for an entry: the app's own channel reader for
   /// a channel, the heading-owned table reader for a website page.
-  SourceEndpoint? endpointOf(FinderEntry e) {
-    final city = e.city.isEmpty ? 'نامشخص' : e.city;
-    if (e.kind == 'site') {
-      // The seller is named by what the site calls itself, else by its host:
-      // a page title is a sentence about one product, not a seller's name.
-      return SourceEndpoint('finder-site-${finderHash(e.url)}',
-          e.site.isEmpty ? e.host : e.site, e.url, 'عمومی', 'site-table', city,
-          defaultEnabled: false);
-    }
-    if (!e.readable) return null;
-    return publicChannel(e.url,
-        name: e.name.isEmpty ? null : e.name, city: city);
-  }
+  SourceEndpoint? endpointOf(FinderEntry e) => finderEndpointOf(e);
 
   /// Sources هوش جستجوگر ۱ has already accepted.
   List<SourceEndpoint> acceptedEndpoints({bool onlyUnapplied = false}) => [
@@ -1113,7 +1104,7 @@ class SourceFinder {
   String report() {
     final s = state, now = _now(), b = StringBuffer();
     String ago(int at) => at == 0 ? '-' : '${(now - at) ~/ 60}m';
-    b.writeln('IronPin 0.9.5 finder • round ${s.round + 1} • '
+    b.writeln('IronPin 0.9.6 finder • round ${s.round + 1} • '
         'started ${ago(s.startedAt)} • online ${ago(s.lastOnlineAt)} • '
         'step ${ago(s.lastStepAt)}');
     b.writeln('questions answered ${s.searches} • pages read ${s.pages} • '
@@ -1158,6 +1149,19 @@ class SourceFinder {
     if (s.lastError.isNotEmpty) b.writeln('last: ${s.lastError}');
     return b.toString().trimRight();
   }
+}
+
+/// Maps one verified [FinderEntry] to the [SourceEndpoint] the app reads.
+SourceEndpoint? finderEndpointOf(FinderEntry e) {
+  final city = e.city.isEmpty ? 'نامشخص' : e.city;
+  if (e.kind == 'site') {
+    return SourceEndpoint('finder-site-${finderHash(e.url)}',
+        e.site.isEmpty ? e.host : e.site, e.url, 'عمومی', 'site-table', city,
+        defaultEnabled: false);
+  }
+  if (!e.readable) return null;
+  return publicChannel(e.url,
+      name: e.name.isEmpty ? null : e.name, city: city);
 }
 
 /// Hands waiting entries to هوش جستجوگر ۱: each is read with the app's own

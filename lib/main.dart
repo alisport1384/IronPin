@@ -285,11 +285,12 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
                                     : reason)));
                           },
                     icon: c.busy
-                        ? const SizedBox(
-                            height: 21,
-                            width: 21,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white70))
+                        ? const RepaintBoundary(
+                            child: SizedBox(
+                                height: 21,
+                                width: 21,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white70)))
                         : const Icon(Icons.sync)),
                 const SizedBox(width: 8)
               ],
@@ -311,15 +312,22 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
                                       color: Colors.white70, fontSize: 10),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis)),
-                          const Text('بدون سرور',
-                              style: TextStyle(
-                                  fontSize: 10, color: Colors.white54))
+                          Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                  color: Colors.white10,
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: const Text('بدون سرور',
+                                  style: TextStyle(
+                                      fontSize: 10, color: Colors.white60)))
                         ])),
                     if (c.busy)
-                      const LinearProgressIndicator(
-                          minHeight: 2,
-                          backgroundColor: ink,
-                          color: Color(0xff7bddca))
+                      const RepaintBoundary(
+                          child: LinearProgressIndicator(
+                              minHeight: 2,
+                              backgroundColor: ink,
+                              color: Color(0xff7bddca)))
                   ]))),
           body: SafeArea(
               child: IndexedStack(index: tab, children: [

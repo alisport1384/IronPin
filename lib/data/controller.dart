@@ -7,6 +7,7 @@ import '../domain/maps_resolver.dart';
 import '../domain/ocr.dart';
 import '../domain/photo_scan.dart';
 import '../domain/range_projection.dart';
+import '../domain/row_facts.dart';
 import '../domain/searcher.dart';
 import '../domain/range_worker.dart';
 import 'range_session.dart';
@@ -140,7 +141,7 @@ class MarketController extends ChangeNotifier {
       final report = await finder.runSlice(
           maxSteps: maxSteps,
           budget: const Duration(seconds: 60),
-          cancelled: () => disposed || busy);
+          cancelled: () => disposed || busy || transferring);
       finderReport = report;
       if (report.steps > 0) {
         unawaited(AppLogger.instance.record('discovery', 'finder_slice', {
@@ -188,7 +189,7 @@ class MarketController extends ChangeNotifier {
           windowDays: discoveryDays,
           limit: limit,
           photos: photoScanner,
-          cancelled: () => disposed || _stopDelivery);
+          cancelled: () => disposed || _stopDelivery || transferring);
       if (accepted > 0) {
         await applyFinderAccepted();
         rangeSession.invalidate();
@@ -427,19 +428,36 @@ class MarketController extends ChangeNotifier {
 
   Future<void> init() async {
     await AppLogger.instance.checkpoint('startup');
-    filter.city = await store.setting('selectedCity') ?? '';
+    final cfg = await store.settingsMap(const [
+      'selectedCity',
+      'windowDays',
+      'windowDays:prices',
+      'windowDays:range',
+      'windowDays:chart',
+      'loggingEnabled',
+      'discoveredSources',
+      'finder.enabled',
+      'enabled',
+      'sourcesVersion',
+      'analysisSourcesVersion',
+      'sheetSourcesVersion',
+      'allRegisteredSourcesEnabledVersion',
+      'mashhadSourcesVersion',
+      'autoRefresh',
+      'scanIntervalMinutes',
+      'lastRefresh',
+      'lastBackgroundScan',
+      'lastBackgroundScanCount',
+    ]);
+    filter.city = cfg['selectedCity'] ?? '';
     filter.cityKind = 'all';
-    discoveryDays = int.tryParse(await store.setting('windowDays') ?? '') ??
-        defaultWindowDays;
+    discoveryDays = int.tryParse(cfg['windowDays'] ?? '') ?? defaultWindowDays;
     if (discoveryDays < 0) discoveryDays = defaultWindowDays;
-    pricesDays =
-        int.tryParse(await store.setting('windowDays:prices') ?? '') ?? -1;
-    rangeDays =
-        int.tryParse(await store.setting('windowDays:range') ?? '') ?? -1;
-    chartDays =
-        int.tryParse(await store.setting('windowDays:chart') ?? '') ?? -1;
+    pricesDays = int.tryParse(cfg['windowDays:prices'] ?? '') ?? -1;
+    rangeDays = int.tryParse(cfg['windowDays:range'] ?? '') ?? -1;
+    chartDays = int.tryParse(cfg['windowDays:chart'] ?? '') ?? -1;
     filter.windowDays = pricesWindow;
-    loggingEnabled = await store.setting('loggingEnabled') == 'true';
+    loggingEnabled = cfg['loggingEnabled'] == 'true';
     await AppLogger.instance.setEnabled(loggingEnabled);
     registry = jsonDecode(await rootBundle.loadString('assets/registry.json'));
     final cityData =
@@ -449,7 +467,7 @@ class MarketController extends ChangeNotifier {
     cities.insert(0, 'مشهد');
     client.cityNames = cities;
     filter.queryCities = cities;
-    final savedLinks = await store.setting('discoveredSources');
+    final savedLinks = cfg['discoveredSources'];
     if (savedLinks != null) {
       try {
         await rememberSources((jsonDecode(savedLinks) as List)
@@ -460,14 +478,18 @@ class MarketController extends ChangeNotifier {
         AppLogger.instance.capture(error, stack, section: 'discovery');
       }
     }
-    finderEnabled = await store.setting('finder.enabled') != 'false';
+    final finderEnabledRaw = cfg['finder.enabled'];
+    finderEnabled = finderEnabledRaw != 'false';
+    if (finderEnabledRaw == null) {
+      await store.setSetting('finder.enabled', '$finderEnabled');
+    }
     try {
       await finder.load(force: true);
       finderSources = finder.acceptedEndpoints();
     } catch (error, stack) {
       AppLogger.instance.capture(error, stack, section: 'finder');
     }
-    final setting = await store.setting('enabled');
+    final setting = cfg['enabled'];
     if (setting != null) {
       enabled = (jsonDecode(setting) as List)
           .cast<String>()
@@ -480,45 +502,45 @@ class MarketController extends ChangeNotifier {
     } catch (error, stack) {
       AppLogger.instance.capture(error, stack, section: 'finder');
     }
-    if (await store.setting('sourcesVersion') != '2') {
+    final upgradeWrites = <String, String>{};
+    if (cfg['sourcesVersion'] != '2') {
       enabled.addAll(
           ['telegram-mashhad', 'telegram-ahanresan', 'telegram-ahanemashhad']);
-      await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('sourcesVersion', '2');
+      upgradeWrites['sourcesVersion'] = '2';
     }
-    if (await store.setting('analysisSourcesVersion') != '1') {
+    if (cfg['analysisSourcesVersion'] != '1') {
       enabled
           .addAll(['public-eitaa-modiranahan', 'public-bale-novinparsgroup']);
-      await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('analysisSourcesVersion', '1');
+      upgradeWrites['analysisSourcesVersion'] = '1';
     }
-    if (await store.setting('sheetSourcesVersion') != '1') {
+    if (cfg['sheetSourcesVersion'] != '1') {
       enabled.addAll(['fardad-sheet', 'mashhad-sheet']);
-      await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('sheetSourcesVersion', '1');
+      upgradeWrites['sheetSourcesVersion'] = '1';
     }
     // Explicit user request: all curated sources ON, once on upgrade.
     // Unreviewed discovered links are candidates, not confirmed source adapters.
-    if (await store.setting('allRegisteredSourcesEnabledVersion') != '4') {
+    if (cfg['allRegisteredSourcesEnabledVersion'] != '4') {
       enabled.addAll(endpoints.map((e) => e.id));
-      await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('allRegisteredSourcesEnabledVersion', '4');
+      upgradeWrites['allRegisteredSourcesEnabledVersion'] = '4';
     }
     // Add only the eight newly requested routes once; preserve old OFF choices.
-    if (await store.setting('mashhadSourcesVersion') != '072') {
+    if (cfg['mashhadSourcesVersion'] != '072') {
       enabled.addAll(mashhadV072EndpointIds);
-      await store.setSetting('enabled', jsonEncode(enabled.toList()));
-      await store.setSetting('mashhadSourcesVersion', '072');
+      upgradeWrites['mashhadSourcesVersion'] = '072';
     }
-    autoRefresh = await store.setting('autoRefresh') == 'true';
+    if (upgradeWrites.isNotEmpty) {
+      upgradeWrites['enabled'] = jsonEncode(enabled.toList());
+      await store.setSettings(upgradeWrites);
+    }
+    autoRefresh = cfg['autoRefresh'] == 'true';
     scanIntervalMinutes =
-        int.tryParse(await store.setting('scanIntervalMinutes') ?? '') ?? 30;
+        int.tryParse(cfg['scanIntervalMinutes'] ?? '') ?? 30;
     if (![15, 30, 60].contains(scanIntervalMinutes)) scanIntervalMinutes = 30;
-    lastRefreshAt = DateTime.tryParse(await store.setting('lastRefresh') ?? '')
-        ?.toLocal();
-    lastBackgroundScan = await store.setting('lastBackgroundScan');
+    lastRefreshAt =
+        DateTime.tryParse(cfg['lastRefresh'] ?? '')?.toLocal();
+    lastBackgroundScan = cfg['lastBackgroundScan'];
     lastBackgroundScanCount =
-        int.tryParse(await store.setting('lastBackgroundScanCount') ?? '') ?? 0;
+        int.tryParse(cfg['lastBackgroundScanCount'] ?? '') ?? 0;
     try {
       await BackgroundScanScheduler.configure(
           enabled: autoRefresh, intervalMinutes: scanIntervalMinutes);
@@ -558,26 +580,74 @@ class MarketController extends ChangeNotifier {
     _notify();
   }
 
+  int _quotesMetaIdentity = 0;
+  Map<String, Quote> _quotesById = const {};
+  List<String> _availableCategories = const [];
+  List<String> _availableMaterials = const [];
+
+  void _ensureQuotesMeta() {
+    final id = identityHashCode(quotes);
+    if (id == _quotesMetaIdentity && _quotesById.length == quotes.length) return;
+    _quotesMetaIdentity = id;
+    final byId = <String, Quote>{};
+    final cats = <String>{};
+    final mats = <String>{};
+    for (final q in quotes) {
+      byId[q.id] = q;
+      if (q.category.isNotEmpty) cats.add(q.category);
+      if (q.material.isNotEmpty) mats.add(q.material);
+    }
+    _quotesById = byId;
+    _availableCategories = cats.toList()..sort();
+    _availableMaterials = mats.toList()..sort();
+  }
+
+  /// O(1) lookup by offer ID, avoiding linear scans of 50,000+ quotes on UI builds.
+  Quote? quoteById(String id) {
+    _ensureQuotesMeta();
+    return _quotesById[id];
+  }
+
+  List<String> get availableCategories {
+    _ensureQuotesMeta();
+    return _availableCategories;
+  }
+
+  List<String> get availableMaterials {
+    _ensureQuotesMeta();
+    return _availableMaterials;
+  }
+
+  List<Quote>? _chartOptionsCache;
+  String _chartOptionsKey = '';
+
   /// Every stored offer that has a real price in the chart basis, deduplicated
-  /// by id, with the current feed rows first. Selecting one never invents a
-  /// price: a row without a comparable amount stays out.
+  /// by id, with the current feed rows first. Memoized per archive revision,
+  /// basis, window, and minute bucket so [ChartPage] builds in O(1).
   List<Quote> get chartOptions {
+    final now = DateTime.now().toUtc();
+    final key = '${identityHashCode(quotes)}\u0001${quotes.length}'
+        '\u0001${filter.basis}\u0001$chartWindow'
+        '\u0001$_filterKey\u0001${now.millisecondsSinceEpoch ~/ 60000}';
+    final cached = _chartOptionsCache;
+    if (cached != null && key == _chartOptionsKey) return cached;
     final basis = filter.basis;
     final seen = <String>{};
     final options = <Quote>[];
-    final now = DateTime.now().toUtc();
     void add(Iterable<Quote> source) {
       for (final q in source) {
-        // Only rows inside the chart's own window: the tab shows what was stored
-        // in the selected window, exactly like the other tabs.
         if (!insideWindow(q, now, chartWindow)) continue;
         if (q.tomanFor(basis) == null) continue;
         if (seen.add(q.id)) options.add(q);
       }
     }
 
-    add(filtered);
+    if (quotes.length <= 200 || _filterKey == _currentFilterKey) {
+      add(filtered);
+    }
     add(quotes);
+    _chartOptionsCache = options;
+    _chartOptionsKey = key;
     return options;
   }
 
@@ -586,12 +656,8 @@ class MarketController extends ChangeNotifier {
   CandidateSet? candidates;
   String _candidateKey = '';
   String _preparingCandidateKey = '';
+  Future<void>? _preparingFuture;
 
-  /// The rows the prices tab shows: the prepared candidate set when it is ready
-  /// and still matches the current basis/search, otherwise the classic filter
-  /// (used for selections, price bounds and sorting, which the index path does
-  /// not replace). If the index path fails, this is the same answer the app has
-  /// always given — it is the fallback, not a different result.
   List<Quote>? _rowCache;
   String _rowCacheKey = '';
 
@@ -610,27 +676,32 @@ class MarketController extends ChangeNotifier {
   List<Quote> get candidateRows {
     final c = candidates;
     if (c == null || _candidateKey != _currentCandidateKey) return filtered;
-    // Building and sorting thousands of rows is done once per scope and sort,
-    // never once per frame.
+    final f = filter;
     final key = '$_candidateKey\u0001${c.total}\u0001${c.quotes.length}'
-        '\u0001${filter.sort}'
-        '\u0001${filter.mashhadFirst}\u0001${filter.minPrice}'
-        '\u0001${filter.maxPrice}\u0001${filter.onlyFresh}';
+        '\u0001${f.sort}\u0001${f.mashhadFirst}';
     final cached = _rowCache;
     if (cached != null && key == _rowCacheKey) return cached;
-    // A newest-first order is a date order, and the selection is already in that
-    // order, so a page is enough. A price order is not: the cheapest offer of the
-    // scope may be the last row of it, so the whole selection is built once before
-    // it is sorted — the only case where the tab builds every row.
-    if (filter.sort != 'latest') c.extend(c.total);
-    final now = DateTime.now();
-    final list = _sortCandidates(c.quotes, now);
-    final f = filter;
-    // The classic filter has already been applied to the selection, so only the
-    // fields it owns alone (the bounds and the freshness switch) are re-run here.
-    final rows = f.minPrice == null && f.maxPrice == null && !f.onlyFresh
-        ? list
-        : f.apply(list, now);
+
+    List<Quote> rows;
+    if (f.sort == 'latest' && !f.mashhadFirst) {
+      // `CandidateSet` is already ordered newest-first (`market_at DESC, id ASC`)
+      // and already filtered by `selectCandidates` (including price bounds and
+      // freshness). Returning the built page directly is O(1).
+      rows = List<Quote>.unmodifiable(c.quotes);
+    } else if (c.wires.isNotEmpty) {
+      // Sort raw index maps directly without materialising off-screen `Quote`
+      // objects; wrap in `LazyQuoteList` so `rows.length` is exact and only
+      // visible rows on screen construct `Quote` instances.
+      final sorted = _sortCandidateWires(c.wires);
+      rows = f.sort == 'latest'
+          ? LazyQuoteList(sorted.length > c.quotes.length
+              ? sorted.sublist(0, c.quotes.length)
+              : sorted)
+          : LazyQuoteList(sorted);
+    } else {
+      if (f.sort != 'latest') c.extend(c.total);
+      rows = _sortCandidates(c.quotes, DateTime.now());
+    }
     _rowCache = rows;
     _rowCacheKey = key;
     return rows;
@@ -652,11 +723,65 @@ class MarketController extends ChangeNotifier {
         filter.unit,
         filter.recentWeek,
         filter.includeUnpriced,
+        filter.onlyFresh,
+        filter.minPrice,
+        filter.maxPrice,
         filter.windowDays,
         quotes.length,
         identityHashCode(quotes),
         historyRevision,
       ].join('\u0001');
+
+  List<Map<String, Object?>> _sortCandidateWires(
+      List<Map<String, Object?>> wires) {
+    final f = filter;
+    final n = wires.length;
+    if (n <= 1) return wires;
+    final order = List<int>.generate(n, (i) => i);
+    if (f.sort == 'latest') {
+      order.sort((ia, ib) {
+        final a = wires[ia], b = wires[ib];
+        final byDate = ((b['market_at'] as int?) ?? 0)
+            .compareTo((a['market_at'] as int?) ?? 0);
+        if (byDate != 0) return byDate;
+        if (f.mashhadFirst) {
+          final city = (a['seller_city'] == 'مشهد' ? 0 : 1)
+              .compareTo(b['seller_city'] == 'مشهد' ? 0 : 1);
+          if (city != 0) return city;
+        }
+        return '${a['id']}'.compareTo('${b['id']}');
+      });
+      return [for (final i in order) wires[i]];
+    }
+    final basis = f.basis;
+    final desc = f.sort == 'desc';
+    final mashhadFirst = f.mashhadFirst;
+    final groups = List<String>.generate(
+        n, (i) => storedRowComparisonGroup(wires[i], basis));
+    final prices = List<double?>.generate(
+        n, (i) => storedRowTomanFor(wires[i], basis));
+    order.sort((ia, ib) {
+      final group = groups[ia].compareTo(groups[ib]);
+      if (group != 0) return group;
+      final a = wires[ia], b = wires[ib];
+      if (mashhadFirst) {
+        final p = (a['seller_city'] == 'مشهد' ? 0 : 1)
+            .compareTo(b['seller_city'] == 'مشهد' ? 0 : 1);
+        if (p != 0) return p;
+      }
+      final pa = prices[ia], pb = prices[ib];
+      if (pa == null && pb == null) {
+        return (a['title'] as String? ?? '')
+            .compareTo(b['title'] as String? ?? '');
+      }
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      final cmp = pa.compareTo(pb);
+      final dir = desc ? -cmp : cmp;
+      return dir != 0 ? dir : '${a['id']}'.compareTo('${b['id']}');
+    });
+    return [for (final i in order) wires[i]];
+  }
 
   List<Quote> _sortCandidates(List<Quote> rows, DateTime now) {
     final list = rows.toList();
@@ -720,6 +845,7 @@ class MarketController extends ChangeNotifier {
         includeUnpriced: filter.includeUnpriced,
         minPrice: filter.minPrice,
         maxPrice: filter.maxPrice,
+        queryCities: filter.queryCities,
       );
 
   /// Prepares the candidate set from the index. Called after the archive is
@@ -740,40 +866,43 @@ class MarketController extends ChangeNotifier {
     }
     final key = _currentCandidateKey;
     if (key == _candidateKey && candidates != null) return;
-    if (_preparingCandidateKey == key) return;
-    _preparingCandidateKey = key;
-    try {
-      // An index already in memory is filtered synchronously: no await, so a
-      // test clock (or the first frame) cannot observe a half-done state.
-      // The scope is the whole filter, not a part of it: the fast path must
-      // answer exactly what the classic path would, or it is not the same list.
-      final scope = candidateScope();
-      if (rangeSession.hasIndexFor(pricesWindow)) {
-        candidates =
-            rangeSession.candidatesNow(scope: scope, at: DateTime.now());
-        _candidateKey = key;
-        _notify();
-        return;
-      }
-      await AppLogger.instance
-          .checkpoint('candidate_index_start', rows: quotes.length);
-      if (disposed || busy || key != _currentCandidateKey) return;
-      final set = await rangeSession.candidates(
-          scope: scope, at: DateTime.now(), windowDays: pricesWindow);
-      if (disposed || busy) return;
-      // A newer question may have been asked while this one was being answered.
-      if (key != _currentCandidateKey) return;
-      candidates = set;
-      _candidateKey = key;
-      await AppLogger.instance
-          .checkpoint('candidate_index_ready', rows: set.total);
-      _notify();
-    } catch (e, stack) {
-      // The classic filter still answers; a fast path is never a hard failure.
-      AppLogger.instance.capture(e, stack, section: 'candidates');
-    } finally {
-      if (_preparingCandidateKey == key) _preparingCandidateKey = '';
+    if (_preparingCandidateKey == key && _preparingFuture != null) {
+      return _preparingFuture!;
     }
+    _preparingCandidateKey = key;
+    final run = () async {
+      try {
+        final scope = candidateScope();
+        if (rangeSession.hasIndexFor(pricesWindow)) {
+          candidates =
+              rangeSession.candidatesNow(scope: scope, at: DateTime.now());
+          _candidateKey = key;
+          _notify();
+          return;
+        }
+        await AppLogger.instance
+            .checkpoint('candidate_index_start', rows: quotes.length);
+        if (disposed || busy || key != _currentCandidateKey) return;
+        final set = await rangeSession.candidates(
+            scope: scope, at: DateTime.now(), windowDays: pricesWindow);
+        if (disposed || busy) return;
+        if (key != _currentCandidateKey) return;
+        candidates = set;
+        _candidateKey = key;
+        await AppLogger.instance
+            .checkpoint('candidate_index_ready', rows: set.total);
+        _notify();
+      } catch (e, stack) {
+        AppLogger.instance.capture(e, stack, section: 'candidates');
+      } finally {
+        if (_preparingCandidateKey == key) {
+          _preparingCandidateKey = '';
+          _preparingFuture = null;
+        }
+      }
+    }();
+    _preparingFuture = run;
+    return run;
   }
 
   List<Quote> _filtered = [];
@@ -845,13 +974,32 @@ class MarketController extends ChangeNotifier {
 
   void transferState(bool value) {
     transferring = value;
+    if (value) {
+      _stopDelivery = true;
+      _finderTimer?.cancel();
+      _finderTimer = null;
+    } else if (ready && finderEnabled && !disposed) {
+      startFinder();
+    }
     _notify();
+  }
+
+  /// Quiesces background finder/delivery writes before backup export or merge.
+  Future<void> pauseForTransfer() async {
+    transferState(true);
+    final pendingDelivery = _delivery;
+    if (pendingDelivery != null) {
+      await pendingDelivery.catchError((Object _) {});
+    }
+    await finder.flush();
   }
 
   Future<void> imported() async {
     rangeSession.invalidate();
     discoveredSources.clear();
     await init();
+    await scheduleFinder();
+    startFinder();
     historyChanged();
   }
 

@@ -108,7 +108,9 @@ class TextPriceEngine {
     final s = latin(text);
     // A line that is a channel tag (#میلگرد_شاخه_انبار_مشهد) files the post; its
     // words are labels, never the basis of an amount.
-    if (s.trimLeft().startsWith('#')) return 'unknown';
+    if (s.trimLeft().startsWith('#') || ProductText.isNonMetal(s)) {
+      return 'unknown';
+    }
     if (RegExp(r'کیلویی|تومانی?\s*[/\\]\s*کیلو|ریال\s*[/\\]\s*کیلو')
         .hasMatch(s)) return 'kg';
     // The basis is written either before the amount ("هر کیلو ۱۲۵,۰۰۰") or after
@@ -119,7 +121,11 @@ class TextPriceEngine {
             unicode: true)
         .firstMatch(s) ??
         RegExp(
-                r'(?:تومان|ریال)\s*(?:[/|،,]\s*)?(کیلوگرم|کیلو|شاخه|عدد|برگ|رول|تن|متر\s*مربع|مترمربع|متر)(?![\p{L}])',
+                r'(?<!(?:وزن|جرم|مساحت|طول|عرض|ابعاد)\s)(?:هر|یک|تک)\s+(?:برگ\s+|شیت\s+)?(ورق|برگ|شیت)(?![\p{L}])',
+                unicode: true)
+            .firstMatch(s) ??
+        RegExp(
+                r'(?:تومان|ریال)\s*(?:[/|،,]\s*)?(کیلوگرم|کیلو|شاخه|عدد|برگ|ورق|شیت|رول|تن|متر\s*مربع|مترمربع|متر)(?![\p{L}])',
                 unicode: true)
             .firstMatch(s);
     if (m != null) return parseUnit(m[1]!);
@@ -305,6 +311,12 @@ class TextPriceEngine {
         invalidDate = false;
       }
       if (line.isEmpty) continue;
+      if (ProductText.isNonMetal(line)) {
+        pending = null;
+        heading = '';
+        contextCategory = '';
+        continue;
+      }
       if (RegExp(r'^https?://|^@|(?:تلفن|تماس|همراه|شماره|☎|📞|📱|داخلی|عضو|مشترک|مشاهده|کد\s*پستی)')
               .hasMatch(line) &&
           !product.hasMatch(line) &&

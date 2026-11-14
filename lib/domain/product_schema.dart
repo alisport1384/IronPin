@@ -164,9 +164,12 @@ class ProductFacts {
   final Map<String, String> values;
   const ProductFacts(this.family, this.values);
   factory ProductFacts.of(Quote q) {
-    final family = ProductText.category(q.title).isNotEmpty
-        ? ProductText.category(q.title)
-        : ProductText.category(q.category);
+    final nonMetal = ProductText.isNonMetal('${q.title} ${q.category}');
+    final family = nonMetal
+        ? ''
+        : ProductText.category(q.title).isNotEmpty
+            ? ProductText.category(q.title)
+            : ProductText.category(q.category);
     String field(String re) =>
         q.details.entries
             .where((e) => RegExp(re).hasMatch(latin(e.key)))
@@ -281,7 +284,8 @@ class ProductFacts {
           ? field(r'^(?:جنس|متریال)$')
           : q.material != 'فولاد کربنی'
               ? q.material
-              : RegExp(r'فولاد\s*کربنی|کربن\s*استیل').hasMatch(title)
+              : RegExp(r'فولاد\s*کربنی|کربن\s*استیل|(?:ورق|پلیت|صفحه|میلگرد|تیر\s*آهن|تیرآهن|نبشی|ناودانی|پروفیل|لوله|تسمه)\s*(?:آهن\s*)?فولادی|آهن\s*فولادی')
+                      .hasMatch(title)
                   ? 'فولاد کربنی'
                   : '',
       'width': field(r'^عرض(?:\s|\(|$)').isNotEmpty

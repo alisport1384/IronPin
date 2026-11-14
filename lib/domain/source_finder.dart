@@ -230,8 +230,22 @@ final _trade = RegExp(
 
 TradeEvidence tradeEvidence(String text) {
   final s = ProductText.normalize(text);
-  final products = ProductText.product.allMatches(s).take(20).toList();
-  final wholesale = _wholesale.allMatches(s).take(20).length;
+  String sliceAround(Match m) {
+    final from = m.start > 48 ? m.start - 48 : 0;
+    final to = m.end + 48 < s.length ? m.end + 48 : s.length;
+    return s.substring(from, to);
+  }
+
+  final products = ProductText.product
+      .allMatches(s)
+      .where((m) => !ProductText.isNonMetal(sliceAround(m)))
+      .take(20)
+      .toList();
+  final wholesale = _wholesale
+      .allMatches(s)
+      .where((m) => !ProductText.isNonMetal(sliceAround(m)))
+      .take(20)
+      .length;
   final product = products.isNotEmpty
       ? ProductText.category(products.first[0]!)
       : (wholesale > 0 ? 'آهن‌آلات' : '');
@@ -538,6 +552,7 @@ class FinderState {
     'finder.meta', 'finder.queue', 'finder.seen',
     'finder.list.0', 'finder.list.1', 'finder.list.2'
   ];
+  static const backupKeys = [...settingKeys, 'finder.enabled'];
 
   int rev = 0, round = 0;
   int startedAt = 0, lastOnlineAt = 0, lastStepAt = 0, roundCompletedAt = 0;

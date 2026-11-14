@@ -8,9 +8,24 @@ double? toman(double? amount, String currency) {
   };
 }
 
-String faDigits(Object value) => value
-    .toString()
-    .replaceAllMapped(RegExp('[0-9]'), (m) => '۰۱۲۳۴۵۶۷۸۹'[int.parse(m[0]!)]);
+String faDigits(Object value) {
+  final s = value.toString();
+  var hasAsciiDigit = false;
+  for (var i = 0; i < s.length; i++) {
+    final cu = s.codeUnitAt(i);
+    if (cu >= 0x30 && cu <= 0x39) {
+      hasAsciiDigit = true;
+      break;
+    }
+  }
+  if (!hasAsciiDigit) return s;
+  final out = List<int>.filled(s.length, 0);
+  for (var i = 0; i < s.length; i++) {
+    final cu = s.codeUnitAt(i);
+    out[i] = (cu >= 0x30 && cu <= 0x39) ? (0x06F0 + (cu - 0x30)) : cu;
+  }
+  return String.fromCharCodes(out);
+}
 
 String moneyWords(double value) {
   if (!value.isFinite || value < 0 || value > 9000000000000000) {

@@ -9,16 +9,31 @@ const ink = Color(0xff122c3d),
     muted = Color(0xff657786);
 String fmt(num? value, {int decimals = 0}) {
   if (value == null) return '—';
-  final s = value.toStringAsFixed(decimals).split('.');
-  final n = s[0]
-      .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}٬');
-  final out = decimals > 0 ? '$n٫${s[1]}' : n;
-  const en = '0123456789', fa = '۰۱۲۳۴۵۶۷۸۹';
-  var r = out;
-  for (var i = 0; i < 10; i++) {
-    r = r.replaceAll(en[i], fa[i]);
+  final raw = value.toStringAsFixed(decimals);
+  final dot = decimals > 0 ? raw.indexOf('.') : -1;
+  final intEnd = dot < 0 ? raw.length : dot;
+  final sb = StringBuffer();
+  var start = 0;
+  if (intEnd > 0 && raw.codeUnitAt(0) == 0x2D) {
+    sb.writeCharCode(0x2D); // '-'
+    start = 1;
   }
-  return r;
+  final digitsLen = intEnd - start;
+  for (var i = 0; i < digitsLen; i++) {
+    if (i > 0 && (digitsLen - i) % 3 == 0) {
+      sb.writeCharCode(0x066C); // '٬'
+    }
+    final cu = raw.codeUnitAt(start + i);
+    sb.writeCharCode(cu >= 0x30 && cu <= 0x39 ? 0x06F0 + (cu - 0x30) : cu);
+  }
+  if (dot >= 0 && dot + 1 < raw.length) {
+    sb.writeCharCode(0x066B); // '٫'
+    for (var i = dot + 1; i < raw.length; i++) {
+      final cu = raw.codeUnitAt(i);
+      sb.writeCharCode(cu >= 0x30 && cu <= 0x39 ? 0x06F0 + (cu - 0x30) : cu);
+    }
+  }
+  return sb.toString();
 }
 
 /// «⟨…⟩ پیش» — how long ago something happened, in Persian.

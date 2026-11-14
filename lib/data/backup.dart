@@ -7,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import '../domain/market.dart';
 import '../domain/source_finder.dart';
 import 'app_logger.dart';
+import 'source_finder_io.dart';
 import 'sources.dart';
 import 'store.dart';
 
@@ -154,6 +155,8 @@ class MarketBackup {
       final seen = {for (final t in _tables) t: 0};
       var checksum = 2166136261, header = false, ended = false;
       var addedLatest = 0, addedSettings = 0, addedSync = 0, skipped = 0;
+      var sawFinderLists = false;
+      Set<String>? backupEnabledSet;
       Future<void> apply(List<String> lines) async {
         final parsed =
             await compute(_parseChunk, {'lines': lines, 'checksum': checksum});
@@ -237,16 +240,23 @@ class MarketBackup {
               }
             case 'settings':
               final key = row['key'] as String;
+              final val = row['value'] as String;
+              if (key == 'enabled') {
+                backupEnabledSet =
+                    (jsonDecode(val) as List).cast<String>().toSet();
+              }
+              if (key.startsWith('finder.list.')) {
+                sawFinderLists = true;
+              }
               if (!settings.containsKey(key)) {
                 batch.insert('settings', row);
-                settings[key] = row['value'] as String;
+                settings[key] = val;
                 addedSettings++;
               } else if (key == 'discoveredSources') {
                 final current =
                     (jsonDecode(settings[key]!) as List).cast<Map>();
                 final urls = current.map((e) => e['url']).toSet();
-                final incoming =
-                    (jsonDecode(row['value'] as String) as List).cast<Map>();
+                final incoming = (jsonDecode(val) as List).cast<Map>();
                 final joined = [
                   ...current,
                   ...incoming.where((e) => urls.add(e['url']))
@@ -263,16 +273,15 @@ class MarketBackup {
                 } else {
                   skipped++;
                 }
-              } else if (FinderState.settingKeys.contains(key) &&
-                  settings[key] != row['value']) {
-                // هوش جستجوگر ۲ process state, not a user preference: a backup
-                // that carries its queue, lists and seen links must load them
-                // back on every import, checkbox or not — otherwise an
-                // initialized phone could never receive the searcher's state
-                // from a file.
-                batch.update('settings', {'value': row['value']},
+              } else if (FinderState.backupKeys.contains(key) &&
+                  settings[key] != val) {
+                // هوش جستجوگر ۲ state (including its ON/OFF switch, queue,
+                // lists and seen links) must load back on every import,
+                // checkbox or not — otherwise an initialized phone could never
+                // receive the searcher's complete state from a file.
+                batch.update('settings', {'value': val},
                     where: 'key=?', whereArgs: [key]);
-                settings[key] = row['value'] as String;
+                settings[key] = val;
                 addedSettings++;
               } else if (restoreSettings &&
                   !{
@@ -284,10 +293,10 @@ class MarketBackup {
                     'sheetSourcesVersion',
                     'allRegisteredSourcesEnabledVersion'
                   }.contains(key) &&
-                  settings[key] != row['value']) {
-                batch.update('settings', {'value': row['value']},
+                  settings[key] != val) {
+                batch.update('settings', {'value': val},
                     where: 'key=?', whereArgs: [key]);
-                settings[key] = row['value'] as String;
+                settings[key] = val;
                 addedSettings++;
               } else {
                 skipped++;
@@ -327,6 +336,39 @@ class MarketBackup {
       if (!header || !ended) {
         throw const FormatException(
             'فایل بکاپ ناقص است. هیچ داده‌ای بازیابی نشد.');
+      }
+      // When importing into an already initialized phone with default merge
+      // (restoreSettings == false), accepted هوش جستجوگر ۲ sources carried in
+      // `finder.list.*` already have `applied == true` from the source phone,
+      // so `takeUnapplied()` would not re-enable them unless merged into
+      // `enabled` here. Explicit OFF choices in the backup's `enabled` are
+      // respected when present.
+      if (!restoreSettings && sawFinderLists && settings.containsKey('enabled')) {
+        final restored = FinderState.fromSettings(settings);
+        final acceptedIds = <String>[];
+        for (final entry in restored.entries) {
+          if (entry.handoff != 'accepted') continue;
+          final id = finderEndpointOf(entry)?.id;
+          if (id == null) continue;
+          if (backupEnabledSet == null || backupEnabledSet!.contains(id)) {
+            acceptedIds.add(id);
+          }
+        }
+        if (acceptedIds.isNotEmpty) {
+          final current = (jsonDecode(settings['enabled']!) as List)
+              .cast<String>();
+          final knownIds = current.toSet();
+          final extra = acceptedIds.where(knownIds.add).toList();
+          if (extra.isNotEmpty) {
+            final joined = [...current, ...extra];
+            if (joined.length > 1200) {
+              throw const FormatException('تنظیم منابع فعال معتبر نیست.');
+            }
+            settings['enabled'] = jsonEncode(joined);
+            await tx.update('settings', {'value': settings['enabled']},
+                where: 'key=?', whereArgs: ['enabled']);
+          }
+        }
       }
       final afterCount = Sqflite.firstIntValue(
           await tx.rawQuery('SELECT COUNT(*) FROM history'))!;
@@ -512,12 +554,33 @@ void _validateRecord(Map<String, dynamic> record) {
       final key = row['key'], value = row['value'] as String;
       if (key == 'enabled') {
         final list = jsonDecode(value);
-        // 82 registered routes, up to 60 added by hand or seen in posts and
-        // up to 150 accepted from the lists of هوش جستجوگر ۲.
+        // Curated routes, channels added by hand or seen in posts, and
+        // accepted sources from هوش جستجوگر ۲ across merged backups.
         if (list is! List ||
-            list.length > 400 ||
+            list.length > 1200 ||
             !list.every((e) => e is String && e.length <= 512)) {
           throw const FormatException('تنظیم منابع فعال معتبر نیست.');
+        }
+      }
+      if (key == 'finder.enabled' && !['true', 'false'].contains(value)) {
+        throw const FormatException('تنظیم هوش جستجوگر ۲ معتبر نیست.');
+      }
+      if (key == 'finder.meta') {
+        final meta = jsonDecode(value);
+        if (meta is! Map) {
+          throw const FormatException('فراداده هوش جستجوگر ۲ معتبر نیست.');
+        }
+      }
+      if (const [
+        'finder.queue',
+        'finder.seen',
+        'finder.list.0',
+        'finder.list.1',
+        'finder.list.2'
+      ].contains(key)) {
+        final list = jsonDecode(value);
+        if (list is! List) {
+          throw const FormatException('فهرست هوش جستجوگر ۲ معتبر نیست.');
         }
       }
       if (key == 'discoveredSources') {

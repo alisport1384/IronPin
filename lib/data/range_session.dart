@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
@@ -13,41 +14,64 @@ import 'store.dart';
 /// the list scrolls to them, so a long archive costs the rows on screen.
 const int candidatePrebuild = 60;
 
+/// Immutable virtual list over stored index rows that materialises [Quote]
+/// objects lazily per accessed index, so sorting 50,000+ offers never builds
+/// off-screen cards up front.
+class LazyQuoteList extends ListBase<Quote> {
+  final List<Map<String, Object?>> _rows;
+  final List<Quote?> _cache;
+  LazyQuoteList(this._rows) : _cache = List<Quote?>.filled(_rows.length, null);
+
+  @override
+  int get length => _rows.length;
+
+  @override
+  set length(int newLength) =>
+      throw UnsupportedError('LazyQuoteList is immutable');
+
+  @override
+  Quote operator [](int index) =>
+      _cache[index] ??= quoteFromStoredRow(_rows[index]);
+
+  @override
+  void operator []=(int index, Quote value) =>
+      throw UnsupportedError('LazyQuoteList is immutable');
+}
+
 /// The selectable rows of the stored archive for one basis and one search word.
 class CandidateSet {
   /// The newest rows, already built; the rest follow as the list grows.
   final List<Quote> quotes;
   final List<Map<String, Object?>> pending;
+  final List<Map<String, Object?>> wires;
+  int _cursor = 0;
 
   /// Counted, not hidden: how many stored rows were withheld, and why.
   final int undated, unpriced, indexRows;
   final DateTime at;
   final int total;
-  const CandidateSet(
-      this.quotes, this.undated, this.unpriced, this.indexRows, this.at,
-      {this.pending = const [], int? total})
-      : total = total ?? quotes.length;
+  CandidateSet(this.quotes, this.undated, this.unpriced, this.indexRows, this.at,
+      {this.pending = const [], List<Map<String, Object?>>? wires, int? total})
+      : wires = wires ?? const [],
+        total = total ?? quotes.length;
   int get withheld => undated + unpriced;
 
   /// One more page of rows, in the same order, built on demand. The list shows
   /// what it has built and grows when the user scrolls, so a scope of ten
   /// thousand rows never costs ten thousand objects on the first frame.
   void extend([int rows = candidatePrebuild]) {
-    // Row by row through [at_], so the pending list is consumed exactly once: a
-    // page never skips a row and never returns one twice.
+    // Row by row through [at_], so the pending list is consumed in O(1) per
+    // row via [_cursor] instead of O(N) list shifting.
     while (rows-- > 0 && quotes.length < total) {
       if (at_(quotes.length) == null) return;
     }
   }
 
   /// Row [index] of the whole set, built on first use and kept afterwards.
-  ///
-  /// Rows are always built in order (`index == quotes.length`), so the pending
-  /// list is consumed from its head: no row is skipped, none is returned twice.
   Quote? at_(int index) {
     if (index < quotes.length) return quotes[index];
-    if (index != quotes.length || pending.isEmpty) return null;
-    final built = quoteFromStoredRow(pending.removeAt(0));
+    if (index != quotes.length || _cursor >= pending.length) return null;
+    final built = quoteFromStoredRow(pending[_cursor++]);
     quotes.add(built);
     return built;
   }
@@ -288,6 +312,7 @@ class RangeSession {
         pending: wires.length > built.length
             ? wires.sublist(built.length)
             : const [],
+        wires: wires,
         total: wires.length);
   }
 
@@ -346,8 +371,16 @@ class RangeSession {
     final again = cached(key, at);
     if (again != null) return again.asMemory();
     final watch = Stopwatch()..start();
+    // Only rows of the requested family can ever pass `admits(family, ...)`:
+    // pre-filtering here avoids copying 90%+ unrelated rows across the isolate
+    // boundary on 100k+ archives while keeping `inputRows` exact.
+    final familyRows = <Map<String, Object?>>[
+      for (final r in _index)
+        if (r['family'] == family) r
+    ];
     final input = {
-      'rows': _index,
+      'rows': familyRows,
+      'inputRows': _index.length,
       'family': family,
       'fields': fields,
       'basis': basis,
@@ -355,13 +388,13 @@ class RangeSession {
       'windowMs': windowMsFor(windowDays),
       'now': at.millisecondsSinceEpoch
     };
-    // The projection is CPU-bound over the whole index: run it off the isolate
-    // that draws frames, and keep one implementation for both paths.
+    // The projection is CPU-bound over the matching family: run it off the
+    // isolate that draws frames, and keep one implementation for both paths.
     computeRuns++;
     final answer = await compute(_answerInBackground, input).timeout(timeout);
     _answers[key] = answer;
     await AppLogger.instance.record('range', 'confirmed_from_index', {
-      'rows': input['rows'] is List ? (input['rows'] as List).length : 0,
+      'rows': _index.length,
       'kept': answer.keptRows,
       'elapsedMs': watch.elapsedMilliseconds
     });
@@ -372,6 +405,7 @@ class RangeSession {
 /// Background entry point; identical code to the synchronous projection.
 RangeAnswer _answerInBackground(Map<String, Object?> input) {
   final rows = (input['rows'] as List).cast<Map<String, Object?>>();
+  final inputRows = (input['inputRows'] as int?) ?? rows.length;
   final at =
       DateTime.fromMillisecondsSinceEpoch(input['now'] as int, isUtc: true);
   final projected = project(rows,
@@ -382,5 +416,5 @@ RangeAnswer _answerInBackground(Map<String, Object?> input) {
       nowMs: at.millisecondsSinceEpoch,
       windowMs: input['windowMs'] as int? ?? 48 * 3600 * 1000);
   return buildAnswer(projected,
-      basis: input['basis'] as String, at: at, inputRows: rows.length);
+      basis: input['basis'] as String, at: at, inputRows: inputRows);
 }

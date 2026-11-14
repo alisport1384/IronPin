@@ -161,6 +161,7 @@ class PublicTables {
             !(headingOwned && cells.length > headers.length)) {
           continue;
         }
+        if (text.any(ProductText.isNonMetal)) continue;
         String field(String pattern) {
           final i = headers!.indexWhere((h) => RegExp(pattern).hasMatch(h));
           return i < 0 ? '' : text[i];
