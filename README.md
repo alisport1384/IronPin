@@ -35,6 +35,8 @@ flutter build apk --release --target-platform android-arm64   # ۶۴ بیتی (a
 
 مسیر خروجی‌ها در `build/app/outputs/flutter-apk/` قرار می‌گیرد (`app-armeabi-v7a-release.apk` و `app-arm64-v8a-release.apk`). متغیرهای امضای انتشار (`IRONPIN_KEYSTORE` و کلیدهای وابسته) در `docs/BUILD.fa.md` شرح داده شده‌اند.
 
+**فایل‌های نصبی:** هر دو معماری (`armeabi-v7a` و `arm64-v8a`) با push تگ `v*` در GitHub Actions از یک درخت و با یک کلید ثابت ساخته و در بخش [Releases](https://github.com/alisport1384/IronPin/releases) منتشر می‌شوند. اجرای سبز یعنی تحلیل ایستا، ۴۹۰ آزمون آفلاین و بررسی محتوای هر دو فایل (معماری، مدل‌های OCR، امضا) گذشته است.
+
 ## ساختار پروژه و مستندات
 
 ```text

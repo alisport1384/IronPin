@@ -58,6 +58,33 @@ cp build/app/outputs/flutter-apk/app-release.apk \
 خروجی‌های تحویلی در `releases/` و با همین نام‌ها هستند؛ `.apk` در گیت ignore است و فقط
 فایل `SHA256SUMS` کامیت می‌شود.
 
+### تحویل ۰.۹.۶ — ۲۳ آبان ۱۴۰۵ (از GitHub Actions، با یک کلید)
+
+از این نسخه، **هر دو** فایل در GitHub Actions و از همان کامیت ساخته می‌شوند؛ ساخت دستی
+فقط برای عیب‌یابی است. مراحل همان بخش ۳ است، به‌علاوهٔ امضا با کلید ثابت:
+
+| secret | مقدار |
+| --- | --- |
+| `IRONPIN_KEYSTORE_BASE64` | خروجی `base64 -w0` از فایل PKCS12 |
+| `IRONPIN_STORE_PASSWORD` | رمز keystore |
+| `IRONPIN_KEY_ALIAS` | `ironpin-release` |
+| `IRONPIN_KEY_PASSWORD` | رمز کلید |
+
+کلید در `$RUNNER_TEMP/ironpin-release.jks` باز می‌شود و از راه متغیرهای محیطی
+(`IRONPIN_KEYSTORE` و سه تای دیگر) به `android/app/build.gradle` می‌رسد — همان قراردادی
+که `tool/sign_env.sh` در ساخت دستی می‌گذارد. اگر secret نباشد، Gradle به کلید آزمایشی
+برمی‌گردد و اجرا هشدار می‌دهد (برای forkها).
+
+با push تگ `v*` همان اجرا هر دو فایل را در ریلیز منتشر می‌کند:
+
+```bash
+git tag v0.9.6 && git push origin v0.9.6
+```
+
+فایل‌های ریلیز: `IronPin-0.9.6-armeabi-v7a-release.apk`،
+`IronPin-0.9.6-arm64-v8a-release.apk` و `SHA256SUMS.txt`. یادداشت ریلیز (اندازه، هش‌ها،
+اثر انگشت گواهی) خودکار از همان فایل‌ها ساخته می‌شود.
+
 ### تحویل ۰.۹.۵ — ۲۱ آبان ۱۴۰۵ (سه اصلاح کاربر)
 
 | فایل | معماری | حجم | sha256 |
@@ -163,7 +190,12 @@ bash tool/build_low_memory.sh android-arm
 
 `.github/workflows/android.yml` با هر push این کارها را می‌کند: `flutter analyze`، همهٔ
 آزمون‌ها، ساخت دو APK (یکی برای هر معماری)، بررسی محتوای هر APK، و گذاشتن هر دو فایل به‌همراه
-`SHA256SUMS.txt` در artifact با نام `IronPin-test-release-APKs`.
+`SHA256SUMS.txt` در artifact با نام `IronPin-<نسخه>-release-APKs`.
+
+از ۰.۹.۶ سه کار دیگر هم در همان اجرا انجام می‌شود: امضا با کلید ثابتِ secret (بخش ۳)،
+بررسی `versionName` و `native-code` و پذیرش امضا با `apksigner verify`، و — فقط روی push
+تگ `v*` — انتشار همان دو فایل در ریلیز. یعنی فایل ریلیز و فایل artifact از یک اجرا و یک
+درخت می‌آیند و کلیدشان یکی است.
 
 تا پیش از commit `8ad112d` این ساخت همیشه شکست می‌خورد. علت: workflow هر دو معماری را با
 `--split-per-abi` در یک دستور می‌ساخت، ولی `android/app/build.gradle` خودش `ndk.abiFilters`
@@ -171,7 +203,8 @@ bash tool/build_low_memory.sh android-arm
 (`ndk abiFilters cannot be present when splits abi filters are set`). حالا workflow همان دو
 دستور جدای بخش ۳ را اجرا می‌کند. **`--split-per-abi` را با این پروژه به کار نبرید.**
 
-APKهای Actions با کلید آزمایشیِ همان اجرا امضا می‌شوند و این کلید در هر اجرا عوض می‌شود.
+تا ۰.۹.۵ APKهای Actions با کلید آزمایشیِ همان اجرا امضا می‌شدند و این کلید در هر اجرا
+عوض می‌شد. از ۰.۹.۶ کلید از secret می‌آید و در همهٔ اجراها یکی است.
 
 ### تحویل ۰.۹.۱ — ۲۰ آبان ۱۴۰۵ (بازساخت پس از رفع اشکال نوسازی)
 

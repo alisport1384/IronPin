@@ -1,9 +1,11 @@
 # سند تولید IronPin — مرجع بازتولید برای عامل هوش مصنوعی
 
-> وضعیت جاری **۰.۸.۵+۲۱**: مرجع طراحی [DESIGN](../docs/DESIGN.fa.md)،
-> گزارش [۰.۸.۵](../docs/TEST_REPORT.v0.8.5.fa.md)، تغییرات
-> [۰.۸.۵](CHANGES.v0.8.5.fa.md) و شواهد [verification](verification/v0.8.5/README.fa.md).
-> ۳۶۲ تست موفق، APK تأییدشدهٔ ARMv7، schema 7 و تأیید مثبت گزارش‌شده توسط کاربر.
+> وضعیت جاری **۰.۹.۶+۲۸**: مرجع طراحی [DESIGN](../docs/DESIGN.fa.md)،
+> گزارش [۰.۹.۶](../docs/TEST_REPORT.v0.9.6.fa.md)، تغییرات
+> [۰.۹.۶](CHANGES.v0.9.6.fa.md) و شواهد قدیمی‌تر [verification](verification/v0.8.5/README.fa.md).
+> ۴۹۰ تست موفق، schema 8، هر دو معماری (`armeabi-v7a` و `arm64-v8a`) در ریلیز `v0.9.6`
+> از GitHub Actions با یک کلید ثابت، و آرشیو ۱۰۰٬۰۰۰ ردیفی آزمون‌شده در
+> `test/scale_100k_test.dart`.
 > بخش‌های شماره‌دار قدیمی زیر، سابقهٔ تولید هستند و وضعیت جاری از آن‌ها استنتاج نمی‌شود.
 
 ## ۱. هدف و قرارداد این سند
