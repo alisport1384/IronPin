@@ -60,14 +60,19 @@ cp build/app/outputs/flutter-apk/app-release.apk \
 
 ### تحویل ۰.۹.۹ — ۲۵ آبان ۱۴۰۵ (هر دو معماری از GitHub Actions، با یک کلید)
 
-هر دو معماری (`IronPin-0.9.9-armeabi-v7a-release.apk` و
-`IronPin-0.9.9-arm64-v8a-release.apk`) به‌همراه `SHA256SUMS.txt` در گردش‌کار
-`.github/workflows/android.yml` از یک درخت سورس و با کلید امضای ثابت پروژه
-(`CN=IronPin Sideload`) ساخته، بررسی (`versionName='0.9.9'`، `versionCode='31'`،
-تفکیک خالص ABI، کتابخانه و مدل‌های آفلاین OCR فارسی/انگلیسی، و `apksigner verify`)
-و با تگ `v0.9.9` در [ریلیز v0.9.9](https://github.com/alisport1384/IronPin/releases/tag/v0.9.9)
-منتشر می‌شوند. چون گواهی امضا با تحویل‌های ۰.۹.۶ به بعد یکی است، کاربران روی نسخه‌های
-۰.۹.۶+ بدون حذف برنامه مستقیم ارتقا می‌گیرند.
+| فایل | معماری | حجم | sha256 |
+| --- | --- | ---: | --- |
+| `IronPin-0.9.9-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳.۹MB (۱۳٬۹۳۵٬۴۱۴ بایت) | `8abb70f1fc5e3f4f7ab32498e6efa19a5f77dadc5aa0298caf10243168e13aac` |
+| `IronPin-0.9.9-arm64-v8a-release.apk` | ۶۴ بیتی (`arm64-v8a`) | ۱۴.۵MB (۱۴٬۵۴۸٬۰۹۹ بایت) | `031f9efa2946e410570a1b5fccb11d8e13b6abf7fbc9c1d8098cfe7c7b6c7b07` |
+
+هر دو معماری به‌همراه `SHA256SUMS.txt` در گردش‌کار `.github/workflows/android.yml` از
+یک درخت سورس و با کلید امضای ثابت پروژه (`CN=IronPin Sideload`، اثر انگشت SHA-256 گواهی
+`16fe4f741ea3ac5c54612fa0361a29f389ac535a9400b202329ce4bde494c4ee`) ساخته، بررسی
+(`versionName='0.9.9'`، `versionCode='31'`، تفکیک خالص ABI، کتابخانه و مدل‌های آفلاین
+OCR فارسی/انگلیسی، و `apksigner verify`) و با تگ `v0.9.9` در
+[ریلیز v0.9.9](https://github.com/alisport1384/IronPin/releases/tag/v0.9.9) منتشر شده‌اند.
+چون گواهی امضا با تحویل‌های ۰.۹.۶ به بعد یکی است، کاربران روی نسخه‌های ۰.۹.۶+ بدون حذف
+برنامه مستقیم ارتقا می‌گیرند.
 
 ### تحویل ۰.۹.۶ — ۲۳ آبان ۱۴۰۵ (از GitHub Actions، با یک کلید)
 

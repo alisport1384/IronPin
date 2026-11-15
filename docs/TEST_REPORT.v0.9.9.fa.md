@@ -30,12 +30,16 @@ bash tool/test_on_another_day.sh 45  -> 507 passed, 0 failed (+45 days clock shi
   روشن شدند (از جمله کانال‌های بازار آهن با ده تا ده‌ها ردیف قیمت معتبر) و **صفر کلید
   تکراری** ثبت شد.
 
-## ساخت و انتشار دو معماری
+## ساخت و انتشار دو معماری (ریلیز `v0.9.9`)
 
 - نسخه: `0.9.9+31` (`versionName='0.9.9'`, `versionCode='31'`, `minSdk=21`, `targetSdk=35`).
-- هر دو بستهٔ `IronPin-0.9.9-armeabi-v7a-release.apk` (۳۲ بیتی) و
-  `IronPin-0.9.9-arm64-v8a-release.apk` (۶۴ بیتی) در گردش‌کار GitHub Actions
-  (`.github/workflows/android.yml`) از یک درخت سورس و با کلید امضای ثابت پروژه
-  (`CN=IronPin Sideload`) ساخته، با `aapt2` و `apksigner` راستی‌آزمایی (تفکیک خالص ABI
-  و حضور کتابخانه و مدل‌های آفلاین OCR فارسی/انگلیسی) و به همراه `SHA256SUMS.txt` در ریلیز
-  `v0.9.9` منتشر می‌شوند.
+- هر دو بسته در گردش‌کار GitHub Actions (`.github/workflows/android.yml`) از یک درخت سورس و با
+  کلید امضای ثابت پروژه (`CN=IronPin Sideload`، اثر انگشت گواهی SHA-256:
+  `16fe4f741ea3ac5c54612fa0361a29f389ac535a9400b202329ce4bde494c4ee`) ساخته، با `aapt2` و
+  `apksigner` راستی‌آزمایی و به همراه `SHA256SUMS.txt` در
+  [ریلیز `v0.9.9`](https://github.com/alisport1384/IronPin/releases/tag/v0.9.9) منتشر شدند:
+
+| فایل | معماری | حجم | SHA-256 |
+| --- | --- | ---: | --- |
+| `IronPin-0.9.9-armeabi-v7a-release.apk` | ۳۲ بیتی (`armeabi-v7a`) | ۱۳٬۹۳۵٬۴۱۴ بایت | `8abb70f1fc5e3f4f7ab32498e6efa19a5f77dadc5aa0298caf10243168e13aac` |
+| `IronPin-0.9.9-arm64-v8a-release.apk` | ۶۴ بیتی (`arm64-v8a`) | ۱۴٬۵۴۸٬۰۹۹ بایت | `031f9efa2946e410570a1b5fccb11d8e13b6abf7fbc9c1d8098cfe7c7b6c7b07` |
