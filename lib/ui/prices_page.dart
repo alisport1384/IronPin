@@ -53,7 +53,7 @@ class _PricesPageState extends State<PricesPage> {
     _debounce?.cancel();
     if (c.quotes.length > 2000) {
       setState(() {});
-      _debounce = Timer(const Duration(milliseconds: 70), c.changed);
+      _debounce = Timer(const Duration(milliseconds: 300), c.changed);
     } else {
       c.changed();
     }

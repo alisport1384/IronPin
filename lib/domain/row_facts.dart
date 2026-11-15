@@ -364,6 +364,29 @@ String _packPrices(Map<String, double> prices) => [
 /// expanding them into a full `RowFacts`.
 Map<String, double> unpackPrices(String packed) => _unpackPrices(packed);
 
+/// The value of one unit in a packed price table, or null when absent.
+///
+/// The packed form is `unitvalueunitvalue...` (see
+/// [_packPrices]); this reads a single entry with two index scans and no
+/// allocation, where [unpackPrices] would split the whole table.
+double? packedPriceOf(String packed, String unit) {
+  if (packed.isEmpty || unit.isEmpty) return null;
+  var from = 0;
+  while (from < packed.length) {
+    final sep = packed.indexOf('', from);
+    if (sep < 0) return null;
+    if (sep - from == unit.length && packed.substring(from, sep) == unit) {
+      final end = packed.indexOf('', sep + 1);
+      return double.tryParse(
+          packed.substring(sep + 1, end < 0 ? packed.length : end));
+    }
+    final next = packed.indexOf('', sep + 1);
+    if (next < 0) return null;
+    from = next + 1;
+  }
+  return null;
+}
+
 Map<String, double> _unpackPrices(String packed) {
   final out = <String, double>{};
   if (packed.isEmpty) return out;
@@ -529,7 +552,7 @@ double? storedRowTomanFor(Map<String, Object?> row, String basis) {
     final t = inToman(amount);
     return t == null ? null : t * 1000.0;
   }
-  return _unpackPrices(row['prices'] as String? ?? '')[basis];
+  return packedPriceOf(row['prices'] as String? ?? '', basis);
 }
 
 /// Rebuilds a `Quote` for a row that is actually rendered, with the values the

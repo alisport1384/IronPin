@@ -213,7 +213,20 @@ class RangeSession {
       throw StateError('Archive invalidated during index read');
     }
     final bucket = _bucketOf(at);
-    _index = rows;
+    // Sorted once, here, instead of on every selection: index rows are kept
+    // newest-first (`market_at DESC, id ASC`), so a candidate selection is a
+    // single order-preserving pass and never re-sorts the archive per query.
+    // Keys are read once per row before sorting (Schwartzian transform):
+    // the comparator itself only compares two ints and, rarely, two strings,
+    // so sorting 100k rows allocates no strings per comparison.
+    final keys = [
+      for (final r in rows)
+        (at: (r['market_at'] as int?) ?? 0, id: '${r['id']}', row: r)
+    ]..sort((a, b) {
+        final byDate = b.at.compareTo(a.at);
+        return byDate != 0 ? byDate : a.id.compareTo(b.id);
+      });
+    _index = [for (final k in keys) k.row];
     _epoch++;
     _token = 'i$_epoch-$bucket';
     _bucket = bucket;
@@ -289,23 +302,20 @@ class RangeSession {
           {required CandidateScope scope, required DateTime at}) =>
       _candidateSet(scope, at);
 
-  CandidateSet _candidateSet(CandidateScope scope, DateTime at) {
-    final picked = selectCandidates(_index,
-        scope: scope, nowMs: at.millisecondsSinceEpoch);
-    // Sorted before any object is built: the newest-first order is a numeric
-    // order, so ordering maps is enough and the sort never touches Quote.
-    final wires = picked.wires.toList()
-      ..sort((a, b) {
-        final byDate = ((b['market_at'] as int?) ?? 0)
-            .compareTo((a['market_at'] as int?) ?? 0);
-        return byDate != 0 ? byDate : '${a['id']}'.compareTo('${b['id']}');
-      });
-    // Only the rows the list will actually draw become objects; the rest stay as
-    // plain maps until the user scrolls to them.
+  CandidateSet _candidateSet(CandidateScope scope, DateTime at) =>
+      _buildSet(
+          selectCandidates(_index,
+              scope: scope, nowMs: at.millisecondsSinceEpoch),
+          at);
+
+  CandidateSet _buildSet(
+      ({List<Map<String, Object?>> wires, int withheld, int undated, int unpriced})
+          picked,
+      DateTime at) {
+    // The index is kept newest-first (see [_load]), and selection preserves
+    // that order, so the wires need no sort here.
+    final wires = picked.wires;
     final built = wires.take(candidatePrebuild).toList();
-    // Built from the stored row, never from the raw index map: the columns of the
-    // index are snake_case and a `Quote` reads camelCase, so the conversion is
-    // what keeps the date, the receipt time and the source link on the card.
     final quotes = <Quote>[for (final row in built) quoteFromStoredRow(row)];
     return CandidateSet(
         quotes, picked.undated, picked.unpriced, _index.length, at,
@@ -316,17 +326,74 @@ class RangeSession {
         total: wires.length);
   }
 
+  /// Rows per slice of a chunked candidate selection.
+  static const int candidateSliceRows = 1200;
+
+  /// Wall-clock budget of one slice of a chunked candidate selection.
+  ///
+  /// A fixed row count is the wrong unit on purpose-built hardware: 1,200
+  /// rows that take 4 ms on a desktop can take 40 ms on a 32-bit phone,
+  /// which is several dropped frames. Slices therefore end by time, not by
+  /// count, so the longest synchronous block stays near one frame
+  /// everywhere; the row count above remains only as a hard cap.
+  static const int candidateSliceBudgetMs = 5;
+
+  /// Archives up to this size are selected in one synchronous pass; beyond
+  /// it the selection is sliced (see [candidates]).
+  static const int candidateSyncLimit = 4000;
+
+  /// The same selection as [candidatesNow], sliced on large archives.
+  /// Throws [StateError] when the archive is invalidated mid-scan.
+  Future<CandidateSet> candidatesSliced(
+      {required CandidateScope scope,
+      required DateTime at,
+      bool Function()? cancelled}) async {
+    final generation = _generation;
+    final index = _index;
+    final selector =
+        CandidateSelector(scope: scope, nowMs: at.millisecondsSinceEpoch);
+    var i = 0;
+    while (i < index.length) {
+      if (generation != _generation || (cancelled?.call() ?? false)) {
+        throw StateError('Archive invalidated during candidate selection');
+      }
+      final watch = Stopwatch()..start();
+      // One slice: at most [candidateSliceRows] rows and at most
+      // [candidateSliceBudgetMs] of wall clock, whichever comes first. The
+      // clock is read every 64 rows, cheaply, so a slice overruns its
+      // budget by at most a few dozen rows even on very slow hardware.
+      final sliceEnd = (i + candidateSliceRows).clamp(0, index.length);
+      while (i < sliceEnd) {
+        final chunkEnd = (i + 64).clamp(0, sliceEnd);
+        for (; i < chunkEnd; i++) {
+          selector.add(index[i]);
+        }
+        if (watch.elapsedMilliseconds >= candidateSliceBudgetMs) break;
+      }
+      if (i < index.length) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+    if (generation != _generation || (cancelled?.call() ?? false)) {
+      throw StateError('Archive invalidated during candidate selection');
+    }
+    return _buildSet(selector.finish(), at);
+  }
+
   Future<CandidateSet> candidates(
       {required CandidateScope scope,
       required DateTime at,
-      int? windowDays}) async {
+      int? windowDays,
+      bool Function()? cancelled}) async {
     if (windowDays == null) {
       await ensureIndexAt(at);
     } else {
       await ensureIndex(at, windowDays: windowDays);
     }
     final watch = Stopwatch()..start();
-    final set = _candidateSet(scope, at);
+    final set = _index.length <= candidateSyncLimit
+        ? _candidateSet(scope, at)
+        : await candidatesSliced(scope: scope, at: at, cancelled: cancelled);
     await AppLogger.instance.record('prices', 'candidates_ready', {
       'indexRows': set.indexRows,
       'candidates': set.total,

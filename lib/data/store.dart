@@ -35,6 +35,8 @@ const _rangeIndexSchema = [
   // The prices tab filters on these columns, so they are indexed rather than
   // tested row by row; the window is a range on `market_at`, so it goes last.
   'CREATE INDEX IF NOT EXISTS range_index_category ON range_index(category, market_at)',
+  'CREATE INDEX IF NOT EXISTS range_index_market ON range_index(market_at)',
+  'CREATE INDEX IF NOT EXISTS range_index_offer ON range_index(endpoint, id, fetched_at)',
 ];
 
 class MarketStore {
@@ -193,6 +195,10 @@ class MarketStore {
         'CREATE TRIGGER IF NOT EXISTS range_history_del '
         'AFTER DELETE ON history '
         'BEGIN DELETE FROM range_history_map WHERE seq = OLD.seq; END');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS range_index_market ON range_index(market_at)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS range_index_offer ON range_index(endpoint, id, fetched_at)');
   }
 
   Future<List<Quote>> latest() => _readLatest();

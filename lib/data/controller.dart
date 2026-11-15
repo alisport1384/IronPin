@@ -763,6 +763,7 @@ class MarketController extends ChangeNotifier {
 
   List<Quote>? _rowCache;
   String _rowCacheKey = '';
+  int _candidateRunSeq = 0;
 
   /// True while the prepared list has rows that were not built yet.
   bool get moreCandidates => (candidates?.total ?? 0) > candidateRows.length;
@@ -778,7 +779,10 @@ class MarketController extends ChangeNotifier {
 
   List<Quote> get candidateRows {
     final c = candidates;
-    if (c == null || _candidateKey != _currentCandidateKey) return filtered;
+    // While a changed scope is being prepared, the previous set stays on
+    // screen: falling back to `filtered` here would start a full in-memory
+    // filter over every decoded quote on each keystroke of a large archive.
+    if (c == null) return filtered;
     final f = filter;
     final key = '$_candidateKey\u0001${c.total}\u0001${c.quotes.length}'
         '\u0001${f.sort}\u0001${f.mashhadFirst}';
@@ -791,16 +795,22 @@ class MarketController extends ChangeNotifier {
       // and already filtered by `selectCandidates` (including price bounds and
       // freshness). Returning the built page directly is O(1).
       rows = List<Quote>.unmodifiable(c.quotes);
+    } else if (c.wires.isNotEmpty && f.sort == 'latest') {
+      // Wires arrive newest-first from the index. The only remaining order
+      // rule is "Mashhad first within the same announcement moment", which
+      // is a linear pass over equal-date groups -- never a full sort inside
+      // `build`, where the old code re-sorted the whole scope (O(n log n)
+      // map lookups and string allocations per comparison) on every new
+      // candidate set.
+      final ordered = _latestOrder(c.wires, mashhadFirst: f.mashhadFirst);
+      rows = LazyQuoteList(ordered.length > c.quotes.length
+          ? ordered.sublist(0, c.quotes.length)
+          : ordered);
     } else if (c.wires.isNotEmpty) {
       // Sort raw index maps directly without materialising off-screen `Quote`
       // objects; wrap in `LazyQuoteList` so `rows.length` is exact and only
       // visible rows on screen construct `Quote` instances.
-      final sorted = _sortCandidateWires(c.wires);
-      rows = f.sort == 'latest'
-          ? LazyQuoteList(sorted.length > c.quotes.length
-              ? sorted.sublist(0, c.quotes.length)
-              : sorted)
-          : LazyQuoteList(sorted);
+      rows = LazyQuoteList(_sortCandidateWires(c.wires));
     } else {
       if (f.sort != 'latest') c.extend(c.total);
       rows = _sortCandidates(c.quotes, DateTime.now());
@@ -808,6 +818,37 @@ class MarketController extends ChangeNotifier {
     _rowCache = rows;
     _rowCacheKey = key;
     return rows;
+  }
+
+  /// Newest-first order with Mashhad first inside each equal-date group.
+  ///
+  /// The input is already ordered `market_at DESC, id ASC` (the index keeps
+  /// it that way and selection preserves it), so this is one linear scan:
+  /// inside a run of equal `market_at`, Mashhad rows keep their relative
+  /// order and move ahead of the others, exactly as the old comparator
+  /// decided. No comparisons, no allocations per row pair.
+  List<Map<String, Object?>> _latestOrder(List<Map<String, Object?>> wires,
+      {required bool mashhadFirst}) {
+    if (!mashhadFirst || wires.length <= 1) return wires;
+    final out = <Map<String, Object?>>[];
+    var i = 0;
+    while (i < wires.length) {
+      final at = (wires[i]['market_at'] as int?) ?? 0;
+      var j = i + 1;
+      while (j < wires.length &&
+          (((wires[j]['market_at'] as int?) ?? 0) == at)) {
+        j++;
+      }
+      // One group [i, j): Mashhad first, both halves in their given order.
+      for (var k = i; k < j; k++) {
+        if (wires[k]['seller_city'] == 'مشهد') out.add(wires[k]);
+      }
+      for (var k = i; k < j; k++) {
+        if (wires[k]['seller_city'] != 'مشهد') out.add(wires[k]);
+      }
+      i = j;
+    }
+    return out;
   }
 
   /// The number of offers the scope really has, ready ones or not.
@@ -863,27 +904,42 @@ class MarketController extends ChangeNotifier {
         n, (i) => storedRowComparisonGroup(wires[i], basis));
     final prices = List<double?>.generate(
         n, (i) => storedRowTomanFor(wires[i], basis));
-    order.sort((ia, ib) {
-      final group = groups[ia].compareTo(groups[ib]);
-      if (group != 0) return group;
-      final a = wires[ia], b = wires[ib];
-      if (mashhadFirst) {
-        final p = (a['seller_city'] == 'مشهد' ? 0 : 1)
-            .compareTo(b['seller_city'] == 'مشهد' ? 0 : 1);
-        if (p != 0) return p;
+    // Bucket by comparison group first (one hash per row), sort only the
+    // distinct group keys, then sort inside each bucket with the cheap
+    // precomputed prices. The old single sort compared the long group
+    // strings O(n log n) times over the whole scope; this compares them
+    // only between distinct groups and keeps the exact same final order.
+    final buckets = <String, List<int>>{};
+    for (var i = 0; i < n; i++) {
+      (buckets[groups[i]] ??= []).add(i);
+    }
+    final groupKeys = buckets.keys.toList()..sort();
+    final out = <Map<String, Object?>>[];
+    for (final key in groupKeys) {
+      final idx = buckets[key]!;
+      idx.sort((ia, ib) {
+        final a = wires[ia], b = wires[ib];
+        if (mashhadFirst) {
+          final p = (a['seller_city'] == 'مشهد' ? 0 : 1)
+              .compareTo(b['seller_city'] == 'مشهد' ? 0 : 1);
+          if (p != 0) return p;
+        }
+        final pa = prices[ia], pb = prices[ib];
+        if (pa == null && pb == null) {
+          return (a['title'] as String? ?? '')
+              .compareTo(b['title'] as String? ?? '');
+        }
+        if (pa == null) return 1;
+        if (pb == null) return -1;
+        final cmp = pa.compareTo(pb);
+        final dir = desc ? -cmp : cmp;
+        return dir != 0 ? dir : '${a['id']}'.compareTo('${b['id']}');
+      });
+      for (final i in idx) {
+        out.add(wires[i]);
       }
-      final pa = prices[ia], pb = prices[ib];
-      if (pa == null && pb == null) {
-        return (a['title'] as String? ?? '')
-            .compareTo(b['title'] as String? ?? '');
-      }
-      if (pa == null) return 1;
-      if (pb == null) return -1;
-      final cmp = pa.compareTo(pb);
-      final dir = desc ? -cmp : cmp;
-      return dir != 0 ? dir : '${a['id']}'.compareTo('${b['id']}');
-    });
-    return [for (final i in order) wires[i]];
+    }
+    return out;
   }
 
   List<Quote> _sortCandidates(List<Quote> rows, DateTime now) {
@@ -973,21 +1029,20 @@ class MarketController extends ChangeNotifier {
       return _preparingFuture!;
     }
     _preparingCandidateKey = key;
+    final runSeq = ++_candidateRunSeq;
     final run = () async {
       try {
         final scope = candidateScope();
-        if (rangeSession.hasIndexFor(pricesWindow)) {
-          candidates =
-              rangeSession.candidatesNow(scope: scope, at: DateTime.now());
-          _candidateKey = key;
-          _notify();
-          return;
-        }
         await AppLogger.instance
             .checkpoint('candidate_index_start', rows: quotes.length);
         if (disposed || busy || key != _currentCandidateKey) return;
         final set = await rangeSession.candidates(
-            scope: scope, at: DateTime.now(), windowDays: pricesWindow);
+            scope: scope,
+            at: DateTime.now(),
+            windowDays: pricesWindow,
+            // A newer keystroke supersedes this scan: stop slicing instead
+            // of spending the archive pass on an answer nobody will show.
+            cancelled: () => runSeq != _candidateRunSeq || disposed);
         if (disposed || busy) return;
         if (key != _currentCandidateKey) return;
         candidates = set;

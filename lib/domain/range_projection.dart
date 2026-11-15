@@ -575,129 +575,139 @@ class CandidateScope {
   required CandidateScope scope,
   required int nowMs,
 }) {
-  final since = nowMs - scope.maxAgeDays * 24 * 3600 * 1000;
-  final future = nowMs + 5 * 60 * 1000;
-  final basis = scope.basis;
-  final intent = scope.query.trim().isEmpty
-      ? null
-      : ProductQuery.parse(scope.query, cities: scope.queryCities);
-  final grade = latin(scope.grade).toUpperCase();
-  final sizeWanted = number(scope.size);
-  final thicknessWanted = number(scope.thickness);
-  final cityBoundary = scope.city.isEmpty || scope.cityKind != 'all'
-      ? null
-      : RowFacts.cityBoundaryOf(scope.city);
-  final wires = <Map<String, Object?>>[];
-  // Reasons are counted, never invented: a row is withheld here only because it
-  // is outside the window (or has no real announcement date) or has no
-  // comparable price, and the two counts say how many.
-  var undated = 0, unpriced = 0;
-  // One entry per stored offer, however many rows it has: the archive keeps a
-  // latest row and one history row per receipt, and a card per receipt would show
-  // the same seller's same offer twice. The newest receipt speaks for the offer,
-  // and a withheld offer is counted once, never once per row.
-  final slot = <String, int>{};
-  final held = <String, int>{};
+  final selector = CandidateSelector(scope: scope, nowMs: nowMs);
   for (final raw in indexRows) {
+    selector.add(raw);
+  }
+  return selector.finish();
+}
+
+/// Stateful form of [selectCandidates]: identical decisions, one row at a
+/// time, so a caller with a large archive can feed rows in slices and yield
+/// to the UI isolate between slices instead of blocking it for the whole
+/// scan. The synchronous [selectCandidates] is this same loop without the
+/// pauses, so the two paths can never disagree.
+class CandidateSelector {
+  CandidateSelector({required this.scope, required this.nowMs})
+      : _since = nowMs - scope.maxAgeDays * 24 * 3600 * 1000,
+        _future = nowMs + 5 * 60 * 1000,
+        _intent = scope.query.trim().isEmpty
+            ? null
+            : ProductQuery.parse(scope.query, cities: scope.queryCities),
+        _grade = latin(scope.grade).toUpperCase(),
+        _sizeWanted = number(scope.size),
+        _thicknessWanted = number(scope.thickness),
+        _cityBoundary = scope.city.isEmpty || scope.cityKind != 'all'
+            ? null
+            : RowFacts.cityBoundaryOf(scope.city);
+
+  final CandidateScope scope;
+  final int nowMs;
+  final int _since;
+  final int _future;
+  final ProductQuery? _intent;
+  final String _grade;
+  final double? _sizeWanted;
+  final double? _thicknessWanted;
+  final RegExp? _cityBoundary;
+
+  final List<Map<String, Object?>> wires = [];
+  int undated = 0, unpriced = 0;
+  // Offer identity without a per-row string allocation: offers are deduped
+  // by (endpoint, id), kept as nested maps so scanning 100k rows builds no
+  // identity strings at all (the concatenated key was one allocation and
+  // one hash per row, pure garbage-collector pressure on low-end phones).
+  final Map<String, Map<String, int>> _slot = {};
+  final Map<String, Set<String>> _held = {};
+
+  void add(Map<String, Object?> raw) {
     final title = raw['title'] as String? ?? '';
-    if (ProductText.isNonMetal(title)) continue;
-    final identity = '${raw['endpoint']}\u0001${raw['id']}';
-    final seen = slot[identity];
-    if (seen == null && !held.containsKey(identity)) {
-      // First sighting of this offer: decide it below.
+    if (ProductText.isNonMetal(title)) return;
+    final endpoint = raw['endpoint'] as String? ?? '';
+    final offerId = raw['id'] as String? ?? '';
+    final seen = _slot[endpoint]?[offerId];
+    if (seen == null && !(_held[endpoint]?.contains(offerId) ?? false)) {
     } else if (seen != null) {
-      // Already a candidate: keep the newest receipt of it. Two receipts of the
-      // same second are not "newer", but the archive's own current row is the
-      // last word — and the query returns it last, so a tie hands it the card.
       if (((raw['fetched_at'] as int?) ?? 0) >=
           ((wires[seen]['fetched_at'] as int?) ?? 0)) {
         wires[seen] = raw;
       }
-      continue;
+      return;
     } else {
-      // Already withheld: a second row of the same offer is not a second reason.
-      continue;
+      return;
     }
     final marketAt = raw['market_at'] as int?;
-    // The window is the user's own filter, so a row outside it is not a
-    // candidate at all — and it is reported as such, not as "undated".
-    if (marketAt == null || marketAt > future || marketAt < since) {
+    if (marketAt == null || marketAt > _future || marketAt < _since) {
       undated++;
-      held[identity] = 1;
-      continue;
+      (_held[endpoint] ??= {}).add(offerId);
+      return;
     }
     final unit = raw['unit'] as String? ?? '';
     final currency = raw['currency'] as String? ?? '';
-    final prices = unpackPrices(raw['prices'] as String? ?? '');
-    // The comparable price of the requested basis, in toman, computed exactly as
-    // the money helpers do. With no explicit basis the row's own basis is used:
-    // its unit, or the unit its own declared mass converts to. A row whose source
-    // stated no unit still carries a real amount, and it is shown with that
-    // amount — a row is never dropped from the list for lacking a basis; the
-    // reason it cannot be averaged is stated on the card instead.
+    final packed = raw['prices'] as String? ?? '';
+    final basis = scope.basis;
+    // Same decision as `resolvedRowBasis(unpackPrices(packed), unit)`, read
+    // straight from the packed form: unpacking built a Map and several
+    // substrings for every one of the archive's rows on every keystroke.
     final basisKey = basis == 'original' || basis.isEmpty
-        ? (resolvedRowBasis(prices, unit) ?? '')
+        ? (unit != 'unknown' && comparableUnits.contains(unit)
+            ? unit
+            : packedPriceOf(packed, 'kg') != null
+                ? 'kg'
+                : packedPriceOf(packed, 'piece') != null
+                    ? 'piece'
+                    : '')
         : basis;
-    final price = toman(prices[basisKey], currency) ??
+    final price = toman(packedPriceOf(packed, basisKey), currency) ??
         (basisKey.isEmpty
             ? toman((raw['amount'] as num?)?.toDouble(), currency)
             : null);
     final comparable = price != null && price.isFinite && price > 0;
     if (!comparable) {
-      // `MarketFilter.matches` keeps a row that has no comparable price when the
-      // row still carries the amount its source wrote (`hasTextAmount`), or when
-      // the user turned on «نمایش اعلام‌های بدون قیمت معتبر». This path dropped
-      // both, so the prices tab listed fewer offers than the filter it mirrors:
-      // a range offer («۴۱,۰۰۰ تا ۴۳,۰۰۰») or an amount whose currency the
-      // source never stated disappeared instead of being shown with its text.
       final hasTextAmount = (raw['amount_raw'] as String? ?? '').isNotEmpty;
       if (!scope.includeUnpriced && !hasTextAmount) {
         unpriced++;
-        held[identity] = 1;
-        continue;
+        (_held[endpoint] ??= {}).add(offerId);
+        return;
       }
-      // A bound is a bound on a comparable number; a row without one can never
-      // satisfy it, exactly as the classic filter decides.
-      if (scope.minPrice != null || scope.maxPrice != null) continue;
+      if (scope.minPrice != null || scope.maxPrice != null) return;
     } else if ((scope.minPrice != null && price < scope.minPrice!) ||
         (scope.maxPrice != null && price > scope.maxPrice!)) {
-      // A price filter is a filter on the same comparable number.
-      continue;
+      return;
     }
     if (scope.category.isNotEmpty && raw['category'] != scope.category) {
-      continue;
+      return;
     }
     if (scope.material.isNotEmpty && raw['material'] != scope.material) {
-      continue;
+      return;
     }
-    if (scope.unit.isNotEmpty && unit != scope.unit) continue;
-    // Size, thickness and grade were compared on the rendered labels by the
-    // classic filter; the labels are stored with the row, so the same comparison
-    // is one text test here. A label that is empty never satisfies a filter.
+    if (scope.unit.isNotEmpty && unit != scope.unit) return;
     if ((scope.size.isNotEmpty &&
-            !_sameMeasure(scope.size, sizeWanted,
+            !_sameMeasure(scope.size, _sizeWanted,
                 raw['size_num'] as num?, raw['size_label'] as String? ?? '')) ||
         (scope.thickness.isNotEmpty &&
-            !_sameMeasure(scope.thickness, thicknessWanted,
+            !_sameMeasure(scope.thickness, _thicknessWanted,
                 raw['thickness_num'] as num?,
                 raw['thickness_label'] as String? ?? '')) ||
-        (grade.isNotEmpty &&
+        (_grade.isNotEmpty &&
             raw['grade_label'] != null &&
-            latin(raw['grade_label'] as String).toUpperCase() != grade)) {
-      continue;
+            latin(raw['grade_label'] as String).toUpperCase() != _grade)) {
+      return;
     }
     if (scope.city.isNotEmpty &&
         (scope.cityKind == 'all'
-            ? !(cityBoundary?.hasMatch(raw['haystack'] as String? ?? '') ?? true)
+            ? !(_cityBoundary?.hasMatch(raw['haystack'] as String? ?? '') ??
+                true)
             : (raw['seller_city'] as String? ?? '') != scope.city)) {
-      continue;
+      return;
     }
-    if (scope.onlyFresh && !_fresh(raw, nowMs)) continue;
+    if (scope.onlyFresh && !_fresh(raw, nowMs)) return;
+    final intent = _intent;
     if (intent != null) {
-      if (intent.nonMetal) continue;
+      if (intent.nonMetal) return;
       final cat = raw['category'] as String? ?? '';
       if (intent.spec.category.isNotEmpty && intent.spec.category != cat) {
-        continue;
+        return;
       }
       final searchHay = intent.words.isEmpty && intent.width.isEmpty
           ? title
@@ -714,15 +724,20 @@ class CandidateScope {
           sellerCity: raw['seller_city'] as String? ?? '',
           material: raw['material'] as String? ?? '',
           text: searchHay)) {
-        continue;
+        return;
       }
     }
-    // Nothing is materialised here: the passing index rows themselves go to the
-    // list, which copies the columns it draws as it renders them.
-    slot[identity] = wires.length;
+    (_slot[endpoint] ??= {})[offerId] = wires.length;
     wires.add(raw);
   }
-  return (wires: wires, withheld: undated + unpriced, undated: undated, unpriced: unpriced);
+
+  ({List<Map<String, Object?>> wires, int withheld, int undated, int unpriced})
+      finish() => (
+            wires: wires,
+            withheld: undated + unpriced,
+            undated: undated,
+            unpriced: unpriced
+          );
 }
 
 /// `MarketFilter._sameMeasure`, decided from the stored rendered label.
