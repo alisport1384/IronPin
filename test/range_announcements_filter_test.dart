@@ -99,6 +99,20 @@ void main() {
     expect(find.textContaining('اعلام بدون قیمت نمایش داده نمی‌شود'),
         findsOneWidget,
         reason: 'the shorter list says how many rows were withheld');
+    // The card states this product's own three indicators — میانگین،
+    // بالاترین، پایین‌ترین — each taken from this product's candidates only.
+    expect(find.textContaining('شاخص‌های همین کالا'), findsOneWidget);
+    expect(find.textContaining('میانگین: '), findsOneWidget);
+    expect(find.textContaining('بالاترین: '), findsOneWidget);
+    expect(find.textContaining('پایین‌ترین: '), findsOneWidget);
+    // Candidates are not on screen until the user asks for them.
+    expect(find.textContaining('کاندیدهای همان کالا'), findsNothing,
+        reason: 'the candidate list appears only on user request');
+    final show = find.textContaining('نمایش کاندیدها');
+    await t.scrollUntilVisible(show, 300,
+        scrollable: find.byType(Scrollable).first);
+    await t.tap(show);
+    await t.pumpAndSettle();
     // Expanding the candidates of the same product adds exactly one more
     // entry: the priced row again. A leaked price-less sibling would make it
     // three.

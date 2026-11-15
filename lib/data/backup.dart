@@ -17,8 +17,19 @@ const _channel = MethodChannel('ir.ironpin/storage');
 
 class BackupResult {
   final int latest, history, settings, sync, skipped;
-  const BackupResult(
-      this.latest, this.history, this.settings, this.sync, this.skipped);
+
+  /// Row counts the file declares in its own end record — read before merging,
+  /// so the result can say what the file *has*, even when none of it was added.
+  final int? fileLatest, fileHistory;
+  const BackupResult(this.latest, this.history, this.settings, this.sync,
+      this.skipped,
+      {this.fileLatest, this.fileHistory});
+
+  /// True when the file itself declares no price rows at all (a fresh phone's
+  /// export): settings only. Known counts are required — an unreadable file
+  /// never claims "no rows".
+  bool get fileHasNoRows =>
+      fileLatest != null && fileHistory != null && fileLatest! + fileHistory! == 0;
 }
 
 /// A streaming, versioned JSON-lines backup. A final count + FNV-1a checksum
@@ -125,10 +136,53 @@ class MarketBackup {
     }
   }
 
+  /// The row counts an exported file declares in its own end record — the last
+  /// non-empty line — read from a bounded tail window so a huge backup costs
+  /// one seek instead of a full parse. Returns null for anything that is not a
+  /// readable end record; it never guesses a number.
+  static Future<({int latest, int history})?> _tailCounts(File file) async {
+    try {
+      final len = await file.length();
+      if (len == 0) return null;
+      // One record never exceeds 2 MB and the end record is a single line, so
+      // a 1 MB window is enough even when the file ends with a newline (the
+      // bytes after the last '\n' are empty and skipped below).
+      const window = 1024 * 1024;
+      final start = len > window ? len - window : 0;
+      final raf = await file.open();
+      try {
+        await raf.setPosition(start);
+        final bytes = await raf.read(len - start);
+        final text = utf8.decode(bytes, allowMalformed: true);
+        String? last;
+        for (final line in text.split('\n')) {
+          final trimmed = line.trim();
+          if (trimmed.isNotEmpty) last = trimmed;
+        }
+        if (last == null) return null;
+        final record = jsonDecode(last);
+        if (record is! Map || record['end'] != true) return null;
+        final counts = record['counts'];
+        if (counts is! Map) return null;
+        final latest = counts['latest'], history = counts['history'];
+        if (latest is! int || history is! int) return null;
+        return (latest: latest, history: history);
+      } finally {
+        await raf.close();
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<BackupResult> merge(File file, {bool restoreSettings = false}) async {
     if (await file.length() > backupMaxBytes) {
       throw const FormatException('بکاپ از سقف ۵۱۲ مگابایت بزرگ‌تر است.');
     }
+    // What the file says it holds, read before anything is written — the
+    // result must be able to name a rowless file even when its rows (there
+    // are none) add nothing.
+    final declared = await _tailCounts(file);
     final result = await store.db.transaction((tx) async {
       final existing = <String, Map<String, Object?>>{};
       // Lightweight date/identity summaries; heavy JSON parsing is off-thread.
@@ -378,7 +432,8 @@ class MarketBackup {
       await tx.insert('settings', {'key': 'autoRefresh', 'value': 'false'},
           conflictAlgorithm: ConflictAlgorithm.replace);
       return BackupResult(
-          addedLatest, addedHistory, addedSettings, addedSync, skipped);
+          addedLatest, addedHistory, addedSettings, addedSync, skipped,
+          fileLatest: declared?.latest, fileHistory: declared?.history);
     });
     await AppLogger.instance.record('backup', 'import_merged', {
       'latest': result.latest,

@@ -17,18 +17,21 @@ import 'common.dart';
 ///
 /// Order: the comparable basis the row can prove, then the amount exactly as the
 /// source announced it (even when the source named no unit), and only then the
-/// raw extracted text of a row that has no number at all.
-String candidatePriceText(CatalogueItem p) {
-  final q = p.example;
+/// raw extracted text of a row that has no number at all. Zero is not a price:
+/// sources that publish «۰ تومان» mean "I have no price", so every step treats
+/// a non-positive amount as absent and the row reads «بدون قیمت» instead.
+String candidatePriceText(CatalogueItem p) => candidatePriceTextOf(p.example);
+
+String candidatePriceTextOf(Quote q) {
   final basis = rangeBasis(q);
   final comparable = q.tomanFor(basis);
-  if (comparable != null) {
+  if (comparable != null && comparable > 0) {
     return '${fmt(comparable)} تومان / ${q.unitName(basis)}';
   }
   final own = q.tomanFor('original');
-  if (own != null) return '${fmt(own)} تومان • واحد نامشخص';
+  if (own != null && own > 0) return '${fmt(own)} تومان • واحد نامشخص';
   final amount = q.amount;
-  if (amount != null) return '${fmt(amount)} ${faDigits(q.currency)}';
+  if (amount != null && amount > 0) return '${fmt(amount)} ${faDigits(q.currency)}';
   return faDigits(q.details['مبلغ استخراج‌شده'] ?? 'بدون قیمت');
 }
 
@@ -50,6 +53,15 @@ class _RangePageState extends State<RangePage> {
   /// Answer of the confirmed scope. Built from the persisted index, so a second
   /// question costs one pass over derived rows instead of a full re-read.
   RangeAnswer? selection;
+
+  /// One indicator card per product that has candidates — built from the
+  /// candidates themselves (Bug A), so a product can never be counted without
+  /// its own card, and a price-less product never gets one.
+  List<_CatalogEntry> cards = const [];
+
+  /// Cards whose candidates the user asked to see: the candidate list is never
+  /// on screen until «نمایش کاندیدها» is pressed for that product.
+  final showCandidateCards = <String>{};
   String scopeCity = '', stage = '';
   int processed = 0, totalRows = 0;
   @override
@@ -81,6 +93,81 @@ class _RangePageState extends State<RangePage> {
     error = '';
     visible = 40;
     catalogVisible = 40;
+    cards = const [];
+    showCandidateCards.clear();
+  }
+
+  /// The candidates of one product card, revealed only on request. Same rows,
+  /// prices and dialogs as the tab always showed — scoped to the product the
+  /// user asked about.
+  Widget _candidateSection(BuildContext context, _CatalogEntry entry,
+      String needle) {
+    final catalog = entry.candidates
+        .where((p) => p.searchText.contains(needle))
+        .toList();
+    return ExpansionTile(
+      title: Text('کاندیدهای همان کالا • ${fmt(catalog.length)} مورد'),
+      children: [
+        for (final p in catalog.take(catalogVisible))
+          ListTile(
+            title: Text(faDigits(p.example.title)),
+            // Every candidate carries the price the archive actually holds
+            // for it, in the unit that price was announced with: a row is
+            // never offered without its number.
+            trailing: Text(candidatePriceText(p),
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.bold, color: teal)),
+            subtitle: Text(faDigits(
+                '${p.example.specificationLabel} • ${p.example.seller}\n'
+                '${dateLabel(p.example.marketAt, time: false)}\n'
+                '${p.counted ? 'در آمار همین واحد حساب شده است' : p.unavailableReasons.join('؛ ')}')),
+            onTap: () => showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                      title: Text(faDigits(p.example.title)),
+                      content: SingleChildScrollView(
+                          child: Text(faDigits(
+                              '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${p.counted ? 'در آمار همین واحد حساب شده است؛ میانگین، بالاترین و پایین‌ترین از همین فهرست گرفته می‌شود' : rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ برای بازهٔ انتخاب‌شده محاسبه شده است.'))),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('بستن'))
+                      ],
+                    )),
+          ),
+        Text(
+            'نمایش ${fmt(catalog.length < catalogVisible ? catalog.length : catalogVisible)} از ${fmt(catalog.length)} کاندید'),
+        if (catalog.length > catalogVisible)
+          TextButton(
+              onPressed: () => setState(() => catalogVisible += 40),
+              child: const Text('نمایش ۴۰ کاندید بعدی')),
+      ],
+    );
+  }
+
+  /// Rebuilds the product cards from the candidates of the current answer —
+  /// never from the raw announcement list — so cards, candidates and statistics
+  /// are one set (Bug A). Called from every setState that installs an answer.
+  void _recomputeCards() {
+    final answer = selection;
+    if (answer == null || answer.candidates.isEmpty) {
+      cards = const [];
+      showCandidateCards.clear();
+      return;
+    }
+    final quotes = [for (final p in answer.candidates) p.example];
+    final (ranges, _) = buildProductRanges(quotes, answer.at, basis: basis);
+    showCandidateCards.clear();
+    cards = [
+      for (final range in ranges)
+        _CatalogEntry(
+            range,
+            [
+              for (final p in answer.candidates)
+                if (range.announcements.any((q) => identical(q, p.example)))
+                  p
+            ])
+    ];
   }
 
   void select(String? value) {
@@ -124,6 +211,7 @@ class _RangePageState extends State<RangePage> {
       error = '';
       result = cached?.result;
       selection = cached;
+      _recomputeCards();
       visible = 40;
       catalogVisible = 40;
       stage = cached != null ? '' : 'آماده‌سازی فهرست محلی';
@@ -193,6 +281,7 @@ class _RangePageState extends State<RangePage> {
       setState(() {
         selection = answer;
         result = answer.result;
+        _recomputeCards();
         calculating = false;
         stage = '';
         processed = answer.keptRows;
@@ -237,36 +326,26 @@ class _RangePageState extends State<RangePage> {
     }
     final entries = productFields[family]?.keys.toList() ?? <String>[];
     final needle = specNorm(search.text);
-    // «اعلام‌های نتیجه» lists offers the user can act on: a row without a
-    // number has nothing to compare and is left out here. It is still counted
-    // — and named — under «علت نبودن در آمار», so a shorter list is always
+    // «اعلام‌های نتیجه» lists offers the user can act on: a row without a real
+    // number has nothing to compare and is left out here — zero is not a price
+    // (Bug B), so a «۰ تومان» row counts as price-less too. It is still counted
+    // — and named — under the footer line, so a shorter list is always
     // explained rather than silent.
+    bool hasPrice(Quote q) => q.amount != null && q.amount! > 0;
     final hiddenUnpriced = result?.announcements
             .where((q) =>
-                q.amount == null &&
+                !hasPrice(q) &&
                 specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
                     .contains(needle))
             .length ??
         0;
     final shown = result?.announcements
             .where((q) =>
-                q.amount != null &&
+                hasPrice(q) &&
                 specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
                     .contains(needle))
             .toList() ??
         <Quote>[];
-    // Candidates: real announcement date inside the window and a comparable
-    // price in the chosen basis. Old, undated and unpriced rows are not offered
-    // as candidates at all; the count of withheld rows is reported instead.
-    final catalog = selection?.candidates
-            .where((p) => p.searchText.contains(needle))
-            .toList() ??
-        <CatalogueItem>[];
-    // Rows this scope holds that carry no amount at all: not candidates, but
-    // counted here so a shorter list is explained instead of silent.
-    final unpriced = (selection?.catalog ?? <CatalogueItem>[])
-        .where((p) => p.example.amount == null)
-        .length;
     return ListView(padding: const EdgeInsets.all(14), children: [
       Text('رنج‌گیری ${windowText(widget.c.rangeWindow)}',
           style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
@@ -363,38 +442,67 @@ class _RangePageState extends State<RangePage> {
           if (result!.ranges.isEmpty)
             infoBox('رنج عددی قابل مقایسه نداریم',
                 'اعلام‌های مرتبط در پایین باقی می‌مانند. مبلغ/واحد/ارز نامعلوم با حدس وارد آمار نمی‌شود.'),
-          for (final range in result!.ranges)
+          // One card per product that has candidates, built from the same
+          // candidate set as the statistics (Bug A): the product's own three
+          // indicators (میانگین/بالاترین/پایین‌ترین), its own cost calculator —
+          // and its candidates, which stay off screen until «نمایش کاندیدها»
+          // is pressed for this product. The cards sit above «اعلام‌های نتیجه».
+          for (final entry in cards)
             Card(
                 child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text({
-                            'min': 'پایین‌ترین قیمت',
-                            'max': 'بالاترین قیمت',
-                            'mean': 'میانگین قیمت'
-                          }[mode]!),
+                          Text(_cardIdentity(entry.range.example)),
+                          const Text('شاخص‌های همین کالا',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15)),
                           Text(
-                              '${fmt(range.rate(mode), decimals: mode == 'mean' ? 0 : 2)} تومان / ${range.example.unitName(range.basis)}',
+                              '${fmt(entry.range.rate(mode), decimals: mode == 'mean' ? 0 : 2)} تومان / ${entry.range.example.unitName(entry.range.basis)}',
                               style: const TextStyle(
                                   fontSize: 21,
                                   fontWeight: FontWeight.bold,
                                   color: teal)),
+                          // The product's three indicators, each taken from
+                          // this product's own rows only.
                           Text(
-                              '${moneyWords(range.rate(mode))} • ${fmt(range.announcements.length)} اعلام',
-                              style: const TextStyle(fontSize: 11)),
+                              'میانگین: ${fmt(entry.range.mean)} تومان / ${entry.range.example.unitName(entry.range.basis)}'),
+                          Text(
+                              'بالاترین: ${fmt(entry.range.maximum, decimals: 2)} تومان / ${entry.range.example.unitName(entry.range.basis)}'),
+                          Text(
+                              'پایین‌ترین: ${fmt(entry.range.minimum, decimals: 2)} تومان / ${entry.range.example.unitName(entry.range.basis)}'),
                           ExpansionTile(
                               title: Text(
-                                  'محاسبه هزینه • ${range.example.unitName(range.basis)}'),
+                                  'محاسبه هزینه • ${entry.range.example.unitName(entry.range.basis)}'),
                               children: [
                                 RangeCost(
                                     key: ValueKey(
-                                        '${range.key}:$mode:${result!.at}'),
-                                    range: range,
-                                    rate: range.rate(mode),
+                                        '${entry.range.key}:$mode:${result!.at}'),
+                                    range: entry.range,
+                                    rate: entry.range.rate(mode),
                                     allowGeometry: false)
                               ]),
+                          // The section sits above its button on purpose: when
+                          // the user asks for the candidates, the list opens
+                          // exactly where the button just was, in the part of
+                          // the card already brought into view.
+                          if (showCandidateCards.contains(entry.range.key))
+                            _candidateSection(context, entry, needle),
+                          Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: FilledButton.tonal(
+                                  onPressed: () => setState(() {
+                                        if (!showCandidateCards
+                                            .remove(entry.range.key)) {
+                                          showCandidateCards
+                                              .add(entry.range.key);
+                                        }
+                                      }),
+                                  child: Text(showCandidateCards
+                                          .contains(entry.range.key)
+                                      ? 'پنهان کردن کاندیدها'
+                                      : 'نمایش کاندیدها'))),
                         ]))),
           TextField(
               controller: search,
@@ -427,49 +535,6 @@ class _RangePageState extends State<RangePage> {
           if (shown.isEmpty)
             const Text(
                 'اعلامی مطابق این جستجو/مشخصات در ۴۸ ساعت گذشته موجود نیست.'),
-          ExpansionTile(
-            title: Text('کاندیدهای همان کالا • ${fmt(catalog.length)} مورد'),
-            subtitle: Text(faDigits(
-                '${catalog.length == catalogVisible ? 'فقط اعلام دارای تاریخ معتبر در بازه و قیمت قابل‌مقایسه' : 'فقط تاریخ‌دار و قیمت‌دار؛ ${fmt(catalog.length)} مورد در این بازه'}'
-                '${unpriced == 0 ? '' : ' • ${fmt(unpriced)} ردیف بی‌قیمت نمایش داده نمی‌شود'}')),
-            children: [
-              for (final p in catalog.take(catalogVisible))
-                ListTile(
-                  title: Text(faDigits(p.example.title)),
-                  // Every candidate carries the price the archive actually holds
-                  // for it, in the unit that price was announced with: a row is
-                  // never offered without its number.
-                  trailing: Text(candidatePriceText(p),
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: teal)),
-                  subtitle: Text(faDigits(
-                      '${p.example.specificationLabel} • ${p.example.seller}\n'
-                      '${dateLabel(p.example.marketAt, time: false)}\n'
-                      '${p.counted ? 'در آمار همین واحد حساب شده است' : p.unavailableReasons.join('؛ ')}')),
-                  onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                            title: Text(faDigits(p.example.title)),
-                            content: SingleChildScrollView(
-                                child: Text(faDigits(
-                                    '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${p.counted ? 'در آمار همین واحد حساب شده است؛ میانگین، بالاترین و پایین‌ترین از همین فهرست گرفته می‌شود' : rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ برای بازهٔ انتخاب‌شده محاسبه شده است.'))),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('بستن'))
-                            ],
-                          )),
-                ),
-              Text(
-                  'نمایش ${fmt(catalog.length < catalogVisible ? catalog.length : catalogVisible)} از ${fmt(catalog.length)} کاندید'),
-              if (catalog.length > catalogVisible)
-                TextButton(
-                    onPressed: () => setState(() => catalogVisible += 40),
-                    child: const Text('نمایش ۴۰ کاندید بعدی')),
-            ],
-          ),
           if (result!.excluded.isNotEmpty)
             ExpansionTile(title: const Text('علت نبودن در آمار'), children: [
               for (final e in result!.excluded.entries)
@@ -479,6 +544,28 @@ class _RangePageState extends State<RangePage> {
       ],
     ]);
   }
+}
+
+/// The plain-text identity line at the top of a product card: title plus its
+/// technical specification — never a ListTile, and never the bare title either,
+/// so it can never be mistaken for an announcement row of the list below.
+String _cardIdentity(Quote q) {
+  final spec = q.specificationLabel;
+  final parts = <String>[
+    q.title,
+    if (spec.isNotEmpty) spec,
+    if (q.seller.isNotEmpty) q.seller,
+    if (spec.isEmpty && q.seller.isEmpty) q.category,
+  ];
+  return faDigits(parts.join(' • '));
+}
+
+/// One product's card state: its range (the same min/max/mean the statistics
+/// hold) and exactly the candidates that were counted in it.
+class _CatalogEntry {
+  final PriceRange range;
+  final List<CatalogueItem> candidates;
+  const _CatalogEntry(this.range, this.candidates);
 }
 
 class RangeCost extends StatefulWidget {

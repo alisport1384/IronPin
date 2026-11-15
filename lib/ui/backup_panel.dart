@@ -72,8 +72,15 @@ class _BackupPanelState extends State<BackupPanel> {
         if (mounted) {
           setState(() => status = result == null
               ? 'بازیابی لغو شد؛ داده تغییری نکرد.'
-              : 'ادغام انجام شد: ${fmt(result.latest)} قیمت افزوده/به‌روز، ${fmt(result.history)} ثبت تاریخی، '
-                  '${fmt(result.settings)} تنظیم و ${fmt(result.sync)} وضعیت منبع. ${fmt(result.skipped)} رکورد تکراری/مقدم‌نبودن کنار گذاشته شد.');
+              // The file says what it holds: a rowless export (a fresh
+              // phone's) is named as such instead of reporting «۰ افزوده»
+              // as if the restore had worked normally.
+              : result.fileHasNoRows
+                  ? 'این فایل اصلاً هیچ ردیف قیمتی ندارد؛ فقط تنظیماتش بازیابی شد. برای بازگشت قیمت‌ها فایلی را بگیرید که دست‌کم یک بار قیمت گرفته باشد.'
+                  : (result.latest == 0 && result.history == 0)
+                      ? 'فایل ردیف داشت ولی هیچ‌کدید افزوده نشد؛ همهٔ ردیف‌ها تکراری یا قدیمی‌تر از نسخه‌های همین دستگاه بودند. ${fmt(result.settings)} تنظیم و ${fmt(result.sync)} وضعیت منبع بازیابی شد.'
+                      : 'ادغام انجام شد: ${fmt(result.latest)} قیمت افزوده/به‌روز، ${fmt(result.history)} ثبت تاریخی، '
+                          '${fmt(result.settings)} تنظیم و ${fmt(result.sync)} وضعیت منبع. ${fmt(result.skipped)} رکورد تکراری/مقدم‌نبودن کنار گذاشته شد.');
         }
       } else {
         final destination = await backup.exportToPicker();

@@ -427,8 +427,11 @@ ProductRangeResult calculateProductRange(Map<String, Object> input) {
           'بولت با مشخصات ناقص؛ نوع، ابعاد، رزوه، گرید، پوشش و شمول ست برای مقایسه لازم است');
       continue;
     }
-    final grouping =
-        query.family == 'بولت' ? jsonEncode([basis, technicalKey]) : basis;
+    // Group every family by its technical specification (and basis), so rows
+    // of the same product — including «۱ کیلوگرم» vs «۱ تن» listings — share
+    // one range; products without exact specifications pool per basis under a
+    // null technical key. Indicators pick the scope (kg/ton) later.
+    final grouping = jsonEncode([basis, technicalKey]);
     (grouped[grouping] ??= []).add(q);
   }
   final ranges = <PriceRange>[

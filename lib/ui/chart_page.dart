@@ -27,6 +27,14 @@ class _ChartPageState extends State<ChartPage> {
   String lastSignature = '';
   String loadedKey = '';
   int historyLimit = 1000;
+
+  /// 'price' draws every receipt; 'indicators' draws only the changes of the
+  /// range tab's mean/high/low («فقط ثبت رکورد نموداری») — the chart of
+  /// تغییرات تب رنج، نه هر رسید دریافتی.
+  String mode = 'price';
+
+  /// Which indicator lines are visible in the indicator mode.
+  final indicatorOn = <String>{'mean', 'high', 'low'};
   String historyKey(String endpoint) =>
       '${widget.c.selectedCity}:${widget.c.historyEpoch}:${widget.c.endpointRevisions[endpoint] ?? 0}';
   @override
@@ -132,6 +140,34 @@ class _ChartPageState extends State<ChartPage> {
           load(current.id);
         });
       }, inherit: true, inherited: widget.c.discoveryDays),
+      // Two views of the same real history: every receipt, or only the
+      // recorded changes of the range tab's indicators — duplicates that did
+      // not move a number create no point in either view.
+      Row(children: [
+        ChoiceChip(
+            label: const Text('قیمت هر ثبت'),
+            selected: mode == 'price',
+            onSelected: (_) => setState(() => mode = 'price')),
+        const SizedBox(width: 8),
+        ChoiceChip(
+            label: const Text('شاخص‌های رنج — فقط تغییرات'),
+            selected: mode == 'indicators',
+            onSelected: (_) => setState(() => mode = 'indicators')),
+      ]),
+      if (mode == 'indicators')
+        Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(spacing: 6, runSpacing: 0, children: [
+              for (final id in indicatorIds)
+                FilterChip(
+                    avatar: CircleAvatar(
+                        backgroundColor: indicatorColors[id], radius: 6),
+                    label: Text(indicatorLabels[id]!),
+                    selected: indicatorOn.contains(id),
+                    onSelected: (v) => setState(() {
+                          v ? indicatorOn.add(id) : indicatorOn.remove(id);
+                        }))
+            ])),
       FutureBuilder<List<Quote>>(
           future: future,
           builder: (context, snap) {
@@ -158,6 +194,34 @@ class _ChartPageState extends State<ChartPage> {
                   q.comparisonGroup(f.basis) ==
                       current.comparisonGroup(f.basis);
             }).toList();
+            // The same rows, seen as recorded indicator changes instead of
+            // receipts: one point per moment the mean/high/low actually moved,
+            // under the range tab's own window.
+            final indicatorData = mode == 'indicators'
+                ? indicatorChanges(series,
+                    basis: f.basis,
+                    window: widget.c.rangeWindow > 0
+                        ? Duration(days: widget.c.rangeWindow)
+                        : null)
+                : null;
+            final visibleIndicators = [
+              for (final id in indicatorIds)
+                if (indicatorOn.contains(id)) id
+            ];
+            DateTime? firstChangeAt, lastChangeAt;
+            if (indicatorData != null) {
+              for (final id in visibleIndicators) {
+                final points = indicatorData.changes[id]!;
+                if (points.isEmpty) continue;
+                final first = points.first.at, last = points.last.at;
+                if (firstChangeAt == null || first.isBefore(firstChangeAt)) {
+                  firstChangeAt = first;
+                }
+                if (lastChangeAt == null || last.isAfter(lastChangeAt)) {
+                  lastChangeAt = last;
+                }
+              }
+            }
             return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -180,7 +244,78 @@ class _ChartPageState extends State<ChartPage> {
                   if (series.isEmpty)
                     emptyState('نقطه‌ای در این بازه نیست',
                         'بازه یا محدودیت قیمت را تغییر دهید.')
-                  else
+                  else if (mode == 'indicators') ...[
+                    if (visibleIndicators.isEmpty)
+                      infoBox('هیچ شاخصی انتخاب نشده است',
+                          'برای رسم تغییرات، دست‌کم یکی از میانگین/بالاترین/پایین‌ترین را روشن کنید.')
+                    else if (indicatorData!.changes['mean']!.isEmpty)
+                      emptyState('تغییری در این بازه ثبت نشده است',
+                          'شاخص‌ها در این بازه عدد تازه‌ای پیدا نکرده‌اند؛ بازه زمانی را تغییر دهید.')
+                    else
+                      Card(
+                          child: Padding(
+                              padding: const EdgeInsets.all(18),
+                              child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    for (final id in visibleIndicators)
+                                      Text(
+                                          '${indicatorLabels[id]}: ${fmt(indicatorData.changes[id]!.last.value, decimals: 2)} تومان${indicatorData.changes[id]!.length > 1 ? ' • ${fmt(indicatorData.changes[id]!.length)} تغییر ثبت شده' : ''}',
+                                          style: TextStyle(
+                                              color: indicatorColors[id],
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15)),
+                                    const SizedBox(height: 16),
+                                    SizedBox(
+                                        height: 220,
+                                        width: double.infinity,
+                                        child: RepaintBoundary(
+                                            child: CustomPaint(
+                                                painter: IndicatorChartPainter({
+                                                  for (final id
+                                                      in visibleIndicators)
+                                                    id: [
+                                                      for (final c
+                                                          in indicatorData
+                                                              .changes[id]!)
+                                                        c.value
+                                                    ]
+                                                }, {
+                                                  for (final id
+                                                      in visibleIndicators)
+                                                    id: [
+                                                      for (final c
+                                                          in indicatorData
+                                                              .changes[id]!)
+                                                        c.at
+                                                            .millisecondsSinceEpoch
+                                                            .toDouble()
+                                                    ]
+                                                }, {
+                                                  for (final id
+                                                      in visibleIndicators)
+                                                    id: indicatorColors[id]!
+                                                })))),
+                                    Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                              dateLabel(firstChangeAt!,
+                                                  time: false),
+                                              style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: muted)),
+                                          Text(
+                                              dateLabel(lastChangeAt!,
+                                                  time: false),
+                                              style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: muted))
+                                        ])
+                                  ]))),
+                  ] else
                     Card(
                         child: Padding(
                             padding: const EdgeInsets.all(18),
@@ -326,6 +461,176 @@ class PriceChartPainter extends CustomPainter {
   bool shouldRepaint(PriceChartPainter oldDelegate) =>
       !listEquals(values, oldDelegate.values) ||
       !listEquals(times, oldDelegate.times);
+}
+
+/// Which indicators the range tab defines, in drawing order, with the labels
+/// and line colors the chart uses for them.
+const indicatorIds = ['mean', 'high', 'low'];
+const indicatorLabels = {
+  'mean': 'میانگین',
+  'high': 'بالاترین',
+  'low': 'پایین‌ترین',
+};
+const indicatorColors = {
+  'mean': Color(0xff0f7f7a),
+  'high': Color(0xffc76b1d),
+  'low': Color(0xff5a5fc4),
+};
+
+/// One recorded moment when an indicator value moved.
+class IndicatorChange {
+  /// The receipt whose evaluation produced the value (the point's x-axis).
+  final DateTime at;
+  final double value;
+
+  /// Change against the previously recorded point, in percent; the first
+  /// point of a series starts at 0.
+  final double changePct;
+  const IndicatorChange(this.at, this.value, this.changePct);
+}
+
+/// The recorded changes of one product's indicators: mean/high/low, each
+/// emitting a point only when its value actually changed.
+class IndicatorSeries {
+  final int records;
+  final Map<String, List<IndicatorChange>> changes;
+  const IndicatorSeries(this.records, this.changes);
+  bool get isEmpty => records == 0;
+}
+
+/// The range tab's own indicators, evaluated at every receipt.
+///
+/// At each record's `fetchedAt` the current set — every priced record up to
+/// that moment, or the ones inside [window] when given (null = the whole
+/// stored history, matching «همه زمان‌ها») — is projected to mean/high/low in
+/// the chosen [basis], exactly like the range tab counts them. A point is
+/// emitted only when the value differs from the last emitted one, so repeated
+/// receipts that did not move a number register no change. Records without a
+/// valid toman price never influence any indicator.
+IndicatorSeries indicatorChanges(List<Quote> records,
+    {required String basis, Duration? window}) {
+  // Chronological evaluation order; equal timestamps keep the input order, so
+  // the answer never depends on map or sort instability.
+  final ordered = [
+    for (var i = 0; i < records.length; i++) (records[i], i)
+  ]..sort((a, b) {
+      final c = a.$1.fetchedAt.compareTo(b.$1.fetchedAt);
+      return c != 0 ? c : a.$2.compareTo(b.$2);
+    });
+  final changes = <String, List<IndicatorChange>>{
+    'mean': <IndicatorChange>[],
+    'high': <IndicatorChange>[],
+    'low': <IndicatorChange>[],
+  };
+  double? lastMean, lastHigh, lastLow;
+  for (var i = 0; i < ordered.length; i++) {
+    final at = ordered[i].$1.fetchedAt;
+    final cutoff = window == null ? null : at.subtract(window);
+    var sum = 0.0, count = 0;
+    var high = double.negativeInfinity, low = double.infinity;
+    for (var j = 0; j <= i; j++) {
+      final q = ordered[j].$1;
+      if (cutoff != null && !q.fetchedAt.isAfter(cutoff)) continue;
+      final price = q.tomanFor(basis);
+      if (price == null || !price.isFinite || price <= 0) continue;
+      sum += price;
+      count++;
+      if (price > high) high = price;
+      if (price < low) low = price;
+    }
+    if (count == 0) continue;
+    final mean = sum / count;
+    if (lastMean == null || mean != lastMean) {
+      changes['mean']!.add(IndicatorChange(
+          at, mean, lastMean == null ? 0 : (mean - lastMean) / lastMean * 100));
+      lastMean = mean;
+    }
+    if (lastHigh == null || high != lastHigh) {
+      changes['high']!.add(IndicatorChange(at, high,
+          lastHigh == null ? 0 : (high - lastHigh) / lastHigh * 100));
+      lastHigh = high;
+    }
+    if (lastLow == null || low != lastLow) {
+      changes['low']!
+          .add(IndicatorChange(at, low, lastLow == null ? 0 : (low - lastLow) / lastLow * 100));
+      lastLow = low;
+    }
+  }
+  return IndicatorSeries(records.length, changes);
+}
+
+/// Draws the selected indicator change-lines: one step-line per indicator,
+/// sampled with the same chronological min/max rule as the price chart, never
+/// smoothed and never interpolated between recorded points.
+class IndicatorChartPainter extends CustomPainter {
+  final Map<String, List<double>> values, times;
+  final Map<String, Color> colors;
+  IndicatorChartPainter(this.values, this.times, this.colors);
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+    var lo = double.infinity, hi = double.negativeInfinity;
+    for (final list in values.values) {
+      for (final v in list) {
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+    }
+    if (!lo.isFinite || !hi.isFinite) return;
+    final pad = math.max((hi - lo) * .2, math.max(hi * .015, 1));
+    final low = lo - pad, high = hi + pad;
+    const left = 58.0, right = 12.0, top = 12.0, bottom = 14.0;
+    final width = math.max(size.width - left - right, 1),
+        height = math.max(size.height - top - bottom, 1);
+    final grid = Paint()
+      ..color = const Color(0xffdce6eb)
+      ..strokeWidth = 1;
+    for (var i = 0; i < 4; i++) {
+      final y = top + i * height / 3;
+      canvas.drawLine(Offset(left, y), Offset(size.width - right, y), grid);
+      final label = fmt(high - i * (high - low) / 3);
+      final tp = TextPainter(
+          text: TextSpan(
+              text: label,
+              style: const TextStyle(
+                  color: muted, fontFamily: 'Vazirmatn', fontSize: 9)),
+          textDirection: TextDirection.rtl)
+        ..layout(maxWidth: 52);
+      tp.paint(canvas, Offset(left - tp.width - 6, y - 6));
+    }
+    for (final id in values.keys) {
+      final list = values[id]!;
+      if (list.isEmpty) continue;
+      final timesOf = times[id]!;
+      final color = colors[id] ?? teal;
+      final start = timesOf.first, end = timesOf.last;
+      Offset point(int i) => Offset(
+          left + (end == start ? .5 : (timesOf[i] - start) / (end - start)) * width,
+          top + (1 - (list[i] - low) / (high - low)) * height);
+      final indices = chartSampleIndices(list);
+      final line = Path()..moveTo(point(0).dx, point(0).dy);
+      for (var j = 1; j < indices.length; j++) {
+        final i = indices[j], previous = indices[j - 1];
+        line.lineTo(point(i).dx, point(previous).dy);
+        line.lineTo(point(i).dx, point(i).dy);
+      }
+      canvas.drawPath(
+          line,
+          Paint()
+            ..color = color
+            ..strokeWidth = 2.2
+            ..style = PaintingStyle.stroke);
+      for (final i in indices) {
+        canvas.drawCircle(point(i), 3, Paint()..color = color);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(IndicatorChartPainter oldDelegate) =>
+      !mapEquals(values, oldDelegate.values) ||
+      !mapEquals(times, oldDelegate.times) ||
+      !mapEquals(colors, oldDelegate.colors);
 }
 
 class QuoteSearch extends SearchDelegate<Quote?> {

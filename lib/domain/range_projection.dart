@@ -207,9 +207,11 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
       excluded[reason] = (excluded[reason] ?? 0) + 1;
       continue;
     }
-    final group = family == 'بولت'
-        ? jsonEncode([unit, item.row.productKey])
-        : unit;
+    // Every family groups by basis + technical specification, exactly like
+    // `calculateProductRange`: rows of one product keep their own indicators,
+    // «۱ کیلوگرم» and «۱ تن» stay separate groups, and rows without exact
+    // specifications pool per unit under a null technical key.
+    final group = jsonEncode([unit, item.row.productKey]);
     (grouped[group] ??= []).add(index);
     groupBasis[group] = unit;
   }
@@ -249,11 +251,13 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
     }
   }
   // A row with no price is not a candidate at all: it produced an entry the tab
-  // could not put a number on. Rows are only kept when they carry an amount; the
-  // UI still counts and states how many were withheld.
+  // could not put a number on. Rows are only kept when they carry a real,
+  // positive amount — a source that writes «۰ تومان» means "no price", which is
+  // exactly what «قیمت ندارد» says in the announcements; the UI still counts and
+  // states how many were withheld.
   final allCandidates = [
     for (var i = 0; i < rows.length; i++)
-      if (rows[i]['amount'] is num) i
+      if (rows[i]['amount'] is num && (rows[i]['amount'] as num) > 0) i
   ];
   final countedCandidates = [
     for (var i = 0; i < rows.length; i++)
@@ -272,6 +276,36 @@ PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
   );
 }
 
+/// The three indicators of a candidate's own product, as the range tab states
+/// them on the candidate and on the product card: the same min/max/mean the
+/// statistics are built from, the candidate's own price inside that range, and
+/// the roles the price earns there («پایین‌ترین»، «بالاترین»، «نزدیک‌ترین به
+/// میانگین»). One product's marks never carry another product's numbers.
+class CandidateMark {
+  /// Id of the source quote the mark belongs to.
+  final String id;
+
+  /// The candidate's own comparable price in [basis], in toman.
+  final double price;
+  final String basis;
+  final double minimum, maximum, mean;
+
+  /// (price − mean) / mean × 100 — the candidate's deviation from its own
+  /// product's mean.
+  final double deviationPct;
+  final List<String> roles;
+
+  const CandidateMark(
+      {required this.id,
+      required this.price,
+      required this.basis,
+      required this.minimum,
+      required this.maximum,
+      required this.mean,
+      required this.deviationPct,
+      required this.roles});
+}
+
 /// One selectable entry of the local catalogue.
 ///
 /// The quote and its search text are cheap; the reasons it is outside the
@@ -285,7 +319,13 @@ class CatalogueItem {
 
   /// True when this candidate can also be counted in a range of its unit.
   final bool counted;
-  CatalogueItem(this.key, this.wire, this.at, {this.counted = true});
+
+  /// The candidate's own product indicators; built with the answer, never
+  /// fetched later — see [buildAnswer].
+  final CandidateMark? mark;
+
+  CatalogueItem(this.key, this.wire, this.at,
+      {this.counted = true, this.mark});
 
   /// Built only when the entry is actually shown.
   late final Quote example = quoteFromWire(wire);
@@ -331,18 +371,6 @@ RangeAnswer buildAnswer(
   {required String basis, required DateTime at, required int inputRows}) {
   final wires = projected.rows;
   final quotes = [for (final wire in wires) quoteFromWire(wire)];
-  // The candidates are exactly the rows the statistics are built from: a real
-  // announcement date inside the window and a comparable price in its unit.
-  // An offer without a date or without such a price is never offered here — it
-  // stays in the announcements and is counted under «علت نبودن در آمار» — so
-  // min, max and mean are taken from every candidate the tab lists, and every
-  // listed candidate is counted in them.
-  final candidates = <CatalogueItem>[
-    for (final i in projected.announceIndices)
-      CatalogueItem(
-          '${wires[i]['endpoint']}:${wires[i]['id']}:$i', wires[i], at,
-          counted: true)
-  ];
   final ranges = [
     for (final range in projected.ranges)
       PriceRange.computed(
@@ -356,6 +384,36 @@ RangeAnswer buildAnswer(
           roundedMean: range['rounded'] as int,
           sellers: range['sellers'] as int)
   ];
+  // Every counted row's own product indicators, decided inside the range it is
+  // counted in — the mark and the product card can never disagree.
+  final markByIndex = <int, CandidateMark>{};
+  for (final range in projected.ranges) {
+    final unit = range['basis'] as String;
+    final indices = [for (final i in range['indices'] as List) i as int];
+    final values = [
+      for (final i in indices) toman(quotes[i].priceFor(unit), quotes[i].currency)!
+    ];
+    final marks = _marksFor(values,
+        ids: [for (final i in indices) quotes[i].id],
+        basis: unit,
+        minimum: (range['min'] as num).toDouble(),
+        maximum: (range['max'] as num).toDouble(),
+        mean: (range['mean'] as num).toDouble());
+    for (var k = 0; k < indices.length; k++) {
+      markByIndex[indices[k]] = marks[k];
+    }
+  }
+  // The candidates are exactly the rows the statistics are built from: a real
+  // announcement date inside the window and a comparable price in its unit.
+  // An offer without a date or without such a price is never offered here — it
+  // stays in the announcements and is counted under «علت نبودن در آمار» — so
+  // min, max and mean are taken from every candidate the tab lists, and every
+  // listed candidate is counted in them.
+  final candidates = <CatalogueItem>[
+    for (final i in projected.announceIndices)
+      CatalogueItem('${wires[i]['endpoint']}:${wires[i]['id']}:$i', wires[i], at,
+          counted: true, mark: markByIndex[i])
+  ];
   return RangeAnswer(
       ProductRangeResult(quotes, ranges, projected.excluded, at),
       candidates,
@@ -363,6 +421,91 @@ RangeAnswer buildAnswer(
       projected.kept,
       at,
       candidates: candidates);
+}
+
+/// The marks of one range's members: one helper shared by the answer path and
+/// by [buildProductRanges], so the roles and the deviation are identical
+/// wherever the same numbers are shown.
+///
+/// A price earns «پایین‌ترین»/«بالاترین» on exact equality with the range's
+/// extremes, and «نزدیک‌ترین به میانگین» when its distance to the mean is the
+/// smallest of the group (ties both earn it — a single-member product is all
+/// three roles at once).
+List<CandidateMark> _marksFor(List<double> prices,
+    {required List<String> ids,
+    required String basis,
+    required double minimum,
+    required double maximum,
+    required double mean}) {
+  var nearest = double.infinity;
+  for (final price in prices) {
+    final distance = (price - mean).abs();
+    if (distance < nearest) nearest = distance;
+  }
+  return [
+    for (var i = 0; i < prices.length; i++)
+      CandidateMark(
+          id: ids[i],
+          price: prices[i],
+          basis: basis,
+          minimum: minimum,
+          maximum: maximum,
+          mean: mean,
+          deviationPct: mean == 0 ? 0 : (prices[i] - mean) / mean * 100,
+          roles: [
+            if (prices[i] == minimum) 'پایین‌ترین',
+            if (prices[i] == maximum) 'بالاترین',
+            if ((prices[i] - mean).abs() <= nearest) 'نزدیک‌ترین به میانگین',
+          ])
+  ];
+}
+
+/// Per-product indicator ranges over an already-selected set of quotes — the
+/// candidates of a confirmed answer — plus the marks of each range's members.
+///
+/// This is the card view of the same statistics: the input rows already passed
+/// the window, the kilogram agreement and the price checks on the way in, so
+/// only the cheap guards (a real date not in the future, a comparable unit, a
+/// positive price) run again. Rows are grouped exactly as
+/// `calculateProductRange` groups them, so every product keeps its own
+/// mean/high/low and «۱ کیلوگرم» listings never merge with «۱ تن».
+(List<PriceRange>, Map<String, List<CandidateMark>>) buildProductRanges(
+    List<Quote> quotes, DateTime now,
+    {String basis = ''}) {
+  final grouped = <String, ({String basis, List<Quote> rows})>{};
+  for (final q in quotes) {
+    final marketAt = q.marketAt;
+    if (marketAt == null || marketAt.isAfter(now)) continue;
+    final unit =
+        basis.isNotEmpty ? basis : (resolvedBasis(q) ?? unpricedBasis);
+    if (unit == unpricedBasis) continue;
+    final price = toman(q.priceFor(unit), q.currency);
+    if (price == null || !price.isFinite || price <= 0) continue;
+    final key = jsonEncode([unit, exactProductKey(q)]);
+    final slot = grouped[key];
+    if (slot == null) {
+      grouped[key] = (basis: unit, rows: [q]);
+    } else {
+      slot.rows.add(q);
+    }
+  }
+  final ranges = <PriceRange>[];
+  final marks = <String, List<CandidateMark>>{};
+  for (final entry in grouped.entries) {
+    final unit = entry.value.basis;
+    final rows = entry.value.rows;
+    final range = PriceRange(entry.key, unit, rows.first, rows);
+    marks[entry.key] = _marksFor(
+        [for (final q in rows) toman(q.priceFor(unit), q.currency)!],
+        ids: [for (final q in rows) q.id],
+        basis: unit,
+        minimum: range.minimum,
+        maximum: range.maximum,
+        mean: range.mean);
+    ranges.add(range);
+  }
+  ranges.sort((a, b) => a.example.title.compareTo(b.example.title));
+  return (ranges, marks);
 }
 
 /// What the prices tab asks for: the same scope the classic filter describes,

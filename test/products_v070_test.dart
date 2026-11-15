@@ -184,7 +184,10 @@ void main() {
     final other = row('b', 400, thickness: '4', post: 'https://t.me/market/1');
     final r = run([a, edit, other, a]);
     expect(r.announcements.length, 2);
-    expect(r.ranges.single.mean, 300);
+    // Each کالا keeps its own three indicators: the ۳ میل offer is never
+    // averaged with the ۴ میل one just because they share one post.
+    expect(r.ranges.length, 2);
+    expect(r.ranges.map((x) => x.mean).toSet(), {200.0, 400.0});
   });
   test(
       'legacy specs normalize numeric syntax without inferring missing dimension units',

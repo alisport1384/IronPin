@@ -244,7 +244,9 @@ final _rawAmountPattern = RegExp(
     r'^(?:\d+(?:[.٫]\d+)?|\d{1,3}(?:[,٬]\d{3})+(?:[.٫]\d+)?)$');
 
 double? _visibleRawAmount(Quote q) {
-  if (q.amount != null) return q.amount;
+  // Zero is not a price: sources that write «۰ تومان» mean "no price", so the
+  // amount only counts when it is a real, positive number (Bug B).
+  if (q.amount != null && q.amount! > 0) return q.amount;
   final raw = latin(q.details['مبلغ استخراج‌شده'] ?? '');
   if (!_rawAmountPattern.hasMatch(raw)) return null;
   final n = number(raw);

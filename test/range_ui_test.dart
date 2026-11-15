@@ -163,7 +163,12 @@ void main() {
     await t.scrollUntilVisible(find.text('۱۵۰ تومان / کیلوگرم'), 300,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('۱۵۰ تومان / کیلوگرم'), findsOneWidget);
-    await t.tap(find.text('محاسبه هزینه • کیلوگرم'));
+    // The card now states the product's three indicators, so its cost section
+    // sits lower: bring it into the viewport before tapping it.
+    final costTile = find.text('محاسبه هزینه • کیلوگرم');
+    await t.ensureVisible(costTile);
+    await t.pumpAndSettle();
+    await t.tap(costTile);
     await t.pumpAndSettle();
     await t.scrollUntilVisible(find.text('محاسبات همان کالا'), 300,
         scrollable: find.byType(Scrollable).first);

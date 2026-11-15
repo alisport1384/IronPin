@@ -288,7 +288,9 @@ void main() {
         scrollable: find.byType(Scrollable).first);
     await t.enterText(search, 'محصول084');
     await t.pumpAndSettle();
-    expect(find.textContaining('محصول۰۸۴'), findsOneWidget);
+    // Exact match: the range card's identity line also carries a product
+    // title, so a substring search could hit both the card and the list row.
+    expect(find.text('محصول۰۸۴'), findsOneWidget);
     await t.enterText(search, '');
     await t.pumpAndSettle();
     for (var i = 0; i < 2; i++) {
@@ -340,14 +342,31 @@ void main() {
     await t.pumpAndSettle();
     // One candidate: the row with a real date and a comparable price. The
     // undated, unpriced row is not a candidate at all — it is not listed, so a
-    // user can never compare a price that does not exist.
+    // user can never compare a price that does not exist. The list itself
+    // appears only when the user asks for it.
+    final show = find.textContaining('نمایش کاندیدها');
+    await t.scrollUntilVisible(show, 250,
+        scrollable: find.byType(Scrollable).first);
+    // The card section sits below the announcements list, so the scroll may
+    // stop with the button still outside the viewport: bring it in before
+    // tapping it.
+    await t.ensureVisible(show);
+    await t.pumpAndSettle();
+    await t.tap(show);
+    await t.pumpAndSettle();
     final candidates = find.textContaining('کاندیدهای همان کالا');
-    // Rows of a ListView are built lazily, so scroll to it before asserting.
+    // Rows of a ListView are built lazily, so scroll to it before asserting —
+    // and bring it into the viewport, since the new button sits above it.
     await t.scrollUntilVisible(candidates, 250,
         scrollable: find.byType(Scrollable).first);
+    await t.ensureVisible(candidates);
+    await t.pumpAndSettle();
     await t.tap(candidates);
     await t.pumpAndSettle();
-    final product = find.textContaining('محصول۹۰۹').last;
+    // The card sits above «اعلام‌های نتیجه», so the candidate ListTile is the
+    // first ListTile of the product — the announcements row comes after it and
+    // the card's identity line is a plain Text, not a row.
+    final product = find.widgetWithText(ListTile, 'محصول۹۰۹').first;
     await t.ensureVisible(product);
     await t.pumpAndSettle();
     await t.tap(product);
