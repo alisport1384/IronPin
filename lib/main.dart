@@ -100,8 +100,9 @@ class _BootstrapState extends State<Bootstrap> {
         await store.close();
         return;
       }
-      // هوش جستجوگر ۲ starts with the app and continues whenever it is online.
-      c.startFinder();
+      // هوش جستجوگر ۲ starts immediately with the app and activates on every
+      // internet connection.
+      c.startFinder(first: const Duration(milliseconds: 400));
       unawaited(c.scheduleFinder());
       setState(() => controller = c);
     } catch (e, stack) {
@@ -215,7 +216,7 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
         AppLogger.instance.record('lifecycle', 'state', {'state': state.name}));
     if (state == AppLifecycleState.resumed) {
       unawaited(_checkRetention());
-      unawaited(widget.c.refreshBackgroundState());
+      unawaited(widget.c.onAppResumed());
     }
   }
 

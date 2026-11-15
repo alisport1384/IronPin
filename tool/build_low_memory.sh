@@ -28,6 +28,8 @@ flutter --quiet assemble --no-version-check \
   "android_aot_bundle_release_$PLATFORM" || exit 1
 
 echo "[2/2] Gradle packaging"
+DISK_TMP="${TMPDIR:-/home/user/.local/tmp}"
+mkdir -p "$DISK_TMP"
 ( low=0
   while sleep 5; do
     free_mb=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
@@ -39,7 +41,15 @@ echo "[2/2] Gradle packaging"
     fi
   done ) &
 GUARD=$!
-flutter build apk --release --target-platform "$PLATFORM" --no-pub
+(
+  cd "$ROOT/android" &&
+  TMPDIR="$DISK_TMP" ./gradlew compileFlutterBuildRelease \
+    "-Ptarget-platform=$PLATFORM" -Ptarget=lib/main.dart \
+    "-Djava.io.tmpdir=$DISK_TMP" --no-daemon &&
+  TMPDIR="$DISK_TMP" ./gradlew assembleRelease -x lintVitalRelease \
+    "-Ptarget-platform=$PLATFORM" -Ptarget=lib/main.dart \
+    "-Djava.io.tmpdir=$DISK_TMP" --no-daemon
+)
 STATUS=$?
 kill "$GUARD" 2>/dev/null
 [ "$STATUS" -eq 0 ] && ls -la build/app/outputs/flutter-apk/app-release.apk

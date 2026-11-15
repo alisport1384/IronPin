@@ -187,6 +187,13 @@ jobs:
             echo
             echo "فقط کتابخانهٔ معماری خودِ هر فایل در آن است و مدل‌های آفلاین OCR فارسی و انگلیسی"
             echo "همراهش هست؛ هیچ کتابخانهٔ ۶۴بیتی در فایل ۳۲بیتی نیست."
+            if [ -f "production/CHANGES.v${IRONPIN_VERSION}.fa.md" ]; then
+              echo
+              echo "### مستندات و تغییرات این نسخه"
+              echo
+              echo "- مشروح تغییرات: [\`production/CHANGES.v${IRONPIN_VERSION}.fa.md\`](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/production/CHANGES.v${IRONPIN_VERSION}.fa.md)"
+              echo "- گزارش آزمون: [\`docs/TEST_REPORT.v${IRONPIN_VERSION}.fa.md\`](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/TEST_REPORT.v${IRONPIN_VERSION}.fa.md)"
+            fi
           } > release-notes.md
           cat release-notes.md
 

@@ -16,6 +16,8 @@ const _taskName = 'ironpin.periodic.public-scan';
 const _uniqueName = 'ironpin-periodic-public-scan';
 const _finderTask = 'ironpin.periodic.source-finder';
 const _finderUnique = 'ironpin-periodic-source-finder';
+const _connectTask = 'ironpin.oneoff.connect-finder';
+const _connectUnique = 'ironpin-connect-finder';
 
 class ScanBatch {
   final List<SourceEndpoint> sources;
@@ -39,6 +41,7 @@ void callbackDispatcher() {
   WidgetsFlutterBinding.ensureInitialized();
   Workmanager().executeTask((task, inputData) async {
     if (task == _finderTask) return runFinderBackground();
+    if (task == _connectTask) return runFinderBackground(onConnect: true);
     if (task != _taskName) return true;
     return runBackgroundScan();
   });
@@ -78,67 +81,112 @@ class BackgroundScanScheduler {
     );
   }
 
-  /// The list builder's own task: every half hour, only with a network. It is
-  /// independent of the periodic price scan, which the user may keep off.
+  /// The list builder's own task: every 15 minutes while connected, plus an
+  /// immediate network-constrained one-off wakeup so connecting to the internet
+  /// activates Smart Search 2 even when the app is in the background.
   static Future<void> configureFinder({required bool enabled}) async {
     if (configureOverride != null) return;
     await initialize();
     if (!enabled) {
       await Workmanager().cancelByUniqueName(_finderUnique);
+      await Workmanager().cancelByUniqueName(_connectUnique);
       return;
     }
     await Workmanager().registerPeriodicTask(
       _finderUnique,
       _finderTask,
       existingWorkPolicy: ExistingWorkPolicy.keep,
-      frequency: const Duration(minutes: 30),
-      initialDelay: const Duration(minutes: 2),
+      frequency: const Duration(minutes: 15),
+      initialDelay: const Duration(seconds: 20),
+      constraints: Constraints(networkType: NetworkType.connected),
+    );
+    await armConnectWakeup(enabled: true);
+  }
+
+  /// Registers a one-off task constrained to [NetworkType.connected] so Android
+  /// JobScheduler / WorkManager triggers Smart Search 2 as soon as connectivity
+  /// returns.
+  static Future<void> armConnectWakeup({
+    required bool enabled,
+    Duration initialDelay = Duration.zero,
+  }) async {
+    if (configureOverride != null) return;
+    await initialize();
+    if (!enabled) {
+      await Workmanager().cancelByUniqueName(_connectUnique);
+      return;
+    }
+    await Workmanager().registerOneOffTask(
+      _connectUnique,
+      _connectTask,
+      existingWorkPolicy: ExistingWorkPolicy.replace,
+      initialDelay: initialDelay,
       constraints: Constraints(networkType: NetworkType.connected),
     );
   }
 }
 
+List<SourceEndpoint> _decodeDiscovered(String? rawJson) {
+  if (rawJson == null || rawJson.isEmpty) return const [];
+  final out = <SourceEndpoint>[];
+  try {
+    for (final item in (jsonDecode(rawJson) as List).cast<Map>()) {
+      final source =
+          publicChannel(item['url'] as String, name: item['name'] as String?);
+      if (source != null) out.add(source);
+    }
+  } catch (_) {
+    // Bad discovery metadata never adds a route or blocks registered work.
+  }
+  return out;
+}
+
 /// Continues the lists of هوش جستجوگر ۲ while the app is closed.
-///
-/// WorkManager starts it only when the phone has a network, so "every time it
-/// is online" needs no connectivity plugin: a run that still cannot reach
-/// anything undoes its attempts and waits for the next one.
-Future<bool> runFinderBackground() async {
+Future<bool> runFinderBackground({bool onConnect = false}) async {
   MarketStore? store;
   final client = SourceClient(maxChannelPages: 2);
-  String? lease;
-  Timer? heartbeat;
   try {
     store = await MarketStore.open();
     if (await store.setting('finder.enabled') == 'false') return true;
     final finder = SourceFinder(store, client: client.client);
-    await finder.runSlice(
-        maxSteps: 14, budget: const Duration(seconds: 50));
-    // Without the picture reader only website tables can be judged fairly;
-    // channels wait for the app to be open.
-    if (finder.handoffBatch(limit: 1, where: (e) => e.kind == 'site').isEmpty) {
-      return true;
+    await finder.load();
+    final discovered = _decodeDiscovered(await store.setting('discoveredSources'));
+    await finder.registerKnownEndpoints(discovered);
+    if (onConnect) {
+      await finder.onNetworkConnected();
     }
-    lease = await store.acquireRefreshLock();
-    if (lease == null) return true;
-    heartbeat = Timer.periodic(MarketStore.refreshLockHeartbeat,
-        (_) => unawaited(store!.renewRefreshLock(lease!)));
     final days = int.tryParse(await store.setting('windowDays') ?? '') ?? 30;
-    await deliverFinderBatch(store, client, finder,
-        windowDays: days, limit: 3, sitesOnly: true);
+    // First hand over anything already waiting in `در نوبت`.
+    var accepted = 0;
+    if (finder.handoffBatch(limit: 1).isNotEmpty) {
+      accepted += await deliverFinderBatch(store, client, finder,
+          windowDays: days, limit: 6, alreadyLocked: false);
+    }
+    if (finder.handoffBatch(limit: 1).isEmpty) {
+      await finder.ensureSearchingWhenQueueEmpty(drainedJustNow: accepted > 0);
+    }
+    final report = await finder.runSlice(
+        maxSteps: 16, budget: const Duration(seconds: 35));
+    if (!report.offline && finder.handoffBatch(limit: 1).isNotEmpty) {
+      final more = await deliverFinderBatch(store, client, finder,
+          windowDays: days, limit: 6, alreadyLocked: false);
+      if (more > 0 && finder.handoffBatch(limit: 1).isEmpty) {
+        await finder.ensureSearchingWhenQueueEmpty(drainedJustNow: true);
+      }
+    }
+    // Re-arm for the next internet connection transition.
+    try {
+      await BackgroundScanScheduler.armConnectWakeup(
+          enabled: true,
+          initialDelay: report.offline
+              ? const Duration(seconds: 15)
+              : const Duration(minutes: 3));
+    } catch (_) {}
     return true;
   } catch (_) {
     return false;
   } finally {
-    heartbeat?.cancel();
     client.close();
-    if (lease != null && store != null) {
-      try {
-        await store.releaseRefreshLock(lease);
-      } catch (_) {
-        // Lease expiry recovers if the database was interrupted.
-      }
-    }
     // No store.close(): the UI isolate shares the same native handle.
   }
 }
@@ -162,19 +210,8 @@ Future<bool> runBackgroundScan() async {
     final enabledIds = rawEnabled == null
         ? endpoints.map((e) => e.id).toSet()
         : (jsonDecode(rawEnabled) as List).cast<String>().toSet();
-    final discoveredJson = await store.setting('discoveredSources');
-    final discovered = <SourceEndpoint>[];
-    if (discoveredJson != null) {
-      try {
-        for (final item in (jsonDecode(discoveredJson) as List).cast<Map>()) {
-          final source = publicChannel(item['url'] as String,
-              name: item['name'] as String?);
-          if (source != null) discovered.add(source);
-        }
-      } catch (_) {
-        // Bad discovery metadata never adds a route or blocks registered work.
-      }
-    }
+    final discovered =
+        _decodeDiscovered(await store.setting('discoveredSources'));
     // Sources the list builder found and هوش جستجوگر ۱ accepted are routes
     // too; one accepted while the app was closed is read here even before
     // the app has switched it on.
@@ -185,6 +222,7 @@ Future<bool> runBackgroundScan() async {
     try {
       finderOn = await store.setting('finder.enabled') != 'false';
       await finder.load();
+      await finder.registerKnownEndpoints(discovered);
       accepted.addAll(finder.acceptedEndpoints());
       fresh.addAll(
           finder.acceptedEndpoints(onlyUnapplied: true).map((e) => e.id));
@@ -192,9 +230,10 @@ Future<bool> runBackgroundScan() async {
       // A damaged list never blocks the registered routes.
     }
     final ids = <String>{};
+    final keys = <String>{};
     final all = [
       for (final e in [...endpoints, ...discovered, ...accepted])
-        if (ids.add(e.id)) e
+        if (ids.add(e.id) && keys.add(endpointCanonicalKey(e))) e
     ];
     final enabled = all
         .where((e) => enabledIds.contains(e.id) || fresh.contains(e.id))
@@ -254,8 +293,11 @@ Future<bool> runBackgroundScan() async {
     }
     if (finderOn) {
       try {
-        await deliverFinderBatch(store, client, finder,
-            windowDays: days, limit: 3, sitesOnly: true);
+        final more = await deliverFinderBatch(store, client, finder,
+            windowDays: days, limit: 5, alreadyLocked: true);
+        if (finder.handoffBatch(limit: 1).isEmpty) {
+          await finder.ensureSearchingWhenQueueEmpty(drainedJustNow: more > 0);
+        }
       } catch (_) {
         // Hand-over is retried by the next run.
       }

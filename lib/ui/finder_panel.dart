@@ -50,18 +50,27 @@ class _FinderPanelState extends State<FinderPanel> {
     };
   }
 
-  /// What each public search page answered last, in plain words.
+  /// Compact summary of the public search engines and their latest answers.
   static String searchPages(MarketController c) {
     final s = c.finder.state;
+    final ok = <String>[];
+    var readyCount = 0, restingCount = 0;
+    for (final p in c.finder.providers) {
+      switch ((s.providerNote[p.id] ?? '').split('|').first) {
+        case 'ok':
+          ok.add(p.title);
+        case 'net':
+        case 'refused':
+        case 'unreadable':
+          restingCount++;
+        default:
+          readyCount++;
+      }
+    }
     return [
-      for (final p in c.finder.providers)
-        '${p.title}: ${switch ((s.providerNote[p.id] ?? '').split('|').first) {
-          'ok' => 'پاسخ می‌دهد',
-          'net' => 'از این اتصال در دسترس نیست',
-          'refused' => 'پاسخ نداد',
-          'unreadable' => 'پاسخ خوانا نبود',
-          _ => 'هنوز پرسیده نشده'
-        }}'
+      if (ok.isNotEmpty) 'پاسخ‌گو: ${ok.join('، ')}',
+      if (readyCount > 0) 'آماده: $readyCount موتور',
+      if (restingCount > 0) 'موقتاً غیرفعال: $restingCount',
     ].join(' • ');
   }
 
@@ -80,8 +89,8 @@ class _FinderPanelState extends State<FinderPanel> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
       const Text(
           'سه فهرست می‌سازد: وب‌سایت‌ها، کانال‌ها و صفحه‌های شبکه‌های اجتماعی، و کانال‌ها و صفحه‌های شبکه‌های داخلی که کالا می‌فروشند یا پخش می‌کنند. '
-          'هر بار که گوشی آنلاین است از همان‌جا ادامه می‌دهد. هر دور کوتاه است؛ فهرستی که کامل شد خودکار به برنامه داده می‌شود و از آن‌جا هوش جستجوگر ۱ کالا، شهر و جزئیات را تشخیص می‌دهد. '
-          'فقط منبعی که دست‌کم یک ردیف معتبر بدهد به اتصال‌ها افزوده و روشن می‌شود. صفحه جستجویی که از این اتصال در دسترس نباشد کار را متوقف نمی‌کند: صفحه بعدی پرسیده می‌شود و فهرست با پیوندهای خود فروشندگان هم کامل می‌شود. '
+          'با هر اتصال به اینترنت بلافاصله فعال می‌شود، منابع تأییدشده را بدون معطلی در نوبت هوش جستجوگر ۱ قرار می‌دهد، و هر زمان فهرست «در نوبت» به صفر برسد خودکار دور جستجوی تازه را آغاز می‌کند. '
+          'فقط منبعی که دست‌کم یک ردیف معتبر بدهد و تکراری نباشد به اتصال‌ها افزوده و روشن می‌شود. از چند موتور جستجوی مستقل به نوبت استفاده می‌شود تا در دسترس‌نبودن یکی کار را متوقف نکند. '
           'فقط صفحه‌های عمومی خوانده می‌شوند؛ ورود، کلید یا دورزدن محدودیت در کار نیست.',
           style: TextStyle(fontSize: 11, color: muted, height: 1.8)),
       SwitchListTile(
@@ -109,8 +118,11 @@ class _FinderPanelState extends State<FinderPanel> {
               ? null
               : () async {
                   setState(() => working = true);
+                  if (c.finder.handoffBatch(limit: 1).isNotEmpty) {
+                    await c.deliverFinderNow(limit: 8);
+                  }
                   await c.runFinderNow(maxSteps: 12);
-                  await c.deliverFinderNow(limit: 6);
+                  await c.deliverFinderNow(limit: 8);
                   if (mounted) setState(() => working = false);
                 },
           icon: working
@@ -137,12 +149,14 @@ class _FinderPanelState extends State<FinderPanel> {
 
   Widget _part(BuildContext context, int part) {
     final s = widget.c.finder.state;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final list = [...s.lists[part]]..sort((a, b) {
         final r = _rank(a).compareTo(_rank(b));
         return r != 0 ? r : b.at.compareTo(a.at);
       });
     final accepted = s.handed(part, 'accepted'),
-        waiting = s.handed(part, 'wait');
+        waiting = s.waitingInPart(part, now),
+        deferred = s.handed(part, 'wait') - waiting;
     return Card(
         margin: const EdgeInsets.only(bottom: 3),
         child: ExpansionTile(
@@ -152,8 +166,9 @@ class _FinderPanelState extends State<FinderPanel> {
                 style: const TextStyle(fontSize: 12)),
             subtitle: Text(
                 faDigits(
-                    '${s.complete[part] ? 'فهرست کامل شد؛ تحویل به برنامه آغاز شده' : 'در حال تکمیل فهرست'}'
+                    '${s.complete[part] ? 'فهرست کامل شد؛ تحویل به برنامه آغاز شده' : 'در حال تکمیل و تحویل هم‌زمان'}'
                     ' • پذیرفته: $accepted • در نوبت: $waiting'
+                    '${deferred > 0 ? ' • بررسی مجدد بعدی: $deferred' : ''}'
                     '${s.unanswered(part) == 0 ? '' : ' • پرسش منتظر صفحه جستجو: ${s.unanswered(part)}'}'),
                 style: const TextStyle(fontSize: 11, color: muted)),
             children: [

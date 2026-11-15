@@ -20,10 +20,12 @@ class MainActivity: FlutterActivity() {
     private var pending: MethodChannel.Result? = null
     private var pendingPaths: List<String> = emptyList()
     private var ocr: OcrChannel? = null
+    private var network: NetworkChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         ocr = OcrChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        network = NetworkChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ir.ironpin/storage").setMethodCallHandler { call, result ->
             when (call.method) {
                 "logDirectory" -> {
@@ -133,6 +135,7 @@ class MainActivity: FlutterActivity() {
         }
     }
     override fun onDestroy() {
+        network?.dispose(); network = null
         ocr?.dispose(); ocr = null
         pending?.error("ACTIVITY_CLOSED","Export window closed",null);pending=null
         ioExecutor.shutdown()

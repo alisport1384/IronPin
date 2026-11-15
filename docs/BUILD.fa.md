@@ -1,4 +1,4 @@
-# سند ساخت آیرون‌پین — نسخهٔ ۰.۹.۴
+# سند ساخت آیرون‌پین — نسخهٔ ۰.۹.۹
 
 این سند دقیقاً همان مراحلی است که برای ساخت APKهای تحویلی اجرا شده؛ اگر روی ماشین دیگری
 تکرار شود باید همان دو فایل با همان اجزا ساخته شود.
@@ -57,6 +57,17 @@ cp build/app/outputs/flutter-apk/app-release.apk \
 
 خروجی‌های تحویلی در `releases/` و با همین نام‌ها هستند؛ `.apk` در گیت ignore است و فقط
 فایل `SHA256SUMS` کامیت می‌شود.
+
+### تحویل ۰.۹.۹ — ۲۵ آبان ۱۴۰۵ (هر دو معماری از GitHub Actions، با یک کلید)
+
+هر دو معماری (`IronPin-0.9.9-armeabi-v7a-release.apk` و
+`IronPin-0.9.9-arm64-v8a-release.apk`) به‌همراه `SHA256SUMS.txt` در گردش‌کار
+`.github/workflows/android.yml` از یک درخت سورس و با کلید امضای ثابت پروژه
+(`CN=IronPin Sideload`) ساخته، بررسی (`versionName='0.9.9'`، `versionCode='31'`،
+تفکیک خالص ABI، کتابخانه و مدل‌های آفلاین OCR فارسی/انگلیسی، و `apksigner verify`)
+و با تگ `v0.9.9` در [ریلیز v0.9.9](https://github.com/alisport1384/IronPin/releases/tag/v0.9.9)
+منتشر می‌شوند. چون گواهی امضا با تحویل‌های ۰.۹.۶ به بعد یکی است، کاربران روی نسخه‌های
+۰.۹.۶+ بدون حذف برنامه مستقیم ارتقا می‌گیرند.
 
 ### تحویل ۰.۹.۶ — ۲۳ آبان ۱۴۰۵ (از GitHub Actions، با یک کلید)
 
@@ -261,7 +272,7 @@ sha256sum releases/*.apk > releases/SHA256SUMS
 
 چه چیزی باید دیده شود:
 
-- `versionName 0.9.5`، `versionCode 27`، `sdkVersion 21`، `targetSdkVersion 35`.
+- `versionName 0.9.9`، `versionCode 31`، `sdkVersion 21`، `targetSdkVersion 35`.
 - فقط `lib/armeabi-v7a/*` در فایل ۳۲بیتی و فقط `lib/arm64-v8a/*` در فایل ۶۴بیتی،
   هر کدام شامل `libapp.so`، `libflutter.so`، `libtesseract.so`، `libleptonica.so`،
   `libjpeg.so`، `libpngx.so`.
@@ -272,7 +283,7 @@ sha256sum releases/*.apk > releases/SHA256SUMS
 
 ```bash
 flutter analyze --no-pub     # باید «No issues found!» بدهد
-flutter test --concurrency=1 # ۴۸۲ آزمون در ۰.۹.۵
+flutter test --concurrency=1 # ۵۰۷ آزمون در ۰.۹.۹
 bash tool/test_on_another_day.sh 45   # همان آزمون‌ها، انگار ۴۵ روز بعد است
 ```
 

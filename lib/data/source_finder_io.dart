@@ -9,6 +9,7 @@ import 'package:html/parser.dart' as html;
 import 'package:http/http.dart' as http;
 
 import '../domain/maps_resolver.dart';
+import '../domain/market.dart';
 import '../domain/photo_scan.dart';
 import '../domain/product_text.dart';
 import '../domain/searcher.dart';
@@ -24,8 +25,15 @@ import 'store.dart';
 /// CAPTCHA is ever answered — a search page that refuses is left alone for
 /// hours and the reason is written down.
 
-/// The same identity every other request of the app uses.
+/// The same identity every other request of the app uses on seller pages.
 const finderAgent = 'IronPin/0.5 (public price reader)';
+
+/// Standard mobile browser User-Agent used only when requesting public search
+/// engine result pages so SSR HTML endpoints (such as DuckDuckGo HTML and
+/// mobile Bing/Yahoo) return normal 200 HTML instead of bot-challenge 202s.
+const finderSearchAgent =
+    'Mozilla/5.0 (Linux; Android 13; IronPin) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
 
 class FinderAnchor {
   final String url, text;
@@ -174,36 +182,62 @@ FinderJudged judgeFinderPage(Map<String, String> input) {
 /// A public search page the app may ask. Only address formats that were
 /// actually observed are listed; nothing here is a guessed API.
 ///
-/// * `gerdoo` — the Iranian search page, reachable on the domestic network.
-///   It ignores the `site:` operator (observed), so such questions go to the
-///   others.
-/// * `ddg` — DuckDuckGo's page for browsers without scripts.
-/// * `bing` — Bing's own RSS form of its result page (`format=rss`).
+/// Multiple independent global and Iranian domestic engines are rotated in
+/// round-robin order so rate-limiting, filtering, or downtime on any subset of
+/// providers never stalls discovery:
+/// * `ddg-lite` — DuckDuckGo Lite SSR table page (`lite.duckduckgo.com`).
+/// * `yahoo` — Yahoo UK SSR web search (`uk.search.yahoo.com`), honours `site:`.
+/// * `bing` — Bing RSS result feed (`format=rss`), honours `site:`.
+/// * `ddg` — DuckDuckGo non-JS HTML (`html.duckduckgo.com`), honours `site:`.
+/// * `naver` — Naver web search (`search.naver.com`), independent index.
+/// * `bing-html` — Bing standard SSR HTML (`www.bing.com/search`).
+/// * `yahoo-ca` — Yahoo Canada SSR web search (`ca.search.yahoo.com`).
+/// * `gerdoo` — Iranian domestic meta-search (`gerdoo.me`), reachable on NIN.
+/// * `zarebin` — Iranian domestic search API (`zarebin.ir`), reachable on NIN.
 class FinderProvider {
   final String id, title;
   final Uri Function(String query) url;
   final bool siteOperator;
-
-  /// How long this page may take. The domestic page (گردو) is a meta-search
-  /// that waits on its own upstream engines and routinely needs more than the
-  /// short timeout that fits the others; with one shared short timeout every
-  /// question to it timed out and the panel showed «از این اتصال در دسترس
-  /// نبود» although the page answers.
   final Duration timeout;
   const FinderProvider(this.id, this.title, this.url,
       {this.siteOperator = true, this.timeout = const Duration(seconds: 10)});
 }
 
-Uri _gerdooUrl(String q) => Uri.https('gerdoo.me', '/search/', {'query': q});
-Uri _duckUrl(String q) => Uri.https('html.duckduckgo.com', '/html/', {'q': q});
+Uri _duckLiteUrl(String q) =>
+    Uri.https('lite.duckduckgo.com', '/lite/', {'q': q});
+Uri _yahooUkUrl(String q) =>
+    Uri.https('uk.search.yahoo.com', '/search', {'p': q});
 Uri _bingUrl(String q) =>
     Uri.https('www.bing.com', '/search', {'q': q, 'format': 'rss'});
+Uri _duckUrl(String q) => Uri.https('html.duckduckgo.com', '/html/', {'q': q});
+Uri _naverUrl(String q) =>
+    Uri.https('search.naver.com', '/search.naver', {'where': 'web', 'query': q});
+Uri _bingHtmlUrl(String q) => Uri.https('www.bing.com', '/search', {'q': q});
+Uri _yahooCaUrl(String q) =>
+    Uri.https('ca.search.yahoo.com', '/search', {'p': q});
+Uri _gerdooUrl(String q) => Uri.https('gerdoo.me', '/search/', {'query': q});
+Uri _zarebinUrl(String q) => Uri.https(
+    'zarebin.ir', '/gse/api/search/', {'q': q, 'page': '1', 'query_source': 'user'});
+
 const finderProviders = [
-  FinderProvider('gerdoo', 'گردو', _gerdooUrl,
-      siteOperator: false, timeout: Duration(seconds: 30)),
+  FinderProvider('ddg-lite', 'داک‌داک‌گو سبک', _duckLiteUrl),
+  FinderProvider('yahoo', 'یاهو', _yahooUkUrl,
+      timeout: Duration(seconds: 12)),
+  FinderProvider('bing', 'بینگ', _bingUrl),
   FinderProvider('ddg', 'داک‌داک‌گو', _duckUrl),
-  FinderProvider('bing', 'بینگ', _bingUrl)
+  FinderProvider('naver', 'نیور', _naverUrl,
+      siteOperator: false, timeout: Duration(seconds: 12)),
+  FinderProvider('bing-html', 'بینگ وب', _bingHtmlUrl,
+      timeout: Duration(seconds: 12)),
+  FinderProvider('yahoo-ca', 'یاهو ۲', _yahooCaUrl,
+      timeout: Duration(seconds: 12)),
+  FinderProvider('gerdoo', 'گردو', _gerdooUrl,
+      siteOperator: false, timeout: Duration(seconds: 18)),
+  FinderProvider('zarebin', 'ذره‌بین', _zarebinUrl,
+      timeout: Duration(seconds: 14)),
 ];
+
+final _yahooRu = RegExp(r'/RU=([^/]+)/R[KO]=');
 
 /// The real address behind a result link of a search page.
 String? unwrapResultLink(String href) {
@@ -211,12 +245,25 @@ String? unwrapResultLink(String href) {
   if (h.isEmpty) return null;
   if (h.startsWith('//')) h = 'https:$h';
   final u = Uri.tryParse(h);
-  if (u == null || !u.hasScheme) return null;
-  if (u.host.endsWith('duckduckgo.com') && u.path.startsWith('/l/')) {
+  if (u == null || !(u.scheme == 'http' || u.scheme == 'https')) return null;
+  final host = u.host.toLowerCase();
+  if (host.endsWith('duckduckgo.com') && u.path.startsWith('/l/')) {
     final target = u.queryParameters['uddg'];
     return target == null || target.isEmpty ? null : target;
   }
-  if (u.host.endsWith('bing.com') && u.path.startsWith('/ck/')) {
+  if (host.endsWith('yahoo.com')) {
+    final m = _yahooRu.firstMatch(u.path);
+    if (m != null) {
+      try {
+        final decoded = Uri.decodeComponent(m[1]!);
+        return decoded.startsWith('http') ? decoded : null;
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+  if (host.endsWith('bing.com') && u.path.startsWith('/ck/')) {
     final raw = u.queryParameters['u'];
     if (raw == null || !raw.startsWith('a1')) return null;
     try {
@@ -230,8 +277,9 @@ String? unwrapResultLink(String href) {
 }
 
 const _engineHosts = [
-  'duckduckgo.com', 'bing.com', 'microsoft.com', 'msn.com', 'gerdoo.me',
-  'google.com', 'gstatic.com'
+  'duckduckgo.com', 'bing.com', 'microsoft.com', 'msn.com', 'live.com',
+  'gerdoo.me', 'zarebin.ir', 'yahoo.com', 'yimg.com', 'yahooapis.com',
+  'naver.com', 'naver.net', 'pstatic.net', 'google.com', 'gstatic.com'
 ];
 
 String _xml(String s) => s
@@ -242,6 +290,37 @@ String _xml(String s) => s
     .replaceAll('&#39;', "'")
     .replaceAll('&apos;', "'")
     .replaceAll('&amp;', '&');
+
+void _collectJsonAnchors(Object? node, void Function(String?, String) add,
+    [int depth = 0]) {
+  if (node == null || depth > 8) return;
+  if (node is List) {
+    for (final item in node.take(80)) {
+      _collectJsonAnchors(item, add, depth + 1);
+    }
+    return;
+  }
+  if (node is Map) {
+    String str(List<String> keys) {
+      for (final k in keys) {
+        final v = node[k];
+        if (v is String && v.trim().isNotEmpty) return v.trim();
+      }
+      return '';
+    }
+
+    final link = str(const ['web_link', 'url', 'link', 'href']);
+    final title = str(const ['title', 'name', 'heading']);
+    final desc =
+        str(const ['description', 'snippet', 'content', 'summary', 'text']);
+    if (link.startsWith('http')) {
+      add(link, '$title $desc');
+    }
+    for (final v in node.values) {
+      if (v is Map || v is List) _collectJsonAnchors(v, add, depth + 1);
+    }
+  }
+}
 
 /// The result links of a search answer, each with its title and summary.
 List<FinderAnchor> readSearchResults(Map<String, String> input) {
@@ -255,19 +334,20 @@ List<FinderAnchor> readSearchResults(Map<String, String> input) {
         _engineHosts.any((e) => host == e || host.endsWith('.$e'))) {
       return;
     }
+    final cleanText = _oneLine(text, 300);
     final known = index[url];
     if (known == null) {
       index[url] = out.length;
-      out.add(FinderAnchor(url, _oneLine(text, 300)));
-    } else if (!out[known].text.contains(_oneLine(text, 300))) {
+      out.add(FinderAnchor(url, cleanText));
+    } else if (cleanText.isNotEmpty && !out[known].text.contains(cleanText)) {
       // The same result is linked twice (its address line and its title).
-      out[known] =
-          FinderAnchor(url, _oneLine('${out[known].text} $text', 300));
+      out[known] = FinderAnchor(url, _oneLine('${out[known].text} $cleanText', 300));
     }
   }
 
   final body = input['body']!;
-  switch (input['provider']) {
+  final provider = input['provider'] ?? '';
+  switch (provider) {
     case 'bing':
       // Bing's RSS form: one <item> per result with the plain address.
       for (final item
@@ -278,6 +358,21 @@ List<FinderAnchor> readSearchResults(Map<String, String> input) {
                 '');
         add(tag('link'), '${tag('title')} ${tag('description')}');
       }
+    case 'bing-html':
+      final doc = html.parse(body);
+      final cards = doc.querySelectorAll('li.b_algo');
+      if (cards.isNotEmpty) {
+        for (final r in cards) {
+          final a = r.querySelector('h2 a[href]') ?? r.querySelector('a[href]');
+          if (a == null) continue;
+          final caption = r.querySelector('.b_caption')?.text ?? r.text;
+          add(a.attributes['href'], '${a.text} $caption');
+        }
+      } else {
+        for (final a in doc.querySelectorAll('a[href]')) {
+          add(a.attributes['href'], a.text);
+        }
+      }
     case 'ddg':
       final doc = html.parse(body);
       for (final r in doc.querySelectorAll('.result')) {
@@ -285,6 +380,79 @@ List<FinderAnchor> readSearchResults(Map<String, String> input) {
         if (a == null) continue;
         add(a.attributes['href'],
             '${a.text} ${r.querySelector('.result__snippet')?.text ?? ''}');
+      }
+    case 'ddg-lite':
+      final doc = html.parse(body);
+      for (final a in doc.querySelectorAll('a.result-link')) {
+        dom.Element? tr = a.parent;
+        while (tr != null && tr.localName != 'tr') {
+          tr = tr.parent;
+        }
+        String snippet = '';
+        if (tr != null && tr.parent != null) {
+          final rows = tr.parent!.children;
+          final idx = rows.indexOf(tr);
+          if (idx >= 0 && idx + 1 < rows.length) {
+            final next = rows[idx + 1];
+            snippet = next.querySelector('.result-snippet')?.text ?? next.text;
+          }
+        }
+        add(a.attributes['href'], '${a.text} $snippet');
+      }
+    case 'yahoo':
+    case 'yahoo-ca':
+      final doc = html.parse(body);
+      for (final a in doc.querySelectorAll('a[href]')) {
+        final href = a.attributes['href'] ?? '';
+        if (!href.contains('/RU=') && !href.startsWith('http')) continue;
+        dom.Element? block;
+        var parent = a.parent;
+        for (var i = 0; i < 6 && parent != null; i++, parent = parent.parent) {
+          final cls = parent.className;
+          if (cls.contains('algo') ||
+              cls.contains('Sr') ||
+              cls.contains('dd') ||
+              parent.localName == 'li') {
+            block = parent;
+            break;
+          }
+        }
+        add(href, '${a.text} ${block?.text ?? ''}');
+      }
+    case 'naver':
+      final doc = html.parse(body);
+      for (final a in doc.querySelectorAll('a[href]')) {
+        final href = a.attributes['href']?.trim() ?? '';
+        if (!href.startsWith('http')) continue;
+        dom.Element? block;
+        var parent = a.parent;
+        for (var i = 0; i < 6 && parent != null; i++, parent = parent.parent) {
+          final cls = parent.className;
+          if (cls.contains('total_wrap') ||
+              cls.contains('bx') ||
+              parent.localName == 'li' ||
+              (parent.localName == 'div' && parent.text.length <= 900)) {
+            block = parent;
+            if (cls.contains('total_wrap') || parent.localName == 'li') break;
+          }
+        }
+        add(href, '${a.text} ${block?.text ?? ''}');
+      }
+    case 'zarebin':
+      final trimmed = body.trimLeft();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          _collectJsonAnchors(jsonDecode(trimmed), add);
+          break;
+        } catch (_) {
+          // Fall through to HTML parsing if response wasn't valid JSON.
+        }
+      }
+      final doc = html.parse(body);
+      for (final a in doc.querySelectorAll('a[href]')) {
+        final href = a.attributes['href']!.trim();
+        if (!href.startsWith('http')) continue;
+        add(href, '${a.text} ${a.parent?.text ?? ''}');
       }
     default:
       // A page that links its results directly (Gerdoo): every link that
@@ -307,13 +475,31 @@ List<FinderAnchor> readSearchResults(Map<String, String> input) {
   return out;
 }
 
+/// Whether a search page answered with a bot-challenge or rate-limit wall.
+bool isSearchChallenge(String providerId, int status, String body) {
+  if (status != 200) return true;
+  if ((providerId == 'ddg' || providerId == 'ddg-lite') &&
+      body.contains('anomaly')) {
+    return true;
+  }
+  return body.contains("Making sure you're not a bot") ||
+      body.contains('Making sure you&#x27;re not a bot') ||
+      body.contains('smart-captcha') ||
+      body.contains('CheckboxCaptcha') ||
+      (body.contains('g-recaptcha') && body.length < 12000);
+}
+
 /// Whether an answer page honestly says the question has no results.
 bool saysNoResults(String body) =>
     body.contains('no-results') ||
     body.contains('No results') ||
     body.contains('class="b_no"') ||
+    body.contains('We did not find results for') ||
+    body.contains('did not match any documents') ||
+    body.contains('검색결과가 없습니다') ||
     body.contains('نتیجه‌ای یافت نشد') ||
-    body.contains('نتیجه ای یافت نشد');
+    body.contains('نتیجه ای یافت نشد') ||
+    body.contains('موردی یافت نشد');
 
 /// Whether the results are about the question at all. A search page that
 /// suspects a program sometimes answers with unrelated links; such an answer
@@ -372,14 +558,25 @@ class _Outcome {
   const _Outcome({this.network = false, this.undo, this.note = ''});
 }
 
+/// Canonical key of any [SourceEndpoint] for zero-duplicate checks across
+/// built-in routes, discovered channels, and Smart Search 2 entries.
+String endpointCanonicalKey(SourceEndpoint e) => canonicalUrlKey(e.url);
+
 /// What the app already reads; such a place is never listed as new.
-Set<String> finderKnownKeys() {
+Set<String> finderKnownKeys([Iterable<SourceEndpoint> extra = const []]) {
   final known = <String>{};
   for (final e in endpoints) {
     final link = classifyLink(e.url);
-    if (link == null) continue;
+    if (link == null) {
+      known.add(canonicalUrlKey(e.url));
+      continue;
+    }
     known.add(link.key);
     if (link.kind == 'site') known.add('host:${link.host}');
+  }
+  for (final e in extra) {
+    final link = classifyLink(e.url);
+    known.add(link?.key ?? canonicalUrlKey(e.url));
   }
   return known;
 }
@@ -388,14 +585,20 @@ class SourceFinder {
   final MarketStore store;
   final http.Client client;
 
-  /// Pause between two page reads, and between two questions to a search page.
+  /// Pause between two page reads, and between two questions to search pages.
   final Duration pageGap, searchGap, timeout;
+
+  /// Minimum pause before asking the *same* search provider a second question.
+  final Duration providerGap;
 
   /// How long a candidate's own page may take. Shorter than [timeout]: a list
   /// waits for the first reading of every candidate, and a seller whose page
   /// does not answer in this time is simply read later.
   final Duration readTimeout;
   final int maxBytes;
+
+  /// Maximum concurrent candidate/seed page reads across distinct hosts.
+  final int maxParallelReads;
   final List<FinderProvider> providers;
 
   /// Pages on different networks, asked only to tell "this host is down"
@@ -404,32 +607,42 @@ class SourceFinder {
   final DateTime Function() clock;
   final int _writer = Random().nextInt(0x3fffffff) + 1;
   final Map<String, int> _emptyStreak = {};
+  final Map<String, int> _lastProviderMs = {};
+  final Map<String, int> _providerAskSeq = {};
+  int _askCounter = 0;
 
   /// Whose turn it is among the three lists when a candidate is read.
   int _turn = 0;
   int _batches = 0;
 
   FinderState state = FinderState();
-  late final Set<String> known = finderKnownKeys();
+  final Set<String> known = finderKnownKeys();
   bool _loaded = false, _running = false;
   int _lastSearchMs = 0;
   final Map<String, String> _stored = {};
 
   SourceFinder(this.store,
       {required this.client,
-      this.pageGap = const Duration(milliseconds: 700),
-      this.searchGap = const Duration(seconds: 9),
+      this.pageGap = const Duration(milliseconds: 300),
+      this.searchGap = const Duration(milliseconds: 1200),
+      Duration? providerGap,
       this.timeout = const Duration(seconds: 10),
-      this.readTimeout = const Duration(seconds: 8),
+      this.readTimeout = const Duration(seconds: 7),
       this.maxBytes = 1000000,
+      this.maxParallelReads = 4,
       this.providers = finderProviders,
       this.probes = const [
         'https://www.bing.com/',
+        'https://uk.search.yahoo.com/',
         'https://eitaa.com/',
         'https://ahanmelal.com/'
       ],
       DateTime Function()? clock})
-      : clock = clock ?? DateTime.now;
+      : providerGap = providerGap ??
+            (searchGap == Duration.zero
+                ? Duration.zero
+                : const Duration(milliseconds: 3200)),
+        clock = clock ?? DateTime.now;
 
   bool get running => _running;
   int _now() => clock().millisecondsSinceEpoch ~/ 1000;
@@ -441,10 +654,55 @@ class SourceFinder {
       for (final key in FinderState.settingKeys) key: found[key]
     };
     state = FinderState.fromSettings(values);
+    state.deduplicate(known);
     _stored
       ..clear()
       ..addAll(found);
     _loaded = true;
+  }
+
+  /// Registers extra endpoints the app already reads (e.g. discovered channels)
+  /// so Smart Search 2 never lists or hands over duplicates of them.
+  Future<void> registerKnownEndpoints(Iterable<SourceEndpoint> extra) async {
+    known
+      ..clear()
+      ..addAll(finderKnownKeys(extra));
+    if (_loaded && state.deduplicate(known) > 0) {
+      await save();
+    }
+  }
+
+  /// Resets network-related provider/host cooldowns and restarts search if the
+  /// `در نوبت` queue is empty when internet connectivity arrives.
+  Future<void> onNetworkConnected() async {
+    await sync();
+    final now = _now();
+    state.onNetworkConnected(now);
+    _lastProviderMs.clear();
+    _lastSearchMs = 0;
+    state.startNextRoundIfQueueZero(now,
+        askable: (t) => _providerFor(t, now) != null,
+        resting: (e) => _resting(e, now),
+        drainedJustNow: true);
+    _complete(now);
+    await save();
+  }
+
+  /// Starts a new search round immediately if `در نوبت` (`waiting`) is zero and
+  /// no active work remains in the current round.
+  Future<bool> ensureSearchingWhenQueueEmpty({bool drainedJustNow = false}) async {
+    await sync();
+    final now = _now();
+    state.cooldown.removeWhere((_, until) => until <= now);
+    final started = state.startNextRoundIfQueueZero(now,
+        askable: (t) => _providerFor(t, now) != null,
+        resting: (e) => _resting(e, now),
+        drainedJustNow: drainedJustNow);
+    if (started) {
+      _complete(now);
+      await save();
+    }
+    return started;
   }
 
   /// Picks up what another run (the background task) wrote meanwhile.
@@ -555,14 +813,16 @@ class SourceFinder {
     return added;
   }
 
-  Future<_Fetched> _get(Uri url, {Duration? within}) async {
+  Future<_Fetched> _get(Uri url,
+      {Duration? within, String userAgent = finderAgent}) async {
     final timeout = within ?? this.timeout;
     final request = http.Request('GET', url)
       ..followRedirects = true
       ..maxRedirects = 5
       ..headers.addAll({
-        'User-Agent': finderAgent,
-        'Accept': 'text/html,application/xhtml+xml,application/rss+xml',
+        'User-Agent': userAgent,
+        'Accept':
+            'text/html,application/xhtml+xml,application/rss+xml,application/json;q=0.8',
         'Accept-Language': 'fa-IR,fa;q=0.9,en;q=0.5'
       });
     final response = await client.send(request).timeout(timeout);
@@ -589,32 +849,46 @@ class SourceFinder {
     }
   }
 
-  /// The search pages in the order to try them: the one that answered most
-  /// recently first, then the declared order.
+  /// Round-robin provider ordering: healthy and untried providers rotate by
+  /// least-recently-asked sequence so no single search engine is hammered.
   List<FinderProvider> _ordered() {
-    int answered(FinderProvider p) {
+    int tier(FinderProvider p) {
       final note = state.providerNote[p.id] ?? '';
-      return note.startsWith('ok|') ? int.tryParse(note.substring(3)) ?? 0 : 0;
+      if (note.startsWith('ok|') || note.isEmpty) return 0;
+      return 1;
     }
 
     final list = [...providers];
     final rank = {for (var i = 0; i < list.length; i++) list[i].id: i};
     list.sort((a, b) {
-      final byAnswer = answered(b).compareTo(answered(a));
-      return byAnswer != 0 ? byAnswer : rank[a.id]!.compareTo(rank[b.id]!);
+      final byTier = tier(a).compareTo(tier(b));
+      if (byTier != 0) return byTier;
+      final seqA = _providerAskSeq[a.id] ?? 0;
+      final seqB = _providerAskSeq[b.id] ?? 0;
+      if (seqA != seqB) return seqA.compareTo(seqB);
+      return rank[a.id]!.compareTo(rank[b.id]!);
     });
     return list;
   }
 
   /// The search page that will take this question now, if any.
-  FinderProvider? _providerFor(FinderTask task, int now) {
+  FinderProvider? _providerFor(FinderTask task, int now,
+      {bool enforceGap = false}) {
     final site = FinderPlan.usesSiteOperator(task.value);
+    final nowMs = clock().millisecondsSinceEpoch;
+    FinderProvider? fallback;
     for (final p in _ordered()) {
       if ((state.cooldown[p.id] ?? 0) > now) continue;
       if (site && !p.siteOperator) continue;
-      return p;
+      fallback ??= p;
+      if (!enforceGap) return p;
+      final lastMs = _lastProviderMs[p.id] ?? 0;
+      if (lastMs == 0 ||
+          Duration(milliseconds: nowMs - lastMs) >= providerGap) {
+        return p;
+      }
     }
-    return null;
+    return fallback;
   }
 
   String _hostOf(FinderEntry e) => Uri.parse(previewUrl(e.kind, e.url)).host;
@@ -666,7 +940,11 @@ class SourceFinder {
       var now = _now();
       state.cooldown.removeWhere((_, until) => until <= now);
       if (state.startedAt == 0) state.beginRound(now);
-      state.maybeNextRound(now);
+      if (!state.maybeNextRound(now)) {
+        state.startNextRoundIfQueueZero(now,
+            askable: (t) => _providerFor(t, now) != null,
+            resting: (e) => _resting(e, now));
+      }
       _complete(now);
       while (steps < maxSteps &&
           watch.elapsed < budget &&
@@ -738,7 +1016,7 @@ class SourceFinder {
     FinderProvider? provider;
     for (final t in state.queue) {
       if (t.type != 'S' || skip.contains(t.value)) continue;
-      final p = _providerFor(t, now);
+      final p = _providerFor(t, now, enforceGap: true);
       if (p == null) continue;
       search = t;
       provider = p;
@@ -769,11 +1047,22 @@ class SourceFinder {
       return null;
     }
 
-    final since = Duration(
-        milliseconds: clock().millisecondsSinceEpoch - _lastSearchMs);
+    final nowMs = clock().millisecondsSinceEpoch;
+    final sinceGlobal = Duration(milliseconds: nowMs - _lastSearchMs);
+    final sinceProvider = provider == null || (_lastProviderMs[provider.id] ?? 0) == 0
+        ? providerGap
+        : Duration(milliseconds: nowMs - _lastProviderMs[provider.id]!);
+    final since = sinceGlobal < sinceProvider ? sinceGlobal : sinceProvider;
+    final neededGap =
+        sinceProvider < providerGap && (providerGap - sinceProvider) > (searchGap - sinceGlobal)
+            ? providerGap
+            : searchGap;
     final ready = search != null && provider != null;
-    // One question, then readings: questions are the scarce, rate-limited part.
-    if (ready && since >= searchGap && step % 3 == 0) {
+    // Alternate briskly between search questions and parallel candidate reads.
+    if (ready &&
+        sinceGlobal >= searchGap &&
+        sinceProvider >= providerGap &&
+        step % 2 == 0) {
       return [() => _search(search!, provider!, skip)];
     }
     final readings = <Future<_Outcome> Function()>[];
@@ -782,19 +1071,19 @@ class SourceFinder {
       final page = nextPage();
       if (page != null) readings.add(() => _seedPage(page));
     }
-    while (readings.length < 2) {
+    while (readings.length < maxParallelReads) {
       final entry = nextEntry();
       if (entry == null) break;
       readings.add(() => _verify(entry));
     }
-    while (readings.length < 2) {
+    while (readings.length < maxParallelReads) {
       final page = nextPage();
       if (page == null) break;
       readings.add(() => _seedPage(page));
     }
     if (readings.isNotEmpty) return readings;
     if (ready) {
-      final wait = searchGap - since;
+      final wait = neededGap - since;
       if (wait < left) {
         if (wait > Duration.zero) await Future<void>.delayed(wait);
         return [() => _search(search!, provider!, skip)];
@@ -805,20 +1094,22 @@ class SourceFinder {
 
   Future<_Outcome> _search(
       FinderTask task, FinderProvider p, Set<String> skip) async {
-    _lastSearchMs = clock().millisecondsSinceEpoch;
+    final startMs = clock().millisecondsSinceEpoch;
+    _lastSearchMs = startMs;
+    _lastProviderMs[p.id] = startMs;
+    _providerAskSeq[p.id] = ++_askCounter;
     final now = _now();
     _Fetched got;
     try {
       // Each page may take as long as it needs (see [FinderProvider.timeout]):
       // the question must not be declared unreachable because a slow — but
       // answering — page exceeded the short shared timeout.
-      got = await _get(p.url(task.value), within: p.timeout);
+      got = await _get(p.url(task.value),
+          within: p.timeout, userAgent: finderSearchAgent);
     } catch (_) {
       // This page cannot be reached from this network right now. It is left
       // alone for a while and the question goes to the next page; nothing is
-      // counted against the question. A short rest, not a long one: on a
-      // mobile network a first attempt often hangs, and «سه ساعت بعد» reads
-      // as «موتور جستجو کار نمی‌کند».
+      // counted against the question.
       final before = state.cooldown[p.id], note = state.providerNote[p.id];
       _rest(p, now, 3 * 60, 'net',
           'صفحه جستجوی ${p.title} پاسخ نداد؛ سه دقیقه بعد دوباره پرسیده می‌شود و تا آن زمان صفحه بعدی امتحان می‌شود.');
@@ -837,8 +1128,7 @@ class SourceFinder {
             }
           });
     }
-    if (got.status != 200 ||
-        (p.id == 'ddg' && got.body.contains('anomaly'))) {
+    if (isSearchChallenge(p.id, got.status, got.body)) {
       // The page asked not to be read by a program. It is not argued with.
       _rest(p, now, 3 * 3600, 'refused',
           'صفحه جستجوی ${p.title} پاسخ نداد (${got.status})؛ چند ساعت کنار گذاشته شد.');
@@ -1044,19 +1334,35 @@ class SourceFinder {
   /// a channel, the heading-owned table reader for a website page.
   SourceEndpoint? endpointOf(FinderEntry e) => finderEndpointOf(e);
 
-  /// Sources هوش جستجوگر ۱ has already accepted.
-  List<SourceEndpoint> acceptedEndpoints({bool onlyUnapplied = false}) => [
-        for (final e in state.entries)
-          if (e.handoff == 'accepted' && (!onlyUnapplied || !e.applied))
-            endpointOf(e)
-      ].whereType<SourceEndpoint>().toList();
+  /// Sources هوش جستجوگر ۱ has already accepted, deduplicated by canonical URL
+  /// and excluding any route already present in built-in [endpoints].
+  List<SourceEndpoint> acceptedEndpoints({bool onlyUnapplied = false}) {
+    final builtInKeys = {for (final e in endpoints) endpointCanonicalKey(e)};
+    final builtInIds = {for (final e in endpoints) e.id};
+    final seenIds = <String>{};
+    final seenKeys = <String>{};
+    final out = <SourceEndpoint>[];
+    for (final e in state.entries) {
+      if (e.handoff != 'accepted' || (onlyUnapplied && e.applied)) continue;
+      final ep = endpointOf(e);
+      if (ep == null) continue;
+      final cKey = endpointCanonicalKey(ep);
+      if (builtInIds.contains(ep.id) || builtInKeys.contains(cKey)) continue;
+      if (seenIds.add(ep.id) && seenKeys.add(cKey)) {
+        out.add(ep);
+      }
+    }
+    return out;
+  }
 
   /// The entries to give to هوش جستجوگر ۱ now. The place is decided by its
   /// rules from the contact lines the entry was found with.
   List<FinderHandoff> handoffBatch(
       {int limit = 12, bool Function(FinderEntry entry)? where}) {
     if (!_loaded) return const [];
+    final builtInKeys = {for (final e in endpoints) endpointCanonicalKey(e)};
     final out = <FinderHandoff>[];
+    final seenKeys = <String>{};
     for (final e in state.waiting(_now(), limit: where == null ? limit : 400)) {
       if (where != null && !where(e)) continue;
       if (out.length >= limit) break;
@@ -1071,9 +1377,24 @@ class SourceFinder {
         e.note = 'نشانی برای خواندن عمومی معتبر نبود';
         continue;
       }
+      final cKey = endpointCanonicalKey(endpoint);
+      if (builtInKeys.contains(cKey) || known.contains(e.key)) {
+        state.discard(e);
+        continue;
+      }
+      if (!seenKeys.add(cKey)) continue;
       out.add(FinderHandoff(e, endpoint));
     }
     return out;
+  }
+
+  /// Records a transient network failure during handoff without locking the
+  /// entry out for 24 hours.
+  Future<void> deferNetwork(String key, {required String note}) async {
+    final e = state.entry(key);
+    if (e == null) return;
+    state.deferHandoffNetwork(e, note: note, now: _now());
+    await save();
   }
 
   /// Records what هوش جستجوگر ۱ answered for one entry.
@@ -1087,14 +1408,22 @@ class SourceFinder {
 
   /// Marks accepted sources as switched on by the app. Returns their ids.
   Future<List<String>> takeUnapplied() async {
+    final builtInKeys = {for (final e in endpoints) endpointCanonicalKey(e)};
+    final builtInIds = {for (final e in endpoints) e.id};
     final ids = <String>[];
+    var touched = false;
     for (final e in state.entries) {
       if (e.handoff != 'accepted' || e.applied) continue;
       final endpoint = endpointOf(e);
       e.applied = true;
-      if (endpoint != null) ids.add(endpoint.id);
+      touched = true;
+      if (endpoint != null &&
+          !builtInIds.contains(endpoint.id) &&
+          !builtInKeys.contains(endpointCanonicalKey(endpoint))) {
+        ids.add(endpoint.id);
+      }
     }
-    if (ids.isNotEmpty) await save();
+    if (touched) await save();
     return ids;
   }
 
@@ -1104,7 +1433,7 @@ class SourceFinder {
   String report() {
     final s = state, now = _now(), b = StringBuffer();
     String ago(int at) => at == 0 ? '-' : '${(now - at) ~/ 60}m';
-    b.writeln('IronPin 0.9.6 finder • round ${s.round + 1} • '
+    b.writeln('IronPin 0.9.9 finder • round ${s.round + 1} • '
         'started ${ago(s.startedAt)} • online ${ago(s.lastOnlineAt)} • '
         'step ${ago(s.lastStepAt)}');
     b.writeln('questions answered ${s.searches} • pages read ${s.pages} • '
@@ -1128,7 +1457,7 @@ class SourceFinder {
           'new=${s.count(part, 'new')} ok=${s.count(part, 'ok')} '
           'unreachable=${s.count(part, 'unreachable')} '
           'unreadable=${s.count(part, 'unreadable')} '
-          'wait=${s.handed(part, 'wait')} '
+          'wait=${s.waitingInPart(part, now)} '
           'accepted=${s.handed(part, 'accepted')} '
           'rejected=${s.handed(part, 'rejected')}');
     }
@@ -1164,63 +1493,124 @@ SourceEndpoint? finderEndpointOf(FinderEntry e) {
       name: e.name.isEmpty ? null : e.name, city: city);
 }
 
-/// Hands waiting entries to هوش جستجوگر ۱: each is read with the app's own
-/// reader, decided by [Searcher], and stored only when at least one valid row
-/// came out. The caller holds the refresh lock.
-///
-/// With [photos] the price lists that channels publish as pictures are read
-/// too (the foreground). Without it only [sitesOnly] entries should be given:
-/// a channel judged without its pictures would be refused for the wrong
-/// reason.
+/// Hands waiting entries to هوش جستجوگر ۱ in parallel waves across distinct
+/// hosts, reading text prices first and running bounded OCR only when needed,
+/// and holding the SQLite refresh lock only while writing snapshots when
+/// [alreadyLocked] is `false`.
 Future<int> deliverFinderBatch(
     MarketStore store, SourceClient client, SourceFinder finder,
     {required int windowDays,
-    int limit = 3,
+    int limit = 6,
     PhotoScanner? photos,
     bool sitesOnly = false,
+    bool alreadyLocked = true,
     bool Function()? cancelled}) async {
   var accepted = 0;
   final batch = finder.handoffBatch(
       limit: limit, where: sitesOnly ? (e) => e.kind == 'site' : null);
-  for (final h in batch) {
-    if (cancelled?.call() ?? false) break;
+  if (batch.isEmpty) return 0;
+
+  Future<void> writeSnapshot(String endpointId, List<Quote> quotes,
+      {required bool replaceMissing}) async {
+    if (alreadyLocked) {
+      await store.saveSnapshot(endpointId, quotes,
+          replaceMissing: replaceMissing);
+      return;
+    }
+    String? lease;
+    try {
+      lease = await store.acquireRefreshLock();
+      await store.saveSnapshot(endpointId, quotes,
+          replaceMissing: replaceMissing);
+    } finally {
+      if (lease != null) {
+        try {
+          await store.releaseRefreshLock(lease);
+        } catch (_) {}
+      }
+    }
+  }
+
+  Future<bool> inspectOne(FinderHandoff h) async {
+    if (cancelled?.call() ?? false) return false;
     final e = h.endpoint;
     try {
       final fetched =
-          await client.fetch(e, windowDays: windowDays, pageLimit: 2);
-      final rows = photos == null
-          ? fetched
-          : (await readPostPhotos(fetched, photos,
-                  defaultCurrency: e.defaultCurrency, cancelled: cancelled))
-              .rows;
-      final found = rows.isEmpty
+          await client.fetch(e, windowDays: windowDays, pageLimit: 1);
+      var rows = fetched;
+      var found = rows.isEmpty
           ? const SearcherResult([])
           : await Searcher.processAsync(rows,
               now: DateTime.now(),
               windowDays: windowDays,
               resolver: MapsResolver(client.client));
+      final hasImages =
+          fetched.any((r) => (r.details['پیوست تصویر'] ?? '').isNotEmpty);
+      if (found.quotes.isEmpty &&
+          hasImages &&
+          photos != null &&
+          !photos.blocked &&
+          !(cancelled?.call() ?? false)) {
+        rows = (await readPostPhotos(fetched, photos,
+                defaultCurrency: e.defaultCurrency,
+                cancelled: cancelled,
+                maxPhotos: 2))
+            .rows;
+        found = await Searcher.processAsync(rows,
+            now: DateTime.now(),
+            windowDays: windowDays,
+            resolver: MapsResolver(client.client));
+      }
       if (found.quotes.isEmpty) {
+        if (hasImages && (photos == null || photos.blocked)) {
+          // Background run without OCR: leave photo-bearing channel for the
+          // foreground OCR reader instead of refusing it for the wrong reason.
+          await finder.deferNetwork(h.entry.key,
+              note: 'دارای تصویر قیمت؛ در انتظار خوانش OCR');
+          return false;
+        }
         await finder.verdict(h.entry.key,
             rows: 0,
             note: rows.isEmpty
                 ? 'ردیف قیمت در صفحه عمومی پیدا نشد'
                 : 'ردیف قابل‌ثبت نبود (بیرون از بازه: ${found.outOfWindow} • بی‌قیمت/بی‌محصول: ${found.noise})');
-      } else {
-        await store.saveSnapshot(e.id, found.quotes,
-            replaceMissing: client.complete[e.id] ?? true);
-        await finder.verdict(h.entry.key,
-            rows: found.quotes.length,
-            note: 'هوش جستجوگر ۱: ${found.quotes.length} ردیف معتبر');
-        accepted++;
+        return false;
       }
-    } catch (error) {
+      await writeSnapshot(e.id, found.quotes,
+          replaceMissing: client.complete[e.id] ?? true);
       await finder.verdict(h.entry.key,
-          rows: 0,
-          note: error is FormatException
-              ? error.message
-              : 'خطا در اتصال/مهلت دریافت');
+          rows: found.quotes.length,
+          note: 'هوش جستجوگر ۱: ${found.quotes.length} ردیف معتبر');
+      return true;
+    } catch (error) {
+      if (error is FormatException) {
+        await finder.verdict(h.entry.key, rows: 0, note: error.message);
+      } else {
+        await finder.deferNetwork(h.entry.key,
+            note: 'خطا در اتصال/مهلت دریافت؛ تلاش مجدد');
+      }
+      return false;
     }
-    await Future<void>.delayed(const Duration(milliseconds: 450));
+  }
+
+  final pending = [...batch];
+  while (pending.isNotEmpty && !(cancelled?.call() ?? false)) {
+    final wave = <FinderHandoff>[];
+    final waveHosts = <String>{};
+    for (var i = 0; i < pending.length && wave.length < 3;) {
+      final host = Uri.tryParse(pending[i].endpoint.url)?.host ?? '';
+      if (waveHosts.add(host)) {
+        wave.add(pending.removeAt(i));
+      } else {
+        i++;
+      }
+    }
+    if (wave.isEmpty) wave.add(pending.removeAt(0));
+    final results = await Future.wait([for (final h in wave) inspectOne(h)]);
+    accepted += results.where((ok) => ok).length;
+    if (pending.isNotEmpty && !(cancelled?.call() ?? false)) {
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+    }
   }
   return accepted;
 }

@@ -214,7 +214,9 @@ void main() {
       final e = s.nextToVerify({})!;
       expect(e.key, 'telegram:steelshop');
       s.confirm(e, name: 'فروشگاه آهن', contact: 'تلفن 05137654321');
-      expect(e.handoff, '');
+      // Confirmed deliverable entries immediately enter `wait` (`در نوبت`)
+      // without waiting for the entire round to finish.
+      expect(e.handoff, 'wait');
       s.updateCompletion(120);
       expect(s.complete, [true, true, true]);
       expect(s.completedAt, [110, 120, 110]);
@@ -606,7 +608,63 @@ void main() {
       expect(webAddressOf('et://resolve?domain='), isNull);
       expect(webAddressOf('https://resolve/?domain=x'), isNull);
       expect(isDirectoryHost('mychannels.ir'), true);
+      expect(isDirectoryHost('canaljoo.ir'), true);
+      expect(isDirectoryHost('canalha.ir'), true);
       expect(isDirectoryHost('ahanonline.com'), false);
+    });
+    test('DDG Lite, Yahoo, Naver, Bing HTML and Zarebin JSON answers are parsed cleanly',
+        () {
+      final ddgLite =
+          File('test/fixtures/finder_ddg_lite_observed.html').readAsStringSync();
+      final rLite = readSearchResults({'provider': 'ddg-lite', 'body': ddgLite});
+      expect(rLite.length, greaterThanOrEqualTo(6));
+      expect(rLite.every((a) => !a.url.contains('duckduckgo.com')), true);
+      expect(answersQuestion('کانال ایتا قیمت آهن', rLite), true);
+
+      final yahoo =
+          File('test/fixtures/finder_yahoo_observed.html').readAsStringSync();
+      final rYahoo = readSearchResults({'provider': 'yahoo', 'body': yahoo});
+      expect(rYahoo.length, greaterThanOrEqualTo(6));
+      expect(rYahoo.every((a) => !a.url.contains('yahoo.com')), true);
+      expect(rYahoo.any((a) => a.url.contains('tehran-ahan.com')), true);
+      expect(answersQuestion('قیمت میلگرد امروز', rYahoo), true);
+
+      final naver =
+          File('test/fixtures/finder_naver_observed.html').readAsStringSync();
+      final rNaver = readSearchResults({'provider': 'naver', 'body': naver});
+      expect(rNaver.length, greaterThanOrEqualTo(6));
+      expect(rNaver.every((a) => !a.url.contains('naver.com')), true);
+      expect(answersQuestion('قیمت میلگرد امروز', rNaver), true);
+
+      final bingHtml =
+          File('test/fixtures/finder_bing_html_observed.html').readAsStringSync();
+      final rBing =
+          readSearchResults({'provider': 'bing-html', 'body': bingHtml});
+      expect(rBing.length, greaterThanOrEqualTo(5));
+      expect(rBing.every((a) => !a.url.contains('bing.com')), true);
+      expect(answersQuestion('قیمت میلگرد امروز', rBing), true);
+
+      final rZarebin = readSearchResults({
+        'provider': 'zarebin',
+        'body': jsonEncode({
+          'result': {
+            'all_results': [
+              {
+                'web_link': 'https://t.me/steelshop_ir',
+                'title': 'کانال قیمت میلگرد امروز',
+                'description': 'فروش آهن آلات و میلگرد در مشهد'
+              },
+              {
+                'url': 'https://zarebin.ir/about',
+                'title': 'درباره ذره‌بین',
+                'description': 'موتور جستجو'
+              }
+            ]
+          }
+        })
+      });
+      expect(rZarebin.single.url, 'https://t.me/steelshop_ir');
+      expect(rZarebin.single.text, contains('قیمت میلگرد'));
     });
   });
 
@@ -859,7 +917,8 @@ void main() {
       expect(site.endpoint.name, 'ahanshop.example');
     });
 
-    test('two readings at a time at most, never two on one host', () async {
+    test('bounded parallel readings across hosts, never two on one host',
+        () async {
       final inflight = <String, int>{};
       var most = 0, sameHost = 0;
       final f = finderOn(store, (r) async {
@@ -884,7 +943,7 @@ void main() {
         'https://seller2.example/'
       ]);
       await drain(f);
-      expect(most, 2);
+      expect(most, 4);
       expect(sameHost, 0);
       expect(f.state.entries.where((e) => e.state == 'ok').length, 16);
       expect(f.state.complete, [true, true, true]);
@@ -1037,9 +1096,11 @@ void main() {
 
     test('with no search page at all the lists are completed from the links '
         'sellers publish themselves, and hand-over still opens', () async {
+      final searchHosts = {
+        for (final p in finderProviders) p.url('آهن').host
+      };
       final g = finderOn(store, (r) async {
-        if (['html.duckduckgo.com', 'gerdoo.me', 'www.bing.com']
-            .contains(r.url.host)) {
+        if (searchHosts.contains(r.url.host)) {
           throw const SocketException('unreachable');
         }
         return world(r);
@@ -1222,12 +1283,159 @@ void main() {
       await t.tap(tile);
       await t.pumpAndSettle();
       expect(find.text('فروشگاه آهن توس'), findsOneWidget);
-      expect(find.textContaining('منتظر تکمیل فهرست'), findsOneWidget);
+      expect(find.textContaining('تحویل به برنامه: در نوبت هوش جستجوگر ۱'),
+          findsOneWidget);
       expect(t.takeException(), isNull);
       await t.runAsync(() async {
         c.dispose();
         await c.store.close();
       });
     });
+
+    test('zero-queue auto-restart: when در نوبت hits zero a new search round starts immediately',
+        () async {
+      final fixture =
+          File('test/fixtures/ghanbari_sheets_observed.html').readAsStringSync();
+      final c = MarketController(store,
+          client: SourceClient(client: MockClient((r) async {
+        if (r.url.host == 't.me') return page(fixture);
+        return page('<div class="no-results">No results</div>');
+      })));
+      try {
+        c.enabled = {};
+        await c.setDiscoveryDays(0);
+        final s = c.finder.state..startedAt = 100;
+        expect(s.round, 0);
+        // Simulate round 0 having found 1 channel and finished its queue.
+        s.offer(classifyLink('https://t.me/ghanbari_found')!,
+            from: 'q', depth: 0, hinted: true, now: 100);
+        s.confirm(s.entries.single, name: 'آهن قنبری');
+        s.updateCompletion(105);
+        expect(s.totalWaiting(105), 1);
+        for (final e in s.toSettings().entries) {
+          await store.setSetting(e.key, e.value);
+        }
+        await c.finder.load(force: true);
+        // Delivering drains `در نوبت` from 1 -> 0, which must immediately
+        // advance `round` from 0 -> 1 and populate round 1 search queries!
+        final accepted = await c.deliverFinderNow(limit: 4);
+        expect(accepted, 1);
+        expect(c.finder.state.totalWaiting(200), 0);
+        expect(c.finder.state.round, 1);
+        expect(
+            c.finder.state.queue
+                .where((t) => t.type == 'S')
+                .map((t) => t.value),
+            containsAll(FinderPlan.queries(FinderPart.sites, 1)));
+      } finally {
+        c.dispose();
+      }
+    });
+
+    test('every internet connection clears network cooldowns and wakes finder',
+        () async {
+      final c = MarketController(store,
+          client: SourceClient(
+              client: MockClient(
+                  (_) async => page('<div class="no-results">No results</div>'))));
+      try {
+        await c.finder.load(force: true);
+        final s = c.finder.state..beginRound(100);
+        s.providerNote['ddg-lite'] = 'net|100';
+        s.cooldown['ddg-lite'] = 9999999999;
+        s.providerNote['yahoo'] = 'refused|100';
+        s.cooldown['yahoo'] = 9999999999;
+        s.cooldown['h:t.me'] = 9999999999;
+        s.hostFails['t.me'] = 2;
+        s.offer(classifyLink('https://t.me/steel_retry')!,
+            from: 'q', depth: 0, hinted: true, now: 100);
+        final entry = s.entry('telegram:steel_retry')!;
+        s.confirm(entry, name: 'فولاد');
+        s.deferHandoffNetwork(entry, note: 'خطا در اتصال', now: 100);
+        expect(s.isHandoffDueSafe(entry, 110), false);
+        await c.finder.save();
+
+        await c.onInternetConnected();
+        // Network cooldowns & host cooldowns are cleared; HTTP 202 refusal stays.
+        expect(c.finder.state.cooldown.containsKey('ddg-lite'), false);
+        expect(c.finder.state.cooldown.containsKey('h:t.me'), false);
+        expect(c.finder.state.hostFails, isEmpty);
+        expect(c.finder.state.cooldown.containsKey('yahoo'), true);
+        // Transient network-deferred handoff entry is immediately due again!
+        expect(c.finder.state.entry('telegram:steel_retry')!.handoffAt, 0);
+      } finally {
+        c.dispose();
+      }
+    });
+
+    test('zero duplicates across built-in endpoints, discovered sources, and finder',
+        () async {
+      // Built-in endpoint has id `telegram-ahanmelal` and url `https://t.me/s/ahanmelal`,
+      // whereas `publicChannel('https://t.me/ahanmelal')` produces id `public-telegram-ahanmelal`.
+      final c = MarketController(store);
+      try {
+        await c.rememberSources([
+          publicChannel('https://t.me/ahanmelal', name: 'آهن ملل تکراری')!,
+          publicChannel('https://t.me/BrandNewIronShop', name: 'آهن نو')!,
+          publicChannel('https://telegram.me/s/brandnewironshop',
+              name: 'آهن نو ۲')!,
+        ]);
+        // Built-in duplicate and alias duplicate were both rejected.
+        expect(c.discoveredSources.map((e) => e.id).toList(),
+            ['public-telegram-brandnewironshop']);
+        // Finder also refuses to list either the built-in channel or the
+        // newly discovered channel, regardless of URL variation.
+        expect(
+            c.finder.state.offer(classifyLink('https://t.me/s/ahanmelal/42')!,
+                from: 'q', depth: 0, hinted: true, now: 1, known: c.finder.known),
+            false);
+        expect(
+            c.finder.state.offer(
+                classifyLink('https://telegram.me/BrandNewIronShop')!,
+                from: 'q',
+                depth: 0,
+                hinted: true,
+                now: 1,
+                known: c.finder.known),
+            false);
+        // Website URL canonicalization: query order, tracking params, index.html
+        final a = classifyLink(
+            'https://www.ExampleShop.ir/price/index.html?b=2&utm_source=tg&a=1&fbclid=xyz')!;
+        final b = classifyLink('https://exampleshop.ir/price/?a=1&b=2')!;
+        expect(a.key, b.key);
+        expect(a.url, b.url);
+      } finally {
+        c.dispose();
+      }
+    });
+
+    test('round-robin spreads queries across healthy search providers', () async {
+      final counts = <String, int>{};
+      final f = SourceFinder(store,
+          pageGap: Duration.zero,
+          searchGap: Duration.zero,
+          providerGap: Duration.zero,
+          providers: [
+            finderProviders.firstWhere((p) => p.id == 'ddg-lite'),
+            finderProviders.firstWhere((p) => p.id == 'yahoo'),
+            finderProviders.firstWhere((p) => p.id == 'bing'),
+          ],
+          client: MockClient((r) async {
+            counts.update(r.url.host, (v) => v + 1, ifAbsent: () => 1);
+            if (r.url.host == 'www.bing.com') {
+              return page('<rss><channel></channel></rss>');
+            }
+            return page('<html><body><div class="no-results">No results</div></body></html>');
+          }));
+      await f.runSlice(maxSteps: 9);
+      expect(counts['lite.duckduckgo.com'], 3);
+      expect(counts['uk.search.yahoo.com'], 3);
+      expect(counts['www.bing.com'], 3);
+    });
   });
+}
+
+extension on FinderState {
+  bool isHandoffDueSafe(FinderEntry e, int now) =>
+      FinderState.isHandoffDue(e, now);
 }

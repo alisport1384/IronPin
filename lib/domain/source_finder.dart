@@ -92,15 +92,18 @@ const _reserved = {
 /// seals, payment and map services. Matched as a suffix.
 const _notSites = [
   'google.com', 'google.ir', 'bing.com', 'duckduckgo.com', 'yahoo.com',
-  'yandex.com', 'yandex.ru', 'microsoft.com', 'msn.com', 'live.com',
-  'apple.com', 'facebook.com', 'fb.com', 'twitter.com', 'x.com', 'youtube.com',
-  'youtu.be', 'linkedin.com', 'pinterest.com', 'aparat.com', 'wikipedia.org',
-  'wikimedia.org', 'github.com', 'cafebazaar.ir', 'myket.ir', 'enamad.ir',
-  'samandehi.ir', 'zarinpal.com', 'shaparak.ir', 'neshan.org', 'balad.ir',
-  'waze.com', 'wa.me', 'telegram.org', 'w3.org', 'schema.org', 'gravatar.com',
-  'wordpress.org', 'wordpress.com', 'cloudflare.com', 'googleapis.com',
-  'gstatic.com', 'googletagmanager.com', 'bale.ai', 'eitaa.ir', 'rubika.app',
-  'archive.org', 'zarebin.ir', 'gerdoo.me', 'tgstat.com', 'telegram.dog'
+  'yimg.com', 'yandex.com', 'yandex.ru', 'naver.com', 'naver.net',
+  'pstatic.net', 'seznam.cz', 'qwant.com', 'dogpile.com', 'ecosia.org',
+  'metager.org', 'mojeek.com', 'rismoon.com', 'microsoft.com', 'msn.com',
+  'live.com', 'apple.com', 'facebook.com', 'fb.com', 'twitter.com', 'x.com',
+  'youtube.com', 'youtu.be', 'linkedin.com', 'pinterest.com', 'aparat.com',
+  'wikipedia.org', 'wikimedia.org', 'github.com', 'cafebazaar.ir', 'myket.ir',
+  'enamad.ir', 'samandehi.ir', 'zarinpal.com', 'shaparak.ir', 'neshan.org',
+  'balad.ir', 'waze.com', 'wa.me', 'telegram.org', 'w3.org', 'schema.org',
+  'gravatar.com', 'wordpress.org', 'wordpress.com', 'cloudflare.com',
+  'googleapis.com', 'gstatic.com', 'googletagmanager.com', 'bale.ai',
+  'eitaa.ir', 'rubika.app', 'archive.org', 'zarebin.ir', 'gerdoo.me',
+  'tgstat.com', 'telegram.dog'
 ];
 
 final _fileLike = RegExp(
@@ -172,13 +175,35 @@ FinderLink? classifyLink(String raw) {
   }
   if (_notSites.any((x) => host == x || host.endsWith('.$x'))) return null;
   if (_fileLike.hasMatch(u.path)) return null;
-  final query = {
+  final rawQuery = <String, String>{
     for (final e in u.queryParameters.entries)
-      if (!e.key.startsWith('utm_') &&
-          !const {'fbclid', 'gclid', 'srsltid', 'ref', 'share'}.contains(e.key))
+      if (!e.key.toLowerCase().startsWith('utm_') &&
+          !const {
+            'fbclid',
+            'gclid',
+            'srsltid',
+            'yclid',
+            'msclkid',
+            'igshid',
+            'igsh',
+            'ref',
+            'share',
+            '_ga',
+            '_gl'
+          }.contains(e.key.toLowerCase()))
         e.key: e.value
   };
-  var path = u.path.isEmpty ? '/' : u.path;
+  final sortedKeys = rawQuery.keys.toList()..sort();
+  final query = {for (final k in sortedKeys) k: rawQuery[k]!};
+  var path = u.path.isEmpty ? '/' : u.path.replaceAll(RegExp(r'/+'), '/');
+  final lowerPath = path.toLowerCase();
+  for (final idx in const ['/index.html', '/index.htm', '/index.php']) {
+    if (lowerPath.endsWith(idx)) {
+      path = path.substring(0, path.length - idx.length);
+      if (path.isEmpty) path = '/';
+      break;
+    }
+  }
   if (path.length > 1 && path.endsWith('/')) {
     path = path.substring(0, path.length - 1);
   }
@@ -189,13 +214,38 @@ FinderLink? classifyLink(String raw) {
       queryParameters: query.isEmpty ? null : query);
   final url = clean.toString();
   if (url.length > 220) return null;
+  final keyPath = _canonicalPathKey(clean.path);
   return FinderLink(
       url,
       'site',
-      'site:$host${path.toLowerCase()}'
+      'site:$host$keyPath'
           '${query.isEmpty ? '' : '?${clean.query.toLowerCase()}'}',
       FinderPart.sites,
       true);
+}
+
+String _canonicalPathKey(String path) {
+  try {
+    return Uri.decodeFull(path).toLowerCase();
+  } catch (_) {
+    return path.toLowerCase();
+  }
+}
+
+/// Canonical de-duplication key for any URL (channel, website, or raw route).
+String canonicalUrlKey(String rawUrl) {
+  final link = classifyLink(rawUrl);
+  if (link != null) return link.key;
+  final u = Uri.tryParse(rawUrl.trim());
+  if (u == null || u.host.isEmpty) return rawUrl.trim().toLowerCase();
+  var host = u.host.toLowerCase();
+  if (host.startsWith('www.')) host = host.substring(4);
+  var path = u.path.isEmpty ? '/' : u.path.replaceAll(RegExp(r'/+'), '/');
+  if (path.length > 1 && path.endsWith('/')) {
+    path = path.substring(0, path.length - 1);
+  }
+  return 'raw:$host${_canonicalPathKey(path)}'
+      '${u.query.isEmpty ? '' : '?${u.query.toLowerCase()}'}';
 }
 
 /// The address the public reader opens for an entry: Telegram and Bale show
@@ -276,16 +326,19 @@ class FinderPlan {
     'بوشهر', 'بیرجند', 'ایلام', 'شهرکرد', 'سمنان', 'یاسوج', 'بجنورد'
   ];
 
-  /// Three general questions, then two about a city, and so on.
+  /// Three general questions, then two about a city, and so on (deduplicated).
   static List<String> _weave(List<String> general, List<String> local) {
     final out = <String>[];
+    final seen = <String>{};
     var g = 0, l = 0;
     while (g < general.length || l < local.length) {
       for (var i = 0; i < 3 && g < general.length; i++) {
-        out.add(general[g++]);
+        final q = general[g++];
+        if (seen.add(q)) out.add(q);
       }
       for (var i = 0; i < 2 && l < local.length; i++) {
-        out.add(local[l++]);
+        final q = local[l++];
+        if (seen.add(q)) out.add(q);
       }
     }
     return out;
@@ -295,11 +348,16 @@ class FinderPlan {
     _weave([
       for (final p in products) 'قیمت $p امروز',
       'فروش آهن آلات', 'پخش آهن آلات', 'لیست قیمت آهن آلات',
+      'قیمت ورق سیاه امروز', 'قیمت ورق گالوانیزه امروز', 'قیمت قوطی امروز',
+      'قیمت شمش فولاد امروز', 'قیمت میلگرد کلاف امروز', 'قیمت هاش امروز',
+      'بنکداری آهن آلات', 'بازرگانی آهن و فولاد', 'جدول قیمت روز مقاطع فولادی',
       for (final p in products) 'خرید $p',
       for (final p in products) 'فروش $p',
       for (final p in products) 'پخش $p',
     ], [
-      for (final c in cities) ...['قیمت آهن $c', 'آهن فروشی $c']
+      for (final c in cities) ...['قیمت آهن $c', 'آهن فروشی $c'],
+      'فولاد فروشی کاشان', 'آهن فروشی نیشابور', 'آهن فروشی دزفول',
+      'آهن فروشی بابل', 'آهن فروشی آمل', 'آهن فروشی سبزوار',
     ]),
     _weave([
       'کانال تلگرام قیمت آهن', 'کانال تلگرام قیمت میلگرد',
@@ -307,8 +365,12 @@ class FinderPlan {
       'پیج اینستاگرام آهن آلات', 'site:instagram.com آهن آلات',
       for (final p in products.skip(1).take(6)) 'کانال تلگرام قیمت $p',
       'کانال تلگرام آهن آلات',
+      'site:t.me قیمت ورق سیاه', 'site:t.me قیمت تیرآهن', 'site:t.me قیمت قوطی',
+      'site:t.me بازرگانی آهن', 'site:t.me پخش میلگرد', 'کانال تلگرام ورق گالوانیزه',
+      'کانال تلگرام بازار آهن شادآباد', 'کانال تلگرام بازار آهن مکان',
     ], [
-      for (final c in cities) 'کانال تلگرام آهن $c'
+      for (final c in cities) 'کانال تلگرام آهن $c',
+      'کانال تلگرام آهن کاشان', 'کانال تلگرام آهن نیشابور',
     ]),
     _weave([
       for (final m in const ['ایتا', 'بله', 'روبیکا']) 'کانال $m قیمت آهن',
@@ -316,10 +378,16 @@ class FinderPlan {
       for (final m in const ['ایتا', 'بله', 'روبیکا']) 'کانال $m آهن آلات',
       'site:eitaa.com قیمت میلگرد', 'site:eitaa.com آهن آلات',
       'site:ble.ir قیمت آهن', 'site:ble.ir آهن آلات',
-      'site:rubika.ir آهن آلات',
+      'site:rubika.ir آهن آلات', 'site:rubika.ir قیمت میلگرد',
+      'site:eitaa.com قیمت ورق', 'site:ble.ir قیمت میلگرد',
       for (final p in products.skip(1).take(6)) 'کانال ایتا قیمت $p',
+      for (final p in const ['ورق', 'تیرآهن', 'پروفیل', 'لوله'])
+        'کانال روبیکا قیمت $p',
+      for (final p in const ['ورق', 'تیرآهن', 'پروفیل']) 'کانال بله قیمت $p',
     ], [
-      for (final c in cities) 'کانال ایتا آهن $c'
+      for (final c in cities) 'کانال ایتا آهن $c',
+      'کانال روبیکا آهن مشهد', 'کانال روبیکا آهن تهران', 'کانال روبیکا آهن اصفهان',
+      'کانال بله آهن مشهد', 'کانال بله آهن تهران', 'کانال بله آهن اصفهان',
     ]),
   ];
 
@@ -365,7 +433,14 @@ String? webAddressOf(String href) {
 /// Public directories of channels. Their pages describe other people's
 /// channels, so they are read for the addresses they give and never listed as
 /// a seller themselves.
-const finderDirectories = ['mychannels.ir'];
+const finderDirectories = [
+  'mychannels.ir',
+  'canaljoo.ir',
+  'canalha.ir',
+  'joinchannel.ir',
+  'cafechannel.ir',
+  'linkdoniwebsit.ir',
+];
 bool isDirectoryHost(String host) =>
     finderDirectories.any((d) => host == d || host.endsWith('.$d'));
 
@@ -540,6 +615,8 @@ class FinderState {
   static const maxAccepted = 150;
   static const maxHandoffTries = 3;
   static const handoffRetrySeconds = 24 * 3600;
+  static const handoffNetRetrySeconds = 120;
+  static const emptyStreakRestSeconds = 90;
 
   /// Rest between two rounds while the question banks are still being asked
   /// for the first time, and afterwards.
@@ -557,6 +634,7 @@ class FinderState {
   int rev = 0, round = 0;
   int startedAt = 0, lastOnlineAt = 0, lastStepAt = 0, roundCompletedAt = 0;
   int searches = 0, pages = 0, dropped = 0;
+  int emptyQueueRounds = 0;
 
   /// How many times in a row a public search page could not be used.
   int strikes = 0;
@@ -727,7 +805,9 @@ class FinderState {
     return null;
   }
 
-  /// The page was read and it sells goods.
+  /// The page was read and it sells goods. Deliverable entries immediately
+  /// enter the handoff queue (`wait`) so هوش جستجوگر ۱ can inspect them
+  /// without waiting for the entire round to finish.
   void confirm(FinderEntry e,
       {String name = '',
       String contact = '',
@@ -739,7 +819,11 @@ class FinderState {
     e.contact = _clip(contact, 200);
     e.note = _clip(note, 100);
     e.site = _clip(site, 40);
-    e.table = table;
+    if (table) e.table = true;
+    if (e.handoff.isEmpty && deliverable(e)) {
+      e.handoff = 'wait';
+      emptyQueueRounds = 0;
+    }
   }
 
   /// The page was read and says nothing about selling goods: it leaves the
@@ -797,10 +881,10 @@ class FinderState {
       }
     }
     for (final part in FinderPart.all) {
-      if (!complete[part]) continue;
       for (final e in lists[part]) {
         if (e.state == 'ok' && e.handoff.isEmpty && deliverable(e)) {
           e.handoff = 'wait';
+          emptyQueueRounds = 0;
         }
       }
     }
@@ -819,19 +903,79 @@ class FinderState {
   static bool deliverable(FinderEntry e) =>
       e.readable && (e.kind != 'site' || e.table);
 
+  /// Whether a `wait` entry is eligible to be handed to هوش جستجوگر ۱ at [now].
+  static bool isHandoffDue(FinderEntry e, int now) {
+    if (e.handoff != 'wait' || !deliverable(e)) return false;
+    if (e.handoffTries == 0) {
+      return e.handoffAt == 0 || now - e.handoffAt >= handoffNetRetrySeconds;
+    }
+    return now - e.handoffAt >= handoffRetrySeconds;
+  }
+
+  /// Active in-queue (`در نوبت`) count for [part] at [now].
+  int waitingInPart(int part, int now) => acceptedCount >= maxAccepted
+      ? 0
+      : lists[part].where((e) => isHandoffDue(e, now)).length;
+
+  /// Total active in-queue (`در نوبت`) count across all three lists at [now].
+  int totalWaiting(int now) => acceptedCount >= maxAccepted
+      ? 0
+      : entries.where((e) => isHandoffDue(e, now)).length;
+
+  /// Removes any duplicate entries across all lists and any unapplied entry
+  /// already covered by [known] built-in or user-added sources.
+  int deduplicate([Set<String> known = const {}]) {
+    var removed = 0;
+    final seenKeys = <String>{};
+    for (final part in FinderPart.all) {
+      lists[part].removeWhere((e) {
+        final inBuiltIn = known.contains(e.key) ||
+            (e.kind == 'site' &&
+                !e.applied &&
+                e.handoff != 'accepted' &&
+                known.contains('host:${e.host}'));
+        if (inBuiltIn && !e.applied && e.handoff != 'accepted') {
+          remember(e.key);
+          removed++;
+          return true;
+        }
+        if (!seenKeys.add(e.key)) {
+          removed++;
+          return true;
+        }
+        return false;
+      });
+    }
+    return removed;
+  }
+
+  /// Clears network-caused cooldowns and transient handoff deferrals whenever
+  /// a fresh internet connection becomes available.
+  void onNetworkConnected(int now) {
+    final netIds = [
+      for (final e in providerNote.entries)
+        if (e.value.startsWith('net|')) e.key
+    ];
+    for (final id in netIds) {
+      cooldown.remove(id);
+    }
+    cooldown.removeWhere((k, _) => k.startsWith('h:') || k.startsWith('host:'));
+    hostFails.clear();
+    strikes = 0;
+    emptyQueueRounds = 0;
+    for (final e in entries) {
+      if (e.handoff == 'wait' && e.handoffTries == 0 && e.handoffAt > 0) {
+        e.handoffAt = 0;
+      }
+    }
+    if (lastError.contains('اینترنت')) lastError = '';
+  }
+
   /// Questions still waiting for a search page that will take them.
   int unanswered(int part) =>
       queue.where((t) => t.type == 'S' && t.part == part).length;
 
-  /// After a short rest, asks the next questions of the banks. Places that
-  /// could not be reached get another chance once a day.
-  bool maybeNextRound(int now) {
-    final rest = round + 1 < FinderPlan.cycleRounds
-        ? roundRestSeconds
-        : settledRestSeconds;
-    if (roundCompletedAt == 0 || now - roundCompletedAt < rest) return false;
-    round++;
-    roundCompletedAt = 0;
+  void _reviveUnreachableIfDue(int now) {
     if (now - revivedAt >= reviveSeconds) {
       revivedAt = now;
       for (final e in entries) {
@@ -842,6 +986,61 @@ class FinderState {
         }
       }
     }
+  }
+
+  /// Immediately begins a new search round whenever the active `در نوبت`
+  /// queue reaches zero and no active work remains in the current round.
+  bool startNextRoundIfQueueZero(int now,
+      {bool Function(FinderTask task)? askable,
+      bool Function(FinderEntry entry)? resting,
+      bool drainedJustNow = false}) {
+    if (drainedJustNow) emptyQueueRounds = 0;
+    if (totalWaiting(now) > 0) {
+      emptyQueueRounds = 0;
+      return false;
+    }
+    bool open(FinderTask t) => askable == null || askable(t);
+    bool unread(FinderEntry e) =>
+        e.state == 'new' && e.tries == 0 && (resting == null || !resting(e));
+    if (startedAt == 0) {
+      beginRound(now);
+      return true;
+    }
+    final hasActiveWork = queue.any((t) =>
+            (t.type == 'P' && t.tries == 0) ||
+            (t.type == 'S' && open(t))) ||
+        entries.any(unread);
+    if (hasActiveWork) return false;
+    // Check that at least one query of the upcoming round can be asked now.
+    final nextRound = round + 1;
+    final nextHasAskable = askable == null ||
+        FinderPart.all.any((part) => FinderPlan.queries(part, nextRound)
+            .any((q) => askable(FinderTask('S', q, part))));
+    if (!nextHasAskable) return false;
+    if (!drainedJustNow &&
+        emptyQueueRounds >= 3 &&
+        roundCompletedAt > 0 &&
+        now - roundCompletedAt < emptyStreakRestSeconds) {
+      return false;
+    }
+    round = nextRound;
+    emptyQueueRounds++;
+    roundCompletedAt = 0;
+    _reviveUnreachableIfDue(now);
+    beginRound(now);
+    return true;
+  }
+
+  /// After a short rest, asks the next questions of the banks. Places that
+  /// could not be reached get another chance once a day.
+  bool maybeNextRound(int now) {
+    final rest = round + 1 < FinderPlan.cycleRounds
+        ? roundRestSeconds
+        : settledRestSeconds;
+    if (roundCompletedAt == 0 || now - roundCompletedAt < rest) return false;
+    round++;
+    roundCompletedAt = 0;
+    _reviveUnreachableIfDue(now);
     beginRound(now);
     return true;
   }
@@ -854,12 +1053,7 @@ class FinderState {
     if (room <= 0 || limit <= 0) return const [];
     final perPart = [
       for (final part in FinderPart.all)
-        lists[part]
-            .where((e) =>
-                e.handoff == 'wait' &&
-                (e.handoffTries == 0 ||
-                    now - e.handoffAt >= handoffRetrySeconds))
-            .toList()
+        lists[part].where((e) => isHandoffDue(e, now)).toList()
           // Untried first; among websites, a page that showed a price table
           // before one that did not, and a seller's price page before its
           // front page.
@@ -884,6 +1078,14 @@ class FinderState {
       if (!any) break;
     }
     return out;
+  }
+
+  /// Defers a `wait` entry briefly after a network/timeout failure without
+  /// counting it against [maxHandoffTries] or locking it out for 24 hours.
+  void deferHandoffNetwork(FinderEntry e,
+      {required String note, required int now}) {
+    e.note = _clip(note, 100);
+    if (e.handoffTries == 0) e.handoffAt = now;
   }
 
   /// What هوش جستجوگر ۱ answered for one entry: [rows] valid rows, or none.
@@ -933,6 +1135,7 @@ class FinderState {
         'searches': searches,
         'pages': pages,
         'dropped': dropped,
+        'emptyRounds': emptyQueueRounds,
         'strikes': strikes,
         'writer': writer,
         'seeded': seeded,
@@ -978,6 +1181,7 @@ class FinderState {
       s.searches = n('searches');
       s.pages = n('pages');
       s.dropped = n('dropped');
+      s.emptyQueueRounds = n('emptyRounds');
       s.strikes = n('strikes');
       s.revivedAt = n('revived');
       s.writer = n('writer');
