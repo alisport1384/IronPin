@@ -16,20 +16,77 @@ import 'package:shamsi_date/shamsi_date.dart';
 final Map<String, String> _latinCache = {};
 const int _latinCacheLimit = 4096;
 
+@pragma('vm:prefer-inline')
+bool _isWhitespaceCu(int cu) =>
+    cu <= 0x20 ||
+    cu == 0x0085 ||
+    cu == 0x00A0 ||
+    cu == 0x1680 ||
+    (cu >= 0x2000 && cu <= 0x200A) ||
+    cu == 0x2028 ||
+    cu == 0x2029 ||
+    cu == 0x202F ||
+    cu == 0x205F ||
+    cu == 0x3000 ||
+    cu == 0xFEFF;
+
 String latin(String value) {
+  final n = value.length;
+  if (n == 0) return value;
   final cached = _latinCache[value];
   if (cached != null) return cached;
-  const fa = '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩';
-  var s = value;
-  for (var i = 0; i < fa.length; i++) {
-    s = s.replaceAll(fa[i], '${i % 10}');
+
+  // Fast check: if already trimmed, single-spaced with 0x20, and has no
+  // Persian/Arabic digits, ي/ك, or ZWNJ, return `value` with zero allocation.
+  var clean = true;
+  var prevSpace = true;
+  for (var i = 0; i < n; i++) {
+    final cu = value.codeUnitAt(i);
+    if ((cu >= 0x06F0 && cu <= 0x06F9) ||
+        (cu >= 0x0660 && cu <= 0x0669) ||
+        cu == 0x064A ||
+        cu == 0x0643 ||
+        cu == 0x200C) {
+      clean = false;
+      break;
+    }
+    if (_isWhitespaceCu(cu)) {
+      if (cu != 0x20 || prevSpace) {
+        clean = false;
+        break;
+      }
+      prevSpace = true;
+    } else {
+      prevSpace = false;
+    }
   }
-  final result = s
-      .replaceAll('ي', 'ی')
-      .replaceAll('ك', 'ک')
-      .replaceAll('\u200c', ' ')
-      .replaceAll(_latinWhitespace, ' ')
-      .trim();
+  if (clean && !prevSpace) return value;
+
+  final out = List<int>.filled(n, 0);
+  var len = 0;
+  var pendingSpace = false;
+  for (var i = 0; i < n; i++) {
+    var cu = value.codeUnitAt(i);
+    if (cu == 0x200C || _isWhitespaceCu(cu)) {
+      if (len > 0) pendingSpace = true;
+      continue;
+    }
+    if (pendingSpace) {
+      out[len++] = 0x20;
+      pendingSpace = false;
+    }
+    if (cu >= 0x06F0 && cu <= 0x06F9) {
+      cu = 0x30 + (cu - 0x06F0);
+    } else if (cu >= 0x0660 && cu <= 0x0669) {
+      cu = 0x30 + (cu - 0x0660);
+    } else if (cu == 0x064A) {
+      cu = 0x06CC;
+    } else if (cu == 0x0643) {
+      cu = 0x06A9;
+    }
+    out[len++] = cu;
+  }
+  final result = String.fromCharCodes(out, 0, len);
   if (_latinCache.length >= _latinCacheLimit) _latinCache.clear();
   _latinCache[value] = result;
   return result;
@@ -37,7 +94,28 @@ String latin(String value) {
 
 double? number(String s) => double.tryParse(
     latin(s).replaceAll(RegExp('[,٬ ]'), '').replaceAll('٫', '.'));
+
 DateTime? sourceDate(String raw) {
+  if (raw.isEmpty) return null;
+  // Fast path for clean ASCII ISO-8601 UTC timestamps (`2026-11-...T...Z`).
+  if (raw.length >= 20 &&
+      raw.codeUnitAt(0) == 0x32 &&
+      raw.codeUnitAt(1) == 0x30 &&
+      raw.codeUnitAt(4) == 0x2D &&
+      raw.codeUnitAt(7) == 0x2D &&
+      (raw.codeUnitAt(10) == 0x54 || raw.codeUnitAt(10) == 0x20)) {
+    final y = int.tryParse(raw.substring(0, 4));
+    final mo = int.tryParse(raw.substring(5, 7));
+    final dy = int.tryParse(raw.substring(8, 10));
+    if (y != null && mo != null && dy != null) {
+      final check = DateTime.utc(y, mo, dy);
+      if (check.year != y || check.month != mo || check.day != dy) {
+        return null;
+      }
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return parsed.toUtc();
+    }
+  }
   var s = latin(raw);
   if (s.isEmpty) return null;
   const months = [
@@ -159,7 +237,6 @@ final _dimensionsInTitle =
     RegExp(r'\d+(?:\.\d+)?\s*[*×x]\s*\d+(?:\.\d+)?', caseSensitive: false);
 final _gradeInTitle =
     RegExp(r'\b(?:A[1-4]|ST(?:37|52)|CK45|MO40|IPE|HEA|HEB)\b', caseSensitive: false);
-final _latinWhitespace = RegExp(r'\s+');
 
 String materialOf(String s) {
   if (s.contains('استیل')) return 'استنلس استیل';
@@ -514,7 +591,9 @@ class Quote {
       thickness: j['thickness'],
       dimensions: j['dimensions'],
       grade: j['grade'],
-      details: Map<String, String>.from(j['details'] ?? {}));
+      details: (j['details'] as Map?)?.isEmpty ?? true
+          ? const <String, String>{}
+          : Map<String, String>.from(j['details'] as Map));
 }
 
 class MarketFilter {
@@ -630,9 +709,6 @@ class MarketFilter {
         grade
       ]);
   List<Quote> apply(Iterable<Quote> quotes, DateTime now) {
-    for (final q in quotes) {
-      q.searchText;
-    }
     final list = quotes.where((q) => matches(q, now)).toList();
     // Groups are materialised lazily, only for rows the comparator actually
     // visits: a search that matches a handful of rows costs a handful of keys.

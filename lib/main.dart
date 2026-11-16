@@ -153,6 +153,7 @@ class MarketHome extends StatefulWidget {
 class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
   int tab = 0;
   String? chartId;
+  Quote? chartQuote;
   final List<Widget?> _pages = List.filled(5, null);
   bool _retentionOpen = false;
   String? _observedMonth;
@@ -237,10 +238,18 @@ class _MarketHomeState extends State<MarketHome> with WidgetsBindingObserver {
               c: c,
               onChart: (q) => setState(() {
                     chartId = q.id;
+                    chartQuote = q;
                     tab = 1;
                   })),
-          1 => ChartPage(c: c, selectedId: chartId),
-          2 => RangePage(c: c),
+          1 => ChartPage(
+              c: c, selectedId: chartId, selectedQuote: chartQuote),
+          2 => RangePage(
+              c: c,
+              onChart: (q) => setState(() {
+                    chartId = q.id;
+                    chartQuote = q;
+                    tab = 1;
+                  })),
           3 => CalculatorPage(city: c.selectedCity),
           _ => InfoPage(c: c),
         };

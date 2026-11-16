@@ -35,21 +35,21 @@ flutter build apk --release --target-platform android-arm64   # ۶۴ بیتی (a
 
 مسیر خروجی‌ها در `build/app/outputs/flutter-apk/` قرار می‌گیرد (`app-release.apk` جداگانه برای هر معماری؛ متغیرهای امضای انتشار `IRONPIN_KEYSTORE` و کلیدهای وابسته در `docs/BUILD.fa.md` شرح داده شده‌اند).
 
-**فایل‌های نصبی:** هر دو معماری (`armeabi-v7a` و `arm64-v8a`) با push تگ `v*` در GitHub Actions از یک درخت و با یک کلید ثابت ساخته و در بخش [Releases](https://github.com/alisport1384/IronPin/releases) منتشر می‌شوند. اجرای سبز یعنی تحلیل ایستا، **۵۱۰ آزمون آفلاین** و بررسی محتوای هر دو فایل (معماری، مدل‌های OCR، امضا) گذشته است.
+**فایل‌های نصبی:** هر دو معماری (`armeabi-v7a` و `arm64-v8a`) با push تگ `v*` در GitHub Actions از یک درخت و با یک کلید ثابت ساخته و در بخش [Releases](https://github.com/alisport1384/IronPin/releases) منتشر می‌شوند. اجرای سبز یعنی تحلیل ایستا، **۵۱۳ آزمون آفلاین** و بررسی محتوای هر دو فایل (معماری، مدل‌های OCR، امضا) گذشته است.
 
 ## ساختار پروژه و مستندات
 
 ```text
 lib/domain/     مدل بازار، تحلیل متن، جستجوگر ۱ و ۲، رنج‌گیری و محاسبات خالص
-lib/data/       پایگاه SQLite، بکاپ JSONL، مبدل منابع، کنترلر و زمان‌بند پس‌زمینه
+lib/data/       پایگاه SQLite، کش باینری سریع، بکاپ JSONL، مبدل منابع، کنترلر و زمان‌بند پس‌زمینه
 lib/ui/         پنج تب فارسی (قیمت‌ها، نمودار، رنج‌گیری، محاسبات، اطلاعات)
 assets/         فهرست منابع، شهرها، فونت وزیرمتن، داده‌های OCR و فرمول‌ها
-test/           مجموعه کامل آزمون‌های آفلاین مدل، پارسر، بکاپ، مقیاس ۱۰۰هزارتایی و رابط
+test/           مجموعه کامل آزمون‌های آفلاین مدل، پارسر، بکاپ، کش، مقیاس ۱۰۰هزارتایی و رابط
 ```
 
 - طراحی و معماری: [`docs/DESIGN.fa.md`](docs/DESIGN.fa.md)
 - راهنمای دو هوش جستجوگر: [`docs/SEARCH_INTELLIGENCE.fa.md`](docs/SEARCH_INTELLIGENCE.fa.md)
-- گزارش آزمون و تغییرات نسخهٔ جاری (۰.۹.۱۱): [`docs/TEST_REPORT.v0.9.11.fa.md`](docs/TEST_REPORT.v0.9.11.fa.md) · [`production/CHANGES.v0.9.11.fa.md`](production/CHANGES.v0.9.11.fa.md)
+- گزارش آزمون و تغییرات نسخهٔ جاری (۰.۹.۱۲): [`docs/TEST_REPORT.v0.9.12.fa.md`](docs/TEST_REPORT.v0.9.12.fa.md) · [`production/CHANGES.v0.9.12.fa.md`](production/CHANGES.v0.9.12.fa.md)
 - فرمول‌های محاسباتی: [`docs/CALCULATIONS.fa.md`](docs/CALCULATIONS.fa.md)
 - فهرست منابع و ساخت: [`docs/SOURCES.fa.md`](docs/SOURCES.fa.md) · [`docs/BUILD.fa.md`](docs/BUILD.fa.md)
 - تاریخچه تغییرات نسخه‌ها: پوشه [`production/`](production/)

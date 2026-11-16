@@ -1,10 +1,12 @@
 import '../domain/city_scope.dart';
+import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:async';
 import '../data/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../domain/money.dart';
+import '../domain/product_text.dart';
 import '../data/controller.dart';
 import '../domain/market.dart';
 import 'common.dart';
@@ -13,7 +15,9 @@ import 'prices_page.dart';
 class ChartPage extends StatefulWidget {
   final MarketController c;
   final String? selectedId;
-  const ChartPage({super.key, required this.c, this.selectedId});
+  final Quote? selectedQuote;
+  const ChartPage(
+      {super.key, required this.c, this.selectedId, this.selectedQuote});
   @override
   State<ChartPage> createState() => _ChartPageState();
 }
@@ -71,7 +75,10 @@ class _ChartPageState extends State<ChartPage> {
     // Every stored offer with a real price in the chart basis, not only the rows
     // of the current feed window: an older product keeps a chart.
     final options = widget.c.chartOptions;
-    if (options.isEmpty) {
+    if (options.isEmpty && widget.selectedQuote == null) {
+      if (widget.c.chartOptionsLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
       return Column(children: [
         Padding(
             padding: const EdgeInsets.all(18),
@@ -90,6 +97,8 @@ class _ChartPageState extends State<ChartPage> {
       final candidate = widget.c.quoteById(selected!);
       if (candidate != null && options.contains(candidate)) {
         found = candidate;
+      } else if (widget.selectedQuote?.id == selected) {
+        found = widget.selectedQuote;
       } else {
         for (final q in options) {
           if (q.id == selected) {
@@ -100,8 +109,14 @@ class _ChartPageState extends State<ChartPage> {
       }
     }
     if (found == null) {
-      selected = options.first.id;
-      future = null;
+      if (options.isNotEmpty) {
+        selected = options.first.id;
+        future = null;
+      } else if (widget.selectedQuote != null) {
+        found = widget.selectedQuote;
+        selected = found!.id;
+        future = null;
+      }
     }
     final Quote current = found ?? options.first;
     if (future == null ||
@@ -522,24 +537,51 @@ IndicatorSeries indicatorChanges(List<Quote> records,
     'high': <IndicatorChange>[],
     'low': <IndicatorChange>[],
   };
-  double? lastMean, lastHigh, lastLow;
-  for (var i = 0; i < ordered.length; i++) {
-    final at = ordered[i].$1.fetchedAt;
-    final cutoff = window == null ? null : at.subtract(window);
-    var sum = 0.0, count = 0;
-    var high = double.negativeInfinity, low = double.infinity;
-    for (var j = 0; j <= i; j++) {
-      final q = ordered[j].$1;
-      if (cutoff != null && !q.fetchedAt.isAfter(cutoff)) continue;
-      final price = q.tomanFor(basis);
-      if (price == null || !price.isFinite || price <= 0) continue;
-      sum += price;
-      count++;
-      if (price > high) high = price;
-      if (price < low) low = price;
+  final prices = <double>[];
+  final times = <DateTime>[];
+  for (final item in ordered) {
+    final p = item.$1.tomanFor(basis);
+    if (p != null && p.isFinite && p > 0) {
+      prices.add(p);
+      times.add(item.$1.fetchedAt);
     }
-    if (count == 0) continue;
+  }
+  if (prices.isEmpty) return IndicatorSeries(records.length, changes);
+
+  // Sliding window O(N): running sum + monotonic deques for window high/low.
+  final maxQ = ListQueue<int>();
+  final minQ = ListQueue<int>();
+  var left = 0;
+  var sum = 0.0;
+  double? lastMean, lastHigh, lastLow;
+
+  for (var i = 0; i < prices.length; i++) {
+    final at = times[i];
+    final price = prices[i];
+    sum += price;
+    while (maxQ.isNotEmpty && prices[maxQ.last] <= price) {
+      maxQ.removeLast();
+    }
+    maxQ.addLast(i);
+    while (minQ.isNotEmpty && prices[minQ.last] >= price) {
+      minQ.removeLast();
+    }
+    minQ.addLast(i);
+
+    if (window != null) {
+      final cutoff = at.subtract(window);
+      while (left <= i && !times[left].isAfter(cutoff)) {
+        sum -= prices[left];
+        if (maxQ.isNotEmpty && maxQ.first == left) maxQ.removeFirst();
+        if (minQ.isNotEmpty && minQ.first == left) minQ.removeFirst();
+        left++;
+      }
+    }
+    final count = i - left + 1;
+    if (count <= 0) continue;
     final mean = sum / count;
+    final high = prices[maxQ.first];
+    final low = prices[minQ.first];
     if (lastMean == null || mean != lastMean) {
       changes['mean']!.add(IndicatorChange(
           at, mean, lastMean == null ? 0 : (mean - lastMean) / lastMean * 100));
@@ -551,8 +593,8 @@ IndicatorSeries indicatorChanges(List<Quote> records,
       lastHigh = high;
     }
     if (lastLow == null || low != lastLow) {
-      changes['low']!
-          .add(IndicatorChange(at, low, lastLow == null ? 0 : (low - lastLow) / lastLow * 100));
+      changes['low']!.add(IndicatorChange(
+          at, low, lastLow == null ? 0 : (low - lastLow) / lastLow * 100));
       lastLow = low;
     }
   }
@@ -647,26 +689,282 @@ class QuoteSearch extends SearchDelegate<Quote?> {
   @override
   Widget buildResults(BuildContext context) => buildSuggestions(context);
   @override
-  Widget buildSuggestions(BuildContext context) {
-    final needle = latin(query).toLowerCase();
-    final items =
-        quotes.where((q) => q.searchText.contains(needle)).take(300).toList();
-    return ListView.builder(
-        itemCount: items.length + 1,
-        itemBuilder: (ctx, i) {
-          if (i == 0) {
-            return const ListTile(
-                title: Text(
-                    'حداکثر ۳۰۰ نتیجه؛ برای انتخاب دقیق، نام و سایز را جستجو کنید.'),
-                dense: true);
-          }
-          final q = items[i - 1];
-          return ListTile(
-              title: Text(faDigits(q.title)),
-              subtitle: Text(faDigits(
-                  '${q.specificationLabel} • ${q.seller} • ${q.loading}')),
-              onTap: () => close(context, q));
+  Widget buildSuggestions(BuildContext context) => _AsyncQuoteSearchView(
+        quotes: quotes,
+        query: query,
+        onSelect: (q) => close(context, q),
+      );
+}
+
+class _AsyncQuoteSearchView extends StatefulWidget {
+  final List<Quote> quotes;
+  final String query;
+  final ValueChanged<Quote> onSelect;
+  const _AsyncQuoteSearchView({
+    required this.quotes,
+    required this.query,
+    required this.onSelect,
+  });
+
+  @override
+  State<_AsyncQuoteSearchView> createState() => _AsyncQuoteSearchViewState();
+}
+
+class _AsyncQuoteSearchViewState extends State<_AsyncQuoteSearchView> {
+  static const int _maxResults = 300;
+  static const int _syncThreshold = 500;
+  static final RegExp _numericTokenOnly = RegExp(r'^\d+(?:\.\d+)?$');
+
+  Timer? _debounce;
+  int _runSeq = 0;
+  bool _searching = false;
+  List<Quote> _items = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule(widget.query, immediate: true, fromInit: true);
+  }
+
+  @override
+  void didUpdateWidget(_AsyncQuoteSearchView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.query != widget.query ||
+        !identical(oldWidget.quotes, widget.quotes)) {
+      _schedule(widget.query,
+          immediate: widget.quotes.length <= _syncThreshold);
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _schedule(String rawQuery,
+      {bool immediate = false, bool fromInit = false}) {
+    _debounce?.cancel();
+    final seq = ++_runSeq;
+    if (widget.quotes.length <= _syncThreshold) {
+      final results = _searchSync(widget.quotes, rawQuery);
+      if (fromInit) {
+        _items = results;
+        _searching = false;
+      } else {
+        setState(() {
+          _items = results;
+          _searching = false;
         });
+      }
+      return;
+    }
+    if (fromInit) {
+      if (rawQuery.trim().isEmpty) {
+        _items = widget.quotes.take(_maxResults).toList(growable: false);
+        _searching = false;
+        return;
+      }
+      _searching = true;
+    } else if (!_searching) {
+      setState(() => _searching = true);
+    }
+    if (immediate) {
+      unawaited(_runSliced(seq, rawQuery));
+    } else {
+      _debounce = Timer(const Duration(milliseconds: 120), () {
+        if (!mounted || seq != _runSeq) return;
+        unawaited(_runSliced(seq, rawQuery));
+      });
+    }
+  }
+
+  static List<Quote> _searchSync(List<Quote> quotes, String rawQuery) {
+    final needle = ProductText.normalizeLower(rawQuery).trim();
+    if (needle.isEmpty) {
+      return quotes.take(_maxResults).toList(growable: false);
+    }
+    final isExactNumber = _numericTokenOnly.hasMatch(needle);
+    final exactMatches = <Quote>[];
+    final fallback = <Quote>[];
+    final parsed = isExactNumber ? null : ProductQuery.parse(needle);
+
+    for (final q in quotes) {
+      if (isExactNumber) {
+        if (_exactNumberMatch(q, needle)) {
+          exactMatches.add(q);
+          if (exactMatches.length >= _maxResults) break;
+        } else if (fallback.length < _maxResults &&
+            _substringNumberMatch(q, needle)) {
+          fallback.add(q);
+        }
+      } else {
+        if (_matchesQuery(parsed!, q, needle)) {
+          exactMatches.add(q);
+          if (exactMatches.length >= _maxResults) break;
+        }
+      }
+    }
+    if (isExactNumber && exactMatches.length < _maxResults) {
+      for (final q in fallback) {
+        exactMatches.add(q);
+        if (exactMatches.length >= _maxResults) break;
+      }
+    }
+    return exactMatches;
+  }
+
+  static bool _matchesQuery(ProductQuery parsed, Quote q, String needle) =>
+      q.searchText.contains(needle) ||
+      parsed.matches(
+        text: q.searchText,
+        category: q.category,
+        material: q.material,
+        size: q.sizeLabel,
+        thickness: q.thicknessLabel,
+        dimensions: q.dimensionsLabel,
+        grade: q.gradeLabel,
+        sellerCity: q.sellerCity,
+        normalizedText: true,
+      );
+
+  static bool _exactNumberMatch(Quote q, String token) {
+    final numVal = double.tryParse(token);
+    if (numVal != null) {
+      final sNum =
+          q.sizeLabel.isEmpty ? null : double.tryParse(latin(q.sizeLabel));
+      if (sNum != null && (sNum - numVal).abs() < 1e-6) return true;
+      final tNum = q.thicknessLabel.isEmpty
+          ? null
+          : double.tryParse(latin(q.thicknessLabel));
+      if (tNum != null && (tNum - numVal).abs() < 1e-6) return true;
+      if (q.amount != null &&
+          q.amount! > 0 &&
+          (q.amount! - numVal).abs() < 1e-6) {
+        return true;
+      }
+    }
+    return _fieldHasNumberToken(q.title, token) ||
+        _fieldHasNumberToken(q.specificationLabel, token) ||
+        _fieldHasNumberToken(q.seller, token) ||
+        _fieldHasNumberToken(q.loading, token);
+  }
+
+  static bool _fieldHasNumberToken(String field, String token) {
+    if (field.isEmpty) return false;
+    final norm = ProductText.normalizeLower(field);
+    return ProductQuery.containsNumberToken(norm, token);
+  }
+
+  static bool _substringNumberMatch(Quote q, String token) =>
+      (q.title.isNotEmpty &&
+          ProductText.normalizeLower(q.title).contains(token)) ||
+      (q.specificationLabel.isNotEmpty &&
+          ProductText.normalizeLower(q.specificationLabel).contains(token)) ||
+      (q.seller.isNotEmpty &&
+          ProductText.normalizeLower(q.seller).contains(token)) ||
+      (q.loading.isNotEmpty &&
+          ProductText.normalizeLower(q.loading).contains(token));
+
+  Future<void> _runSliced(int seq, String rawQuery) async {
+    final quotes = widget.quotes;
+    final needle = ProductText.normalizeLower(rawQuery).trim();
+    if (needle.isEmpty) {
+      final head = quotes.take(_maxResults).toList(growable: false);
+      if (!mounted || seq != _runSeq) return;
+      setState(() {
+        _items = head;
+        _searching = false;
+      });
+      return;
+    }
+
+    final isExactNumber = _numericTokenOnly.hasMatch(needle);
+    final parsed = isExactNumber ? null : ProductQuery.parse(needle);
+    final exactMatches = <Quote>[];
+    final fallback = <Quote>[];
+
+    var i = 0;
+    while (i < quotes.length) {
+      if (!mounted || seq != _runSeq) return;
+      final sw = Stopwatch()..start();
+      final sliceEnd = (i + 2500).clamp(0, quotes.length);
+      while (i < sliceEnd) {
+        final chunkEnd = (i + 64).clamp(0, sliceEnd);
+        for (; i < chunkEnd; i++) {
+          final q = quotes[i];
+          if (isExactNumber) {
+            if (_exactNumberMatch(q, needle)) {
+              exactMatches.add(q);
+              if (exactMatches.length >= _maxResults) break;
+            } else if (fallback.length < _maxResults &&
+                _substringNumberMatch(q, needle)) {
+              fallback.add(q);
+            }
+          } else {
+            if (_matchesQuery(parsed!, q, needle)) {
+              exactMatches.add(q);
+              if (exactMatches.length >= _maxResults) break;
+            }
+          }
+        }
+        if (exactMatches.length >= _maxResults) break;
+        if (sw.elapsedMilliseconds >= 5) break;
+      }
+      if (exactMatches.length >= _maxResults) break;
+      if (i < quotes.length) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    if (!mounted || seq != _runSeq) return;
+    if (isExactNumber && exactMatches.length < _maxResults) {
+      for (final q in fallback) {
+        exactMatches.add(q);
+        if (exactMatches.length >= _maxResults) break;
+      }
+    }
+    setState(() {
+      _items = exactMatches;
+      _searching = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_searching && _items.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_items.isEmpty) {
+      return const Center(
+          child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('موردی پیدا نشد.', style: TextStyle(color: muted))));
+    }
+    return Column(
+      children: [
+        if (_searching) const LinearProgressIndicator(minHeight: 2),
+        Expanded(
+          child: ListView.builder(
+              itemCount: _items.length + 1,
+              itemBuilder: (ctx, i) {
+                if (i == 0) {
+                  return ListTile(
+                      title: Text(_searching
+                          ? 'در حال جستجو...'
+                          : 'حداکثر ۳۰۰ نتیجه؛ برای انتخاب دقیق، نام و سایز را جستجو کنید.'),
+                      dense: true);
+                }
+                final q = _items[i - 1];
+                return ListTile(
+                    title: Text(faDigits(q.title)),
+                    subtitle: Text(faDigits(
+                        '${q.specificationLabel} • ${q.seller} • ${q.loading}')),
+                    onTap: () => widget.onSelect(q));
+              }),
+        ),
+      ],
+    );
   }
 }
 

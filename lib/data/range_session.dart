@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../domain/market.dart';
 import '../domain/product_schema.dart';
+import '../domain/product_text.dart';
 import '../domain/row_facts.dart';
 import '../domain/range_projection.dart';
 import 'app_logger.dart';
@@ -101,6 +102,9 @@ class RangeSession {
   final MarketStore store;
 
   List<Map<String, Object?>> _index = const [];
+  Int32List _offerSlots = Int32List(0);
+  Uint8List _nonMetalFlags = Uint8List(0);
+  int _offerCount = 0;
   String _token = 'none';
 
   /// The window the loaded index was read for (0 = the archive's own window).
@@ -136,6 +140,9 @@ class RangeSession {
     _epoch++;
     _token = 'none';
     _index = const [];
+    _offerSlots = Int32List(0);
+    _nonMetalFlags = Uint8List(0);
+    _offerCount = 0;
     _answers.clear();
     _bucket = '';
     _windowDays = -1;
@@ -191,6 +198,9 @@ class RangeSession {
     _windowDays = windowDays;
     _token = 'none';
     _index = const [];
+    _offerSlots = Int32List(0);
+    _nonMetalFlags = Uint8List(0);
+    _offerCount = 0;
     _answers.clear();
     _loading = true;
     _loadingGeneration = generation;
@@ -214,19 +224,87 @@ class RangeSession {
     }
     final bucket = _bucketOf(at);
     // Sorted once, here, instead of on every selection: index rows are kept
-    // newest-first (`market_at DESC, id ASC`), so a candidate selection is a
-    // single order-preserving pass and never re-sorts the archive per query.
-    // Keys are read once per row before sorting (Schwartzian transform):
-    // the comparator itself only compares two ints and, rarely, two strings,
-    // so sorting 100k rows allocates no strings per comparison.
-    final keys = [
-      for (final r in rows)
-        (at: (r['market_at'] as int?) ?? 0, id: '${r['id']}', row: r)
-    ]..sort((a, b) {
-        final byDate = b.at.compareTo(a.at);
-        return byDate != 0 ? byDate : a.id.compareTo(b.id);
-      });
-    _index = [for (final k in keys) k.row];
+    // newest-first (`market_at DESC, id ASC`). On large archives (>4,000 rows),
+    // sort indices in a background isolate so the UI isolate stays smooth.
+    final List<Map<String, Object?>> sortedRows;
+    if (rows.length <= candidateSyncLimit) {
+      final keys = [
+        for (final r in rows)
+          (at: (r['market_at'] as int?) ?? 0, id: '${r['id']}', row: r)
+      ]..sort((a, b) {
+          final byDate = b.at.compareTo(a.at);
+          return byDate != 0 ? byDate : a.id.compareTo(b.id);
+        });
+      sortedRows = [for (final k in keys) k.row];
+    } else {
+      final sortPayload = [
+        for (var i = 0; i < rows.length; i++)
+          (
+            idx: i,
+            at: (rows[i]['market_at'] as int?) ?? 0,
+            id: rows[i]['id'] as String? ?? ''
+          )
+      ];
+      final order = await compute(_sortedOrderInBackground, sortPayload);
+      if (generation != _generation) {
+        throw StateError('Archive invalidated during index read');
+      }
+      sortedRows = [for (final idx in order) rows[idx]];
+    }
+
+    // Build lightweight typed slot/nonMetal arrays (~1 MB total for 200k rows)
+    // in yielding 5ms slices so candidate selection avoids nested HashMaps
+    // and repeated `isNonMetal` RegExps without increasing GC pressure.
+    final offerSlots = <String, Map<String, int>>{};
+    var nextOfferSlot = 0;
+    final slots = Int32List(sortedRows.length);
+    final nonMetalFlags = Uint8List(sortedRows.length);
+    if (sortedRows.length <= candidateSyncLimit) {
+      for (var i = 0; i < sortedRows.length; i++) {
+        final raw = sortedRows[i];
+        final ep = raw['endpoint'] as String? ?? '';
+        final id = raw['id'] as String? ?? '';
+        final byId = offerSlots[ep] ??= {};
+        slots[i] = byId[id] ??= nextOfferSlot++;
+        if (ProductText.isNonMetal(raw['title'] as String? ?? '')) {
+          nonMetalFlags[i] = 1;
+        }
+      }
+    } else {
+      var i = 0;
+      while (i < sortedRows.length) {
+        if (generation != _generation) {
+          throw StateError('Archive invalidated during index read');
+        }
+        final sw = Stopwatch()..start();
+        final sliceEnd = (i + candidateSliceRows).clamp(0, sortedRows.length);
+        while (i < sliceEnd) {
+          final chunkEnd = (i + 64).clamp(0, sliceEnd);
+          for (; i < chunkEnd; i++) {
+            final raw = sortedRows[i];
+            final ep = raw['endpoint'] as String? ?? '';
+            final id = raw['id'] as String? ?? '';
+            final byId = offerSlots[ep] ??= {};
+            slots[i] = byId[id] ??= nextOfferSlot++;
+            if (ProductText.isNonMetal(raw['title'] as String? ?? '')) {
+              nonMetalFlags[i] = 1;
+            }
+          }
+          if (sw.elapsedMilliseconds >= candidateSliceBudgetMs) break;
+        }
+        if (i < sortedRows.length) {
+          await Future<void>.delayed(Duration.zero);
+        }
+      }
+    }
+    if (generation != _generation) {
+      throw StateError('Archive invalidated during index read');
+    }
+
+    _index = sortedRows;
+    _offerSlots = slots;
+    _nonMetalFlags = nonMetalFlags;
+    _offerCount = nextOfferSlot;
     _epoch++;
     _token = 'i$_epoch-$bucket';
     _bucket = bucket;
@@ -302,11 +380,24 @@ class RangeSession {
           {required CandidateScope scope, required DateTime at}) =>
       _candidateSet(scope, at);
 
-  CandidateSet _candidateSet(CandidateScope scope, DateTime at) =>
-      _buildSet(
-          selectCandidates(_index,
-              scope: scope, nowMs: at.millisecondsSinceEpoch),
-          at);
+  CandidateSet _candidateSet(CandidateScope scope, DateTime at) {
+    final index = _index;
+    final useSlots = _offerSlots.length == index.length && _offerCount > 0;
+    final selector = CandidateSelector(
+        scope: scope,
+        nowMs: at.millisecondsSinceEpoch,
+        offerCount: useSlots ? _offerCount : 0);
+    if (useSlots) {
+      for (var i = 0; i < index.length; i++) {
+        selector.addWithSlot(index[i], _offerSlots[i], _nonMetalFlags[i] != 0);
+      }
+    } else {
+      for (final raw in index) {
+        selector.add(raw);
+      }
+    }
+    return _buildSet(selector.finish(), at);
+  }
 
   CandidateSet _buildSet(
       ({List<Map<String, Object?>> wires, int withheld, int undated, int unpriced})
@@ -350,25 +441,36 @@ class RangeSession {
       bool Function()? cancelled}) async {
     final generation = _generation;
     final index = _index;
-    final selector =
-        CandidateSelector(scope: scope, nowMs: at.millisecondsSinceEpoch);
+    final useSlots = _offerSlots.length == index.length && _offerCount > 0;
+    final selector = CandidateSelector(
+        scope: scope,
+        nowMs: at.millisecondsSinceEpoch,
+        offerCount: useSlots ? _offerCount : 0);
     var i = 0;
     while (i < index.length) {
       if (generation != _generation || (cancelled?.call() ?? false)) {
         throw StateError('Archive invalidated during candidate selection');
       }
       final watch = Stopwatch()..start();
-      // One slice: at most [candidateSliceRows] rows and at most
-      // [candidateSliceBudgetMs] of wall clock, whichever comes first. The
-      // clock is read every 64 rows, cheaply, so a slice overruns its
-      // budget by at most a few dozen rows even on very slow hardware.
       final sliceEnd = (i + candidateSliceRows).clamp(0, index.length);
-      while (i < sliceEnd) {
-        final chunkEnd = (i + 64).clamp(0, sliceEnd);
-        for (; i < chunkEnd; i++) {
-          selector.add(index[i]);
+      if (useSlots) {
+        final slots = _offerSlots;
+        final nonMetals = _nonMetalFlags;
+        while (i < sliceEnd) {
+          final chunkEnd = (i + 64).clamp(0, sliceEnd);
+          for (; i < chunkEnd; i++) {
+            selector.addWithSlot(index[i], slots[i], nonMetals[i] != 0);
+          }
+          if (watch.elapsedMilliseconds >= candidateSliceBudgetMs) break;
         }
-        if (watch.elapsedMilliseconds >= candidateSliceBudgetMs) break;
+      } else {
+        while (i < sliceEnd) {
+          final chunkEnd = (i + 64).clamp(0, sliceEnd);
+          for (; i < chunkEnd; i++) {
+            selector.add(index[i]);
+          }
+          if (watch.elapsedMilliseconds >= candidateSliceBudgetMs) break;
+        }
       }
       if (i < index.length) {
         await Future<void>.delayed(Duration.zero);
@@ -484,4 +586,13 @@ RangeAnswer _answerInBackground(Map<String, Object?> input) {
       windowMs: input['windowMs'] as int? ?? 48 * 3600 * 1000);
   return buildAnswer(projected,
       basis: input['basis'] as String, at: at, inputRows: inputRows);
+}
+
+List<int> _sortedOrderInBackground(
+    List<({int idx, int at, String id})> items) {
+  items.sort((a, b) {
+    final byDate = b.at.compareTo(a.at);
+    return byDate != 0 ? byDate : a.id.compareTo(b.id);
+  });
+  return [for (final item in items) item.idx];
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'app_logger.dart';
+import 'fast_cache.dart';
 import '../domain/price_range.dart';
 import 'package:path/path.dart' as path;
 import 'package:shamsi_date/shamsi_date.dart';
@@ -41,7 +42,30 @@ const _rangeIndexSchema = [
 
 class MarketStore {
   final Database db;
-  MarketStore(this.db);
+  final String? dbPath;
+  Future<void> _pendingCacheWrite = Future<void>.value();
+  MarketStore(this.db, {this.dbPath});
+
+  static Future<void> _configureConnection(Database db) async {
+    // PRAGMA journal_mode returns a row on Android SQLite, so rawQuery must be
+    // used instead of execute(). Every PRAGMA is best-effort so in-memory/older
+    // SQLite builds degrade cleanly.
+    try {
+      await db.rawQuery('PRAGMA journal_mode=WAL');
+    } catch (_) {}
+    for (final pragma in const [
+      'PRAGMA synchronous=NORMAL',
+      'PRAGMA temp_store=MEMORY',
+      'PRAGMA cache_size=-8192',
+      'PRAGMA mmap_size=16777216',
+      'PRAGMA wal_autocheckpoint=200',
+    ]) {
+      try {
+        await db.execute(pragma);
+      } catch (_) {}
+    }
+  }
+
   static Future<MarketStore> open(
       {String? dbPath, DatabaseFactory? factory}) async {
     final f = factory ?? databaseFactory;
@@ -49,6 +73,7 @@ class MarketStore {
     final db = await f.openDatabase(p,
         options: OpenDatabaseOptions(
             version: 8,
+            onConfigure: _configureConnection,
             onCreate: (db, version) async {
               await db.execute(
                   'CREATE TABLE latest (id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, payload TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)');
@@ -169,7 +194,7 @@ class MarketStore {
               }
             }));
     await _ensureAuxSchema(db);
-    return MarketStore(db);
+    return MarketStore(db, dbPath: p);
   }
 
   /// Auxiliary mapping tables and consistency triggers that let [rangeIndexRows]
@@ -184,6 +209,13 @@ class MarketStore {
         'CREATE TABLE IF NOT EXISTS range_history_map ('
         'seq INTEGER PRIMARY KEY, payload_hash TEXT NOT NULL)');
     await db.execute(
+        'CREATE TABLE IF NOT EXISTS cache_state ('
+        'id INTEGER PRIMARY KEY CHECK(id=1), '
+        'latest_ver INTEGER NOT NULL DEFAULT 1, '
+        'history_ver INTEGER NOT NULL DEFAULT 1)');
+    await db.execute(
+        'INSERT OR IGNORE INTO cache_state(id, latest_ver, history_ver) VALUES(1, 1, 1)');
+    await db.execute(
         'CREATE TRIGGER IF NOT EXISTS range_latest_payload_upd '
         'AFTER UPDATE OF payload ON latest '
         'BEGIN DELETE FROM range_latest_map WHERE id = OLD.id; END');
@@ -196,9 +228,57 @@ class MarketStore {
         'AFTER DELETE ON history '
         'BEGIN DELETE FROM range_history_map WHERE seq = OLD.seq; END');
     await db.execute(
+        'CREATE TRIGGER IF NOT EXISTS cache_latest_ins '
+        'AFTER INSERT ON latest '
+        'BEGIN UPDATE cache_state SET latest_ver = latest_ver + 1 WHERE id = 1; END');
+    await db.execute(
+        'CREATE TRIGGER IF NOT EXISTS cache_latest_upd '
+        'AFTER UPDATE ON latest '
+        'BEGIN UPDATE cache_state SET latest_ver = latest_ver + 1 WHERE id = 1; END');
+    await db.execute(
+        'CREATE TRIGGER IF NOT EXISTS cache_latest_del '
+        'AFTER DELETE ON latest '
+        'BEGIN UPDATE cache_state SET latest_ver = latest_ver + 1 WHERE id = 1; END');
+    await db.execute(
+        'CREATE TRIGGER IF NOT EXISTS cache_history_ins '
+        'AFTER INSERT ON history '
+        'BEGIN UPDATE cache_state SET history_ver = history_ver + 1 WHERE id = 1; END');
+    await db.execute(
+        'CREATE TRIGGER IF NOT EXISTS cache_history_upd '
+        'AFTER UPDATE ON history '
+        'BEGIN UPDATE cache_state SET history_ver = history_ver + 1 WHERE id = 1; END');
+    await db.execute(
+        'CREATE TRIGGER IF NOT EXISTS cache_history_del '
+        'AFTER DELETE ON history '
+        'BEGIN UPDATE cache_state SET history_ver = history_ver + 1 WHERE id = 1; END');
+    await db.execute(
         'CREATE INDEX IF NOT EXISTS range_index_market ON range_index(market_at)');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS range_index_offer ON range_index(endpoint, id, fetched_at)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS range_index_derive ON range_index(derive)');
+  }
+
+  Future<(int latestVer, int historyVer)> _cacheVersions() async {
+    final rows = await db.rawQuery(
+        'SELECT latest_ver, history_ver FROM cache_state WHERE id=1');
+    if (rows.isEmpty) return (0, 0);
+    final row = rows.first;
+    return (
+      (row['latest_ver'] as int?) ?? 0,
+      (row['history_ver'] as int?) ?? 0,
+    );
+  }
+
+  String _latestToken(int latestVer) => '$latestVer:${RowFacts.derive}';
+  String _rangeToken(int latestVer, int historyVer) =>
+      '$latestVer:$historyVer:${RowFacts.derive}';
+
+  void _enqueueCacheWrite(Future<void> Function() task) {
+    _pendingCacheWrite = _pendingCacheWrite
+        .catchError((_) {})
+        .then((_) => task())
+        .catchError((_) {});
   }
 
   Future<List<Quote>> latest() => _readLatest();
@@ -207,6 +287,15 @@ class MarketStore {
   /// the SQLite transaction immediately, and decodes all payloads in a single
   /// worker-isolate hop instead of spawning hundreds of isolates in a loop.
   Future<List<Quote>> _readLatest({String? endpoint}) async {
+    final path = dbPath;
+    String? cacheToken;
+    if (endpoint == null && path != null && FastArchiveCache.isDiskPath(path)) {
+      final versions = await _cacheVersions();
+      cacheToken = _latestToken(versions.$1);
+      final cached = await FastArchiveCache.readLatest(path, cacheToken);
+      if (cached != null) return cached;
+    }
+
     final payloads = await db.transaction((tx) async {
       final raw = <String>[];
       var after = 0;
@@ -226,9 +315,21 @@ class MarketStore {
       }
       return raw;
     });
-    if (payloads.isEmpty) return <Quote>[];
-    if (payloads.length <= 200) return _decodeQuotes(payloads);
-    return compute(_decodeQuotes, payloads);
+    if (payloads.isEmpty) {
+      return <Quote>[];
+    }
+    final quotes = payloads.length <= 200
+        ? _decodeQuotes(payloads)
+        : await compute(_decodeQuotes, payloads);
+    if (endpoint == null &&
+        path != null &&
+        cacheToken != null &&
+        quotes.length >= FastArchiveCache.minRowsToCache) {
+      final token = cacheToken;
+      _enqueueCacheWrite(
+          () => FastArchiveCache.writeLatest(path, token, quotes));
+    }
+    return quotes;
   }
 
   Future<List<Quote>> latestFor(String endpoint) =>
@@ -479,163 +580,296 @@ class MarketStore {
   /// the range engine needs: no payload parsing, no `Quote` construction, and
   /// on warm archives zero payload reads or hashing even at 100,000+ rows.
   Future<List<Map<String, Object?>>> rangeIndexRows(DateTime now,
-          {int windowDays = 0}) =>
-      db.transaction((tx) async {
-        await tx.execute('CREATE TEMP TABLE ironpin_range_read ('
-            'position INTEGER PRIMARY KEY, '
-            'kind INTEGER NOT NULL, '
-            'source_row INTEGER NOT NULL, '
-            'source_id TEXT, '
-            'payload_hash TEXT)');
-        try {
-          await tx.rawInsert(
-              'INSERT INTO ironpin_range_read(kind,source_row,source_id,payload_hash) '
-              'SELECT 0,h.seq,NULL,m.payload_hash FROM history h '
-              'LEFT JOIN range_history_map m ON m.seq=h.seq '
+      {int windowDays = 0}) async {
+    final path = dbPath;
+    final utcNow = now.toUtc();
+    final sinceIso = utcNow.subtract(windowFor(windowDays)).toIso8601String();
+    final nowIso = utcNow.toIso8601String();
+    String? rangeToken;
+    if (path != null && FastArchiveCache.isDiskPath(path)) {
+      final versions = await _cacheVersions();
+      rangeToken = _rangeToken(versions.$1, versions.$2);
+      final cached = await FastArchiveCache.readRangeHeaderAndDecode(
+        path,
+        expectedToken: rangeToken,
+        windowDays: windowDays,
+        newSinceIso: sinceIso,
+        newNowIso: nowIso,
+        hasFutureHistoryBetween: (cachedNowIso, newNowIso) async {
+          final hit = Sqflite.firstIntValue(await db.rawQuery(
+              'SELECT EXISTS(SELECT 1 FROM history WHERE market_at>? AND market_at<=?)',
+              [cachedNowIso, newNowIso]));
+          return (hit ?? 0) != 0;
+        },
+      );
+      if (cached != null) return cached.rows;
+    }
+
+    final out = await db.transaction((tx) async {
+      // Fast warm check before creating TEMP tables: if every mapped row is
+      // present and up-to-date and no unmapped source rows exist, we can read
+      // the index in a single pass without TEMP table overhead.
+      final hasStaleIndex = Sqflite.firstIntValue(await tx.rawQuery(
+              'SELECT EXISTS(SELECT 1 FROM range_index WHERE derive != ? '
+              'OR source_date_raw IS NULL OR amount_raw IS NULL)',
+              [RowFacts.derive])) ??
+          1;
+      if (hasStaleIndex == 0) {
+        final unmappedLatest = Sqflite.firstIntValue(await tx.rawQuery(
+                'SELECT EXISTS(SELECT 1 FROM latest l '
+                'LEFT JOIN range_latest_map m ON m.id=l.id '
+                'LEFT JOIN range_index r ON r.payload=m.payload_hash '
+                'WHERE m.payload_hash IS NULL OR r.payload IS NULL)')) ??
+            1;
+        final unmappedHistory = Sqflite.firstIntValue(await tx.rawQuery(
+                'SELECT EXISTS(SELECT 1 FROM history h '
+                'LEFT JOIN range_history_map m ON m.seq=h.seq '
+                'LEFT JOIN range_index r ON r.payload=m.payload_hash '
+                'WHERE m.payload_hash IS NULL OR r.payload IS NULL)')) ??
+            1;
+        if (unmappedLatest == 0 && unmappedHistory == 0) {
+          final rawFastRows = await tx.rawQuery(
+              'SELECT r.* FROM ('
+              'SELECT m.payload_hash FROM history h '
+              'JOIN range_history_map m ON m.seq=h.seq '
               'WHERE h.market_at>=? AND h.market_at<=? '
-              'UNION ALL SELECT 1,l.rowid,l.id,m.payload_hash FROM latest l NOT INDEXED '
-              'LEFT JOIN range_latest_map m ON m.id=l.id '
-              'UNION ALL SELECT 0,h.seq,NULL,m.payload_hash FROM history h JOIN '
-              '(SELECT MAX(seq) AS seq FROM history '
-              'WHERE id NOT IN (SELECT id FROM latest) GROUP BY id) orphan '
-              'ON h.seq=orphan.seq '
-              'LEFT JOIN range_history_map m ON m.seq=h.seq',
-              [
-                now.toUtc().subtract(windowFor(windowDays)).toIso8601String(),
-                now.toUtc().toIso8601String()
-              ]);
-
-          final missingCount = Sqflite.firstIntValue(await tx.rawQuery(
-                  'SELECT COUNT(*) FROM ironpin_range_read s '
-                  'LEFT JOIN range_index r ON r.payload=s.payload_hash '
-                  'WHERE s.payload_hash IS NULL '
-                  'OR r.payload IS NULL '
-                  'OR r.derive!=? '
-                  'OR r.source_date_raw IS NULL '
-                  'OR r.amount_raw IS NULL',
-                  [RowFacts.derive])) ??
-              0;
-
-          if (missingCount > 0) {
-            final payloads = <String, String>{};
-            final latestMapUpdates = <String, String>{};
-            final historyMapUpdates = <int, String>{};
-            final positionHashes = <int, String>{};
-            var missAfter = 0;
-            while (true) {
-              final page = await tx.rawQuery(
-                  'SELECT s.position, s.kind, s.source_row, s.source_id, '
-                  'CASE WHEN s.kind=0 THEN h.payload ELSE l.payload END AS payload '
-                  'FROM ironpin_range_read s '
-                  'LEFT JOIN range_index r ON r.payload=s.payload_hash '
-                  'LEFT JOIN history h ON s.kind=0 AND h.seq=s.source_row '
-                  'LEFT JOIN latest l ON s.kind=1 AND l.rowid=s.source_row '
-                  'WHERE (s.payload_hash IS NULL '
-                  'OR r.payload IS NULL '
-                  'OR r.derive!=? '
-                  'OR r.source_date_raw IS NULL '
-                  'OR r.amount_raw IS NULL) '
-                  'AND s.position>? ORDER BY s.position LIMIT ?',
-                  [RowFacts.derive, missAfter, _readPage]);
-              if (page.isEmpty) break;
-              for (final row in page) {
-                final payload = row['payload'] as String?;
-                if (payload == null) continue;
-                final hash = payloadFingerprint(payload);
-                payloads.putIfAbsent(hash, () => payload);
-                final pos = row['position'] as int;
-                positionHashes[pos] = hash;
-                if ((row['kind'] as int) == 0) {
-                  historyMapUpdates[row['source_row'] as int] = hash;
-                } else {
-                  final id = row['source_id'] as String?;
-                  if (id != null) latestMapUpdates[id] = hash;
-                }
+              'UNION ALL '
+              'SELECT m.payload_hash FROM latest l NOT INDEXED '
+              'JOIN range_latest_map m ON m.id=l.id '
+              'UNION ALL '
+              'SELECT m.payload_hash FROM ('
+              'SELECT MAX(seq) AS seq FROM history '
+              'WHERE id NOT IN (SELECT id FROM latest) GROUP BY id'
+              ') orphan '
+              'JOIN range_history_map m ON m.seq=orphan.seq'
+              ') refs '
+              'JOIN range_index r ON r.payload=refs.payload_hash',
+              [sinceIso, nowIso]);
+          // Share identical row Map instances across history/latest duplicates
+          // just like the temp-table path, halving memory in RangeSession and
+          // RangeWorker on 100k-200k archives.
+          final byPayload = <String, Map<String, Object?>>{};
+          final fastRows = List<Map<String, Object?>>.generate(
+              rawFastRows.length, (i) {
+            final row = rawFastRows[i];
+            final payload = row['payload'] as String?;
+            if (payload == null) return row;
+            return byPayload.putIfAbsent(payload, () => row);
+          }, growable: false);
+          List<({Map<String, Object?> row, bool isHistory, int marketAtMs})>?
+              cacheItems;
+          if (rangeToken != null &&
+              fastRows.length >= FastArchiveCache.minRowsToCache) {
+            final histTimes = await tx.rawQuery(
+                'SELECT h.market_at FROM history h '
+                'JOIN range_history_map m ON m.seq=h.seq '
+                'JOIN range_index r ON r.payload=m.payload_hash '
+                'WHERE h.market_at>=? AND h.market_at<=?',
+                [sinceIso, nowIso]);
+            cacheItems = List.generate(fastRows.length, (i) {
+              if (i < histTimes.length) {
+                final atStr = histTimes[i]['market_at'] as String?;
+                final atUs = atStr == null
+                    ? 0
+                    : DateTime.parse(atStr).toUtc().microsecondsSinceEpoch;
+                return (row: fastRows[i], isHistory: true, marketAtMs: atUs);
               }
-              missAfter = page.last['position'] as int;
-            }
-
-            if (payloads.isNotEmpty) {
-              await _indexPayloads(tx, [
-                for (final e in payloads.entries)
-                  (payload: e.value, hash: e.key)
-              ]);
-            }
-
-            final mapEntries = latestMapUpdates.entries.toList();
-            for (final chunk in _chunks(mapEntries, _indexChunk)) {
-              final b = tx.batch();
-              for (final e in chunk) {
-                b.insert(
-                    'range_latest_map', {'id': e.key, 'payload_hash': e.value},
-                    conflictAlgorithm: ConflictAlgorithm.replace);
-              }
-              await b.commit(noResult: true);
-            }
-            final histEntries = historyMapUpdates.entries.toList();
-            for (final chunk in _chunks(histEntries, _indexChunk)) {
-              final b = tx.batch();
-              for (final e in chunk) {
-                b.insert('range_history_map',
-                    {'seq': e.key, 'payload_hash': e.value},
-                    conflictAlgorithm: ConflictAlgorithm.replace);
-              }
-              await b.commit(noResult: true);
-            }
-            final posEntries = positionHashes.entries.toList();
-            for (final chunk in _chunks(posEntries, _indexChunk)) {
-              final b = tx.batch();
-              for (final e in chunk) {
-                b.update('ironpin_range_read', {'payload_hash': e.value},
-                    where: 'position=?', whereArgs: [e.key]);
-              }
-              await b.commit(noResult: true);
-            }
+              return (row: fastRows[i], isHistory: false, marketAtMs: 0);
+            }, growable: false);
           }
+          return (rows: fastRows, items: cacheItems);
+        }
+      }
 
-          await tx.execute('CREATE TEMP TABLE ironpin_range_hashes ('
-              'payload_hash TEXT PRIMARY KEY) WITHOUT ROWID');
-          await tx.rawInsert(
-              'INSERT OR IGNORE INTO ironpin_range_hashes(payload_hash) '
-              'SELECT payload_hash FROM ironpin_range_read '
-              'WHERE payload_hash IS NOT NULL');
+      await tx.execute('CREATE TEMP TABLE ironpin_range_read ('
+          'position INTEGER PRIMARY KEY, '
+          'kind INTEGER NOT NULL, '
+          'source_row INTEGER NOT NULL, '
+          'source_id TEXT, '
+          'payload_hash TEXT, '
+          'hist_at TEXT)');
+      try {
+        await tx.rawInsert(
+            'INSERT INTO ironpin_range_read(kind,source_row,source_id,payload_hash,hist_at) '
+            'SELECT 0,h.seq,NULL,m.payload_hash,h.market_at FROM history h '
+            'LEFT JOIN range_history_map m ON m.seq=h.seq '
+            'WHERE h.market_at>=? AND h.market_at<=? '
+            'UNION ALL SELECT 1,l.rowid,l.id,m.payload_hash,NULL FROM latest l NOT INDEXED '
+            'LEFT JOIN range_latest_map m ON m.id=l.id '
+            'UNION ALL SELECT 0,h.seq,NULL,m.payload_hash,NULL FROM history h JOIN '
+            '(SELECT MAX(seq) AS seq FROM history '
+            'WHERE id NOT IN (SELECT id FROM latest) GROUP BY id) orphan '
+            'ON h.seq=orphan.seq '
+            'LEFT JOIN range_history_map m ON m.seq=h.seq',
+            [sinceIso, nowIso]);
 
-          final indexed = <String, Map<String, Object?>>{};
-          var lastHash = '';
-          while (true) {
-            final rows = await tx.rawQuery(
-                'SELECT r.* FROM ironpin_range_hashes h '
-                'JOIN range_index r ON r.payload=h.payload_hash '
-                'WHERE h.payload_hash>? ORDER BY h.payload_hash LIMIT ?',
-                [lastHash, _readPage]);
-            if (rows.isEmpty) break;
-            for (final row in rows) {
-              indexed[row['payload'] as String] = row;
-            }
-            lastHash = rows.last['payload'] as String;
-          }
+        final missingCount = Sqflite.firstIntValue(await tx.rawQuery(
+                'SELECT COUNT(*) FROM ironpin_range_read s '
+                'LEFT JOIN range_index r ON r.payload=s.payload_hash '
+                'WHERE s.payload_hash IS NULL '
+                'OR r.payload IS NULL '
+                'OR r.derive!=? '
+                'OR r.source_date_raw IS NULL '
+                'OR r.amount_raw IS NULL',
+                [RowFacts.derive])) ??
+            0;
 
-          final result = <Map<String, Object?>>[];
-          var after = 0;
+        if (missingCount > 0) {
+          final payloads = <String, String>{};
+          final latestMapUpdates = <String, String>{};
+          final historyMapUpdates = <int, String>{};
+          final positionHashes = <int, String>{};
+          var missAfter = 0;
           while (true) {
             final page = await tx.rawQuery(
-                'SELECT position, payload_hash FROM ironpin_range_read '
-                'WHERE position>? ORDER BY position LIMIT ?',
-                [after, 10000]);
+                'SELECT s.position, s.kind, s.source_row, s.source_id, '
+                'CASE WHEN s.kind=0 THEN h.payload ELSE l.payload END AS payload '
+                'FROM ironpin_range_read s '
+                'LEFT JOIN range_index r ON r.payload=s.payload_hash '
+                'LEFT JOIN history h ON s.kind=0 AND h.seq=s.source_row '
+                'LEFT JOIN latest l ON s.kind=1 AND l.rowid=s.source_row '
+                'WHERE (s.payload_hash IS NULL '
+                'OR r.payload IS NULL '
+                'OR r.derive!=? '
+                'OR r.source_date_raw IS NULL '
+                'OR r.amount_raw IS NULL) '
+                'AND s.position>? ORDER BY s.position LIMIT ?',
+                [RowFacts.derive, missAfter, _readPage]);
             if (page.isEmpty) break;
-            for (final item in page) {
-              final hash = item['payload_hash'] as String?;
-              final row = hash == null ? null : indexed[hash];
-              if (row != null) result.add(row);
+            for (final row in page) {
+              final payload = row['payload'] as String?;
+              if (payload == null) continue;
+              final hash = payloadFingerprint(payload);
+              payloads.putIfAbsent(hash, () => payload);
+              final pos = row['position'] as int;
+              positionHashes[pos] = hash;
+              if ((row['kind'] as int) == 0) {
+                historyMapUpdates[row['source_row'] as int] = hash;
+              } else {
+                final id = row['source_id'] as String?;
+                if (id != null) latestMapUpdates[id] = hash;
+              }
             }
-            after = page.last['position'] as int;
+            missAfter = page.last['position'] as int;
           }
-          return result;
-        } finally {
-          await tx.execute('DROP TABLE IF EXISTS temp.ironpin_range_hashes');
-          await tx.execute('DROP TABLE IF EXISTS temp.ironpin_range_read');
+
+          if (payloads.isNotEmpty) {
+            await _indexPayloads(tx, [
+              for (final e in payloads.entries)
+                (payload: e.value, hash: e.key)
+            ]);
+          }
+
+          final mapEntries = latestMapUpdates.entries.toList();
+          for (final chunk in _chunks(mapEntries, _indexChunk)) {
+            final b = tx.batch();
+            for (final e in chunk) {
+              b.insert(
+                  'range_latest_map', {'id': e.key, 'payload_hash': e.value},
+                  conflictAlgorithm: ConflictAlgorithm.replace);
+            }
+            await b.commit(noResult: true);
+          }
+          final histEntries = historyMapUpdates.entries.toList();
+          for (final chunk in _chunks(histEntries, _indexChunk)) {
+            final b = tx.batch();
+            for (final e in chunk) {
+              b.insert('range_history_map',
+                  {'seq': e.key, 'payload_hash': e.value},
+                  conflictAlgorithm: ConflictAlgorithm.replace);
+            }
+            await b.commit(noResult: true);
+          }
+          final posEntries = positionHashes.entries.toList();
+          for (final chunk in _chunks(posEntries, _indexChunk)) {
+            final b = tx.batch();
+            for (final e in chunk) {
+              b.update('ironpin_range_read', {'payload_hash': e.value},
+                  where: 'position=?', whereArgs: [e.key]);
+            }
+            await b.commit(noResult: true);
+          }
         }
-      });
+
+        await tx.execute('CREATE TEMP TABLE ironpin_range_hashes ('
+            'payload_hash TEXT PRIMARY KEY) WITHOUT ROWID');
+        await tx.rawInsert(
+            'INSERT OR IGNORE INTO ironpin_range_hashes(payload_hash) '
+            'SELECT payload_hash FROM ironpin_range_read '
+            'WHERE payload_hash IS NOT NULL');
+
+        final indexed = <String, Map<String, Object?>>{};
+        var lastHash = '';
+        while (true) {
+          final rows = await tx.rawQuery(
+              'SELECT r.* FROM ironpin_range_hashes h '
+              'JOIN range_index r ON r.payload=h.payload_hash '
+              'WHERE h.payload_hash>? ORDER BY h.payload_hash LIMIT ?',
+              [lastHash, _readPage]);
+          if (rows.isEmpty) break;
+          for (final row in rows) {
+            indexed[row['payload'] as String] = row;
+          }
+          lastHash = rows.last['payload'] as String;
+        }
+
+        final result = <Map<String, Object?>>[];
+        final cacheItems = rangeToken == null
+            ? null
+            : <({Map<String, Object?> row, bool isHistory, int marketAtMs})>[];
+        var after = 0;
+        while (true) {
+          final page = await tx.rawQuery(
+              'SELECT position, payload_hash, hist_at FROM ironpin_range_read '
+              'WHERE position>? ORDER BY position LIMIT ?',
+              [after, 10000]);
+          if (page.isEmpty) break;
+          for (final item in page) {
+            final hash = item['payload_hash'] as String?;
+            final row = hash == null ? null : indexed[hash];
+            if (row != null) {
+              result.add(row);
+              if (cacheItems != null) {
+                final histAt = item['hist_at'] as String?;
+                if (histAt != null) {
+                  cacheItems.add((
+                    row: row,
+                    isHistory: true,
+                    marketAtMs:
+                        DateTime.parse(histAt).toUtc().microsecondsSinceEpoch,
+                  ));
+                } else {
+                  cacheItems.add((row: row, isHistory: false, marketAtMs: 0));
+                }
+              }
+            }
+          }
+          after = page.last['position'] as int;
+        }
+        return (rows: result, items: cacheItems);
+      } finally {
+        await tx.execute('DROP TABLE IF EXISTS temp.ironpin_range_hashes');
+        await tx.execute('DROP TABLE IF EXISTS temp.ironpin_range_read');
+      }
+    });
+
+    final items = out.items;
+    if (path != null &&
+        rangeToken != null &&
+        items != null &&
+        items.length >= FastArchiveCache.minRowsToCache) {
+      final token = rangeToken;
+      _enqueueCacheWrite(() => FastArchiveCache.writeRange(
+            path,
+            token: token,
+            windowDays: windowDays,
+            sinceIso: sinceIso,
+            nowIso: nowIso,
+            items: items,
+          ));
+    }
+    return out.rows;
+  }
 
   Future<RangeReport> rangeReport(DateTime now) async {
     final watch = Stopwatch()..start();
@@ -814,7 +1048,10 @@ class MarketStore {
       Sqflite.firstIntValue(
           await db.rawQuery('SELECT COUNT(*) FROM history')) ??
       0;
-  Future<void> close() => db.close();
+  Future<void> close() async {
+    await _pendingCacheWrite.catchError((_) {});
+    await db.close();
+  }
 }
 
 /// Rows per SQLite statement/bind-list (`<= 500`, well below Android SQLite's

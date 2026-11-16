@@ -464,6 +464,10 @@ class MarketController extends ChangeNotifier {
     _filtered = [];
     _filterKey = '';
     _filteredCity = '';
+    _chartOptionsCache = null;
+    _chartOptionsKey = '';
+    _preparingChartKey = '';
+    _chartOptionsGen++;
     candidates = null;
     _candidateKey = '';
     _rowCache = null;
@@ -723,17 +727,20 @@ class MarketController extends ChangeNotifier {
 
   List<Quote>? _chartOptionsCache;
   String _chartOptionsKey = '';
+  String _preparingChartKey = '';
+  int _chartOptionsGen = 0;
 
-  /// Every stored offer that has a real price in the chart basis, deduplicated
-  /// by id, with the current feed rows first. Memoized per archive revision,
-  /// basis, window, and minute bucket so [ChartPage] builds in O(1).
-  List<Quote> get chartOptions {
-    final now = DateTime.now().toUtc();
-    final key = '${identityHashCode(quotes)}\u0001${quotes.length}'
-        '\u0001${filter.basis}\u0001$chartWindow'
-        '\u0001$_filterKey\u0001${now.millisecondsSinceEpoch ~/ 60000}';
-    final cached = _chartOptionsCache;
-    if (cached != null && key == _chartOptionsKey) return cached;
+  bool get chartOptionsLoading =>
+      _chartOptionsCache == null &&
+      _preparingChartKey.isNotEmpty &&
+      quotes.length > 10000;
+
+  String _currentChartOptionsKey(DateTime now) =>
+      '${identityHashCode(quotes)}\u0001${quotes.length}'
+      '\u0001${filter.basis}\u0001$chartWindow'
+      '\u0001$_filterKey\u0001${now.millisecondsSinceEpoch ~/ 60000}';
+
+  List<Quote> _buildChartOptionsSync(DateTime now) {
     final basis = filter.basis;
     final seen = <String>{};
     final options = <Quote>[];
@@ -749,9 +756,75 @@ class MarketController extends ChangeNotifier {
       add(filtered);
     }
     add(quotes);
+    return options;
+  }
+
+  /// Every stored offer that has a real price in the chart basis, deduplicated
+  /// by id, with the current feed rows first. On small/medium archives
+  /// (`<= 10000`) this builds synchronously; on massive archives it kicks off
+  /// a sliced non-blocking build and returns the most recent cached list until
+  /// ready so the Chart tab never freezes the UI thread.
+  List<Quote> get chartOptions {
+    final now = DateTime.now().toUtc();
+    final key = _currentChartOptionsKey(now);
+    final cached = _chartOptionsCache;
+    if (cached != null && key == _chartOptionsKey) return cached;
+    if (quotes.length <= 10000) {
+      final options = _buildChartOptionsSync(now);
+      _chartOptionsCache = options;
+      _chartOptionsKey = key;
+      _preparingChartKey = '';
+      return options;
+    }
+    if (_preparingChartKey != key && !disposed) {
+      _preparingChartKey = key;
+      unawaited(_prepareChartOptions(key, now));
+    }
+    return cached ?? const <Quote>[];
+  }
+
+  Future<void> _prepareChartOptions(String key, DateTime now) async {
+    final gen = ++_chartOptionsGen;
+    final basis = filter.basis;
+    final window = chartWindow;
+    final snapshot = quotes;
+    final seen = <String>{};
+    final options = <Quote>[];
+
+    Future<bool> scanList(List<Quote> list) async {
+      var i = 0;
+      while (i < list.length) {
+        if (disposed || gen != _chartOptionsGen || !identical(snapshot, quotes)) {
+          return false;
+        }
+        final sw = Stopwatch()..start();
+        final sliceEnd = (i + 2500).clamp(0, list.length);
+        while (i < sliceEnd) {
+          final chunkEnd = (i + 64).clamp(0, sliceEnd);
+          for (; i < chunkEnd; i++) {
+            final q = list[i];
+            if (!insideWindow(q, now, window)) continue;
+            if (q.tomanFor(basis) == null) continue;
+            if (seen.add(q.id)) options.add(q);
+          }
+          if (sw.elapsedMilliseconds >= 5) break;
+        }
+        if (i < list.length) {
+          await Future<void>.delayed(Duration.zero);
+        }
+      }
+      return true;
+    }
+
+    if (_filterKey == _currentFilterKey && _filtered.isNotEmpty) {
+      if (!await scanList(_filtered)) return;
+    }
+    if (!await scanList(snapshot)) return;
+    if (disposed || gen != _chartOptionsGen) return;
     _chartOptionsCache = options;
     _chartOptionsKey = key;
-    return options;
+    _preparingChartKey = '';
+    _notify();
   }
 
   /// Candidate rows of the prices tab, prepared from the stored archive as soon

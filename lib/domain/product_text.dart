@@ -2,19 +2,127 @@
 /// No currency, physical weight, publication time or missing unit is inferred.
 class ProductText {
   static String normalize(String value) {
-    const digits = '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩';
-    var s = value;
-    for (var i = 0; i < digits.length; i++) {
-      s = s.replaceAll(digits[i], '${i % 10}');
+    final n = value.length;
+    if (n == 0) return value;
+    var clean = true;
+    var prevSpace = true;
+    for (var i = 0; i < n; i++) {
+      final cu = value.codeUnitAt(i);
+      if ((cu >= 0x06F0 && cu <= 0x06F9) ||
+          (cu >= 0x0660 && cu <= 0x0669) ||
+          cu == 0x064A ||
+          cu == 0x0643 ||
+          cu == 0x200C ||
+          cu == 0x5F ||
+          cu == 0x066B) {
+        clean = false;
+        break;
+      }
+      if (cu <= 0x20 ||
+          cu == 0x0085 ||
+          cu == 0x00A0 ||
+          cu == 0x1680 ||
+          (cu >= 0x2000 && cu <= 0x200A) ||
+          cu == 0x2028 ||
+          cu == 0x2029 ||
+          cu == 0x202F ||
+          cu == 0x205F ||
+          cu == 0x3000 ||
+          cu == 0xFEFF) {
+        if (cu != 0x20 || prevSpace) {
+          clean = false;
+          break;
+        }
+        prevSpace = true;
+      } else {
+        prevSpace = false;
+      }
     }
-    return s
-        .replaceAll('ي', 'ی')
-        .replaceAll('ك', 'ک')
-        .replaceAll('\u200c', ' ')
-        .replaceAll('_', ' ')
-        .replaceAll('٫', '.')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    if (clean && !prevSpace) return value;
+
+    final out = List<int>.filled(n, 0);
+    var len = 0;
+    var pendingSpace = false;
+    for (var i = 0; i < n; i++) {
+      var cu = value.codeUnitAt(i);
+      if (cu == 0x200C ||
+          cu == 0x5F ||
+          cu <= 0x20 ||
+          cu == 0x0085 ||
+          cu == 0x00A0 ||
+          cu == 0x1680 ||
+          (cu >= 0x2000 && cu <= 0x200A) ||
+          cu == 0x2028 ||
+          cu == 0x2029 ||
+          cu == 0x202F ||
+          cu == 0x205F ||
+          cu == 0x3000 ||
+          cu == 0xFEFF) {
+        if (len > 0) pendingSpace = true;
+        continue;
+      }
+      if (pendingSpace) {
+        out[len++] = 0x20;
+        pendingSpace = false;
+      }
+      if (cu >= 0x06F0 && cu <= 0x06F9) {
+        cu = 0x30 + (cu - 0x06F0);
+      } else if (cu >= 0x0660 && cu <= 0x0669) {
+        cu = 0x30 + (cu - 0x0660);
+      } else if (cu == 0x064A) {
+        cu = 0x06CC;
+      } else if (cu == 0x0643) {
+        cu = 0x06A9;
+      } else if (cu == 0x066B) {
+        cu = 0x2E;
+      }
+      out[len++] = cu;
+    }
+    return String.fromCharCodes(out, 0, len);
+  }
+
+  /// Single-pass [normalize] + ASCII lowercase with zero allocations when the
+  /// input is already normalized and lowercase (such as `range_index.search`).
+  static String normalizeLower(String value) {
+    final n = value.length;
+    if (n == 0) return value;
+    var clean = true;
+    var prevSpace = true;
+    for (var i = 0; i < n; i++) {
+      final cu = value.codeUnitAt(i);
+      if ((cu >= 0x41 && cu <= 0x5A) ||
+          (cu >= 0x06F0 && cu <= 0x06F9) ||
+          (cu >= 0x0660 && cu <= 0x0669) ||
+          cu == 0x064A ||
+          cu == 0x0643 ||
+          cu == 0x200C ||
+          cu == 0x5F ||
+          cu == 0x066B) {
+        clean = false;
+        break;
+      }
+      if (cu <= 0x20 ||
+          cu == 0x0085 ||
+          cu == 0x00A0 ||
+          cu == 0x1680 ||
+          (cu >= 0x2000 && cu <= 0x200A) ||
+          cu == 0x2028 ||
+          cu == 0x2029 ||
+          cu == 0x202F ||
+          cu == 0x205F ||
+          cu == 0x3000 ||
+          cu == 0xFEFF) {
+        if (cu != 0x20 || prevSpace) {
+          clean = false;
+          break;
+        }
+        prevSpace = true;
+      } else {
+        prevSpace = false;
+      }
+    }
+    if (clean && !prevSpace) return value;
+    return normalize(value).toLowerCase();
   }
 
   /// Lookbehind-free native-JIT prefilter: rejects 99.99% of steel titles in
@@ -160,21 +268,44 @@ class ProductQuery {
   final String width;
   final bool nonMetal;
   final bool steelOnly;
-  final RegExp? _digits;
+  final List<String> _numWords;
   final List<String> _textWords;
 
   ProductQuery._(this.spec, this.city, this.words, this.width,
       {this.nonMetal = false, this.steelOnly = false})
-      : _digits = _compileDigits(words),
+      : _numWords = words
+            .where((w) => _numWordPattern.hasMatch(w))
+            .toList(growable: false),
         _textWords = words
-            .where((w) => !RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w))
+            .where((w) => !_numWordPattern.hasMatch(w))
             .toList(growable: false);
 
-  static RegExp? _compileDigits(List<String> words) {
-    final nums =
-        words.where((w) => RegExp(r'^\d+(?:\.\d+)?$').hasMatch(w)).toList();
-    if (nums.isEmpty) return null;
-    return RegExp('(?<![\\d.])(?:${nums.map(RegExp.escape).join('|')})(?![\\d.])');
+  static final _numWordPattern = RegExp(r'^\d+(?:\.\d+)?$');
+
+  static bool containsNumberToken(String haystack, String numToken) =>
+      _containsNumberToken(haystack, numToken);
+
+  static bool _containsNumberToken(String haystack, String numToken) {
+    var start = 0;
+    final n = haystack.length;
+    final m = numToken.length;
+    while (true) {
+      final idx = haystack.indexOf(numToken, start);
+      if (idx < 0) return false;
+      var leftOk = true;
+      if (idx > 0) {
+        final c = haystack.codeUnitAt(idx - 1);
+        leftOk = !((c >= 0x30 && c <= 0x39) || c == 0x2E);
+      }
+      var rightOk = true;
+      final end = idx + m;
+      if (end < n) {
+        final c = haystack.codeUnitAt(end);
+        rightOk = !((c >= 0x30 && c <= 0x39) || c == 0x2E);
+      }
+      if (leftOk && rightOk) return true;
+      start = idx + 1;
+    }
   }
 
   factory ProductQuery.parse(String query, {List<String> cities = const []}) {
@@ -257,7 +388,9 @@ class ProductQuery {
       required String grade,
       required String sellerCity,
       required String text,
-      String material = ''}) {
+      String material = '',
+      bool knownMetal = false,
+      bool normalizedText = false}) {
     if (nonMetal) return false;
     if (spec.category.isNotEmpty && spec.category != category) return false;
     if (spec.thickness.isNotEmpty &&
@@ -271,9 +404,10 @@ class ProductQuery {
       return false;
     }
     if (city.isNotEmpty && city != sellerCity) return false;
-    if (ProductText.isNonMetal(text)) return false;
+    if (!knownMetal && ProductText.isNonMetal(text)) return false;
     String? lazyHay;
-    String hay() => lazyHay ??= ProductText.normalize(text).toLowerCase();
+    String hay() => lazyHay ??=
+        normalizedText ? text : ProductText.normalize(text).toLowerCase();
     if (steelOnly) {
       final mat = material.isEmpty
           ? ''
@@ -305,9 +439,143 @@ class ProductQuery {
     }
     if (words.isEmpty) return true;
     final h = hay();
-    if (_digits != null && !_digits.hasMatch(h)) return false;
+    for (final numWord in _numWords) {
+      if (!_containsNumberToken(h, numWord)) return false;
+    }
     for (final word in _textWords) {
       if (!h.contains(word)) return false;
+    }
+    return true;
+  }
+
+  /// Fast-path row matching over separate `range_index` columns that avoids
+  /// allocating a 9-field concatenated string or calling `normalize` on
+  /// already-normalized `search` text when possible.
+  bool matchesRow({
+    required String category,
+    required String thickness,
+    required String size,
+    required String dimensions,
+    required String grade,
+    required String sellerCity,
+    required String material,
+    required String search,
+    required String brand,
+    required String loading,
+    required String loadingCity,
+    required String terms,
+    required String tax,
+  }) {
+    if (nonMetal) return false;
+    if (spec.category.isNotEmpty && spec.category != category) return false;
+    if (spec.thickness.isNotEmpty &&
+        !ProductText.measureMatches(spec.thickness, thickness)) return false;
+    if (spec.size.isNotEmpty && !ProductText.measureMatches(spec.size, size)) {
+      return false;
+    }
+    if (spec.grade.isNotEmpty &&
+        spec.grade !=
+            ProductText.normalize(grade).replaceAll(' ', '').toUpperCase()) {
+      return false;
+    }
+    if (city.isNotEmpty && city != sellerCity) return false;
+    if (spec.dimensions.isNotEmpty) {
+      String dims(String s) => ProductText.normalizeLower(s)
+          .replaceAll(RegExp(r'\s+'), '')
+          .replaceAll(RegExp('[×*]'), 'x');
+      final wanted = dims(spec.dimensions), actual = dims(dimensions);
+      final reverse = wanted.split('x').reversed.join('x');
+      if (actual != wanted &&
+          actual != reverse &&
+          !actual.endsWith('x$wanted')) {
+        return false;
+      }
+    }
+    if (steelOnly) {
+      final mat = material.isEmpty ? '' : ProductText.normalizeLower(material);
+      if (mat.isNotEmpty) {
+        if (!mat.contains('فولاد') &&
+            !mat.contains('استیل') &&
+            !mat.contains('آهن')) {
+          return false;
+        }
+      }
+    }
+    if (width.isEmpty && !steelOnly && words.isNotEmpty) {
+      final normSearch = ProductText.normalizeLower(search);
+      var allInSearch = true;
+      for (final numWord in _numWords) {
+        if (!_containsNumberToken(normSearch, numWord)) {
+          allInSearch = false;
+          break;
+        }
+      }
+      if (allInSearch) {
+        for (final word in _textWords) {
+          if (!normSearch.contains(word)) {
+            allInSearch = false;
+            break;
+          }
+        }
+      }
+      if (allInSearch) {
+        return !ProductText.isNonMetal(brand) &&
+            !ProductText.isNonMetal(terms);
+      }
+      if (_numWords.length + _textWords.length == 1) {
+        if (_numWords.length == 1) {
+          final nw = _numWords[0];
+          bool hitNum(String v) =>
+              v.isNotEmpty &&
+              _containsNumberToken(ProductText.normalizeLower(v), nw);
+          if (!(hitNum(category) ||
+              hitNum(material) ||
+              hitNum(brand) ||
+              hitNum(sellerCity) ||
+              hitNum(loading) ||
+              hitNum(loadingCity) ||
+              hitNum(terms) ||
+              hitNum(tax))) {
+            return false;
+          }
+        } else {
+          final tw = _textWords[0];
+          bool hitWord(String v) =>
+              v.isNotEmpty && ProductText.normalizeLower(v).contains(tw);
+          if (!(hitWord(category) ||
+              hitWord(material) ||
+              hitWord(brand) ||
+              hitWord(sellerCity) ||
+              hitWord(loading) ||
+              hitWord(loadingCity) ||
+              hitWord(terms) ||
+              hitWord(tax))) {
+            return false;
+          }
+        }
+        return !ProductText.isNonMetal(brand) &&
+            !ProductText.isNonMetal(terms);
+      }
+    }
+    final hay = ProductText.normalizeLower(
+        '$search $category $material $brand $sellerCity $loading $loadingCity $terms $tax');
+    if (ProductText.isNonMetal(hay)) return false;
+    if (steelOnly &&
+        !hay.contains('فولاد') &&
+        !hay.contains('استیل') &&
+        !hay.contains('آهن')) {
+      return false;
+    }
+    if (width.isNotEmpty &&
+        !RegExp('عرض\\s*[:：]?\\s*${RegExp.escape(width)}(?![\\d.])')
+            .hasMatch(hay)) {
+      return false;
+    }
+    for (final numWord in _numWords) {
+      if (!_containsNumberToken(hay, numWord)) return false;
+    }
+    for (final word in _textWords) {
+      if (!hay.contains(word)) return false;
     }
     return true;
   }

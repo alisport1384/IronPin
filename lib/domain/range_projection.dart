@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'market.dart';
 import 'money.dart';
@@ -43,10 +44,20 @@ class RangeRow {
 class PreparedIndex {
   final int length;
   final Map<String, List<({int source, RowFacts row})>> _byFamily;
+  final Map<String, List<({int source, Map<String, Object?> raw})>>
+      _rawByFamily;
+  final Map<Map<String, Object?>, RowFacts> _factCache;
   PreparedIndex(List<RowFacts> facts, [List<Map<String, Object?>> _ = const []])
       : length = facts.length,
-        _byFamily = _groupFacts(facts);
-  const PreparedIndex._(this.length, this._byFamily);
+        _byFamily = _groupFacts(facts),
+        _rawByFamily = const {},
+        _factCache = Map<Map<String, Object?>, RowFacts>.identity();
+  PreparedIndex._raw(this.length, this._rawByFamily)
+      : _byFamily = <String, List<({int source, RowFacts row})>>{},
+        _factCache = Map<Map<String, Object?>, RowFacts>.identity();
+  const PreparedIndex._(this.length, this._byFamily)
+      : _rawByFamily = const {},
+        _factCache = const {};
 
   static Map<String, List<({int source, RowFacts row})>> _groupFacts(
       List<RowFacts> facts) {
@@ -57,19 +68,32 @@ class PreparedIndex {
     return out;
   }
 
-  List<({int source, RowFacts row})> forFamily(String family) =>
-      _byFamily[family] ?? const [];
+  List<({int source, RowFacts row})> forFamily(String family) {
+    final cached = _byFamily[family];
+    if (cached != null) return cached;
+    final rawList = _rawByFamily.remove(family);
+    if (rawList == null || rawList.isEmpty) return const [];
+    final built = <({int source, RowFacts row})>[
+      for (final item in rawList)
+        (
+          source: item.source,
+          row: _factCache.putIfAbsent(
+              item.raw, () => RowFacts.fromRow(item.raw))
+        )
+    ];
+    _byFamily[family] = built;
+    return built;
+  }
 }
 
 PreparedIndex prepare(List<Map<String, Object?>> indexRows) {
-  final cache = Map<Map<String, Object?>, RowFacts>.identity();
-  final byFamily = <String, List<({int source, RowFacts row})>>{};
+  final rawByFamily = <String, List<({int source, Map<String, Object?> raw})>>{};
   for (var i = 0; i < indexRows.length; i++) {
     final raw = indexRows[i];
-    final row = cache.putIfAbsent(raw, () => RowFacts.fromRow(raw));
-    (byFamily[row.family] ??= []).add((source: i, row: row));
+    final family = raw['family'] as String? ?? '';
+    (rawByFamily[family] ??= []).add((source: i, raw: raw));
   }
-  return PreparedIndex._(indexRows.length, byFamily);
+  return PreparedIndex._raw(indexRows.length, rawByFamily);
 }
 
 ({List<Map<String, Object?>> rows, List<Map<String, Object?>> ranges,
@@ -588,8 +612,11 @@ class CandidateScope {
 /// scan. The synchronous [selectCandidates] is this same loop without the
 /// pauses, so the two paths can never disagree.
 class CandidateSelector {
-  CandidateSelector({required this.scope, required this.nowMs})
-      : _since = nowMs - scope.maxAgeDays * 24 * 3600 * 1000,
+  CandidateSelector({
+    required this.scope,
+    required this.nowMs,
+    int offerCount = 0,
+  })  : _since = nowMs - scope.maxAgeDays * 24 * 3600 * 1000,
         _future = nowMs + 5 * 60 * 1000,
         _intent = scope.query.trim().isEmpty
             ? null
@@ -599,7 +626,10 @@ class CandidateSelector {
         _thicknessWanted = number(scope.thickness),
         _cityBoundary = scope.city.isEmpty || scope.cityKind != 'all'
             ? null
-            : RowFacts.cityBoundaryOf(scope.city);
+            : RowFacts.cityBoundaryOf(scope.city),
+        _slotState = offerCount > 0 ? Uint8List(offerCount) : null,
+        _slotPos = offerCount > 0 ? Int32List(offerCount) : null,
+        _slotFetchedAt = offerCount > 0 ? Int64List(offerCount) : null;
 
   final CandidateScope scope;
   final int nowMs;
@@ -610,6 +640,9 @@ class CandidateSelector {
   final double? _sizeWanted;
   final double? _thicknessWanted;
   final RegExp? _cityBoundary;
+  final Uint8List? _slotState;
+  final Int32List? _slotPos;
+  final Int64List? _slotFetchedAt;
 
   final List<Map<String, Object?>> wires = [];
   int undated = 0, unpriced = 0;
@@ -619,6 +652,71 @@ class CandidateSelector {
   // one hash per row, pure garbage-collector pressure on low-end phones).
   final Map<String, Map<String, int>> _slot = {};
   final Map<String, Set<String>> _held = {};
+
+  static double? _resolvePrice(
+      String packed, String unit, String basis, String currency, num? amount) {
+    final wantOwn = basis == 'original' || basis.isEmpty;
+    final target = wantOwn
+        ? (unit != 'unknown' && comparableUnits.contains(unit) ? unit : '')
+        : basis;
+    if (packed.isNotEmpty) {
+      double? exact, kg, piece;
+      var pos = 0;
+      final n = packed.length;
+      while (pos < n) {
+        var next = packed.indexOf('\u0002', pos);
+        if (next < 0) next = n;
+        final sep = packed.indexOf('\u0001', pos);
+        if (sep > pos && sep < next) {
+          final u = packed.substring(pos, sep);
+          if (target.isNotEmpty) {
+            if (u == target) {
+              exact = double.tryParse(packed.substring(sep + 1, next));
+              break;
+            }
+          } else {
+            if (u == 'kg') {
+              kg = double.tryParse(packed.substring(sep + 1, next));
+              break;
+            } else if (u == 'piece') {
+              piece = double.tryParse(packed.substring(sep + 1, next));
+            }
+          }
+        }
+        pos = next + 1;
+      }
+      final rawVal = target.isNotEmpty ? exact : (kg ?? piece);
+      if (rawVal != null) return toman(rawVal, currency);
+      if (target.isNotEmpty || kg != null || piece != null) return null;
+    }
+    if (wantOwn && target.isEmpty) {
+      return toman(amount?.toDouble(), currency);
+    }
+    return null;
+  }
+
+  void addWithSlot(
+      Map<String, Object?> raw, int offerSlot, bool knownNonMetal) {
+    if (knownNonMetal) return;
+    final states = _slotState!;
+    final st = states[offerSlot];
+    if (st == 2) return;
+    if (st == 1) {
+      final fetchedAt = (raw['fetched_at'] as int?) ?? 0;
+      if (fetchedAt >= _slotFetchedAt![offerSlot]) {
+        wires[_slotPos![offerSlot]] = raw;
+        _slotFetchedAt[offerSlot] = fetchedAt;
+      }
+      return;
+    }
+    if (!_acceptRow(raw, raw['title'] as String? ?? '', offerSlot: offerSlot)) {
+      return;
+    }
+    states[offerSlot] = 1;
+    _slotPos![offerSlot] = wires.length;
+    _slotFetchedAt![offerSlot] = (raw['fetched_at'] as int?) ?? 0;
+    wires.add(raw);
+  }
 
   void add(Map<String, Object?> raw) {
     final title = raw['title'] as String? ?? '';
@@ -636,99 +734,119 @@ class CandidateSelector {
     } else {
       return;
     }
+    if (!_acceptRow(raw, title, endpoint: endpoint, offerId: offerId)) return;
+    (_slot[endpoint] ??= {})[offerId] = wires.length;
+    wires.add(raw);
+  }
+
+  bool _acceptRow(Map<String, Object?> raw, String title,
+      {String? endpoint, String? offerId, int? offerSlot}) {
     final marketAt = raw['market_at'] as int?;
     if (marketAt == null || marketAt > _future || marketAt < _since) {
       undated++;
-      (_held[endpoint] ??= {}).add(offerId);
-      return;
+      if (offerSlot != null) {
+        _slotState![offerSlot] = 2;
+      } else if (endpoint != null && offerId != null) {
+        (_held[endpoint] ??= {}).add(offerId);
+      }
+      return false;
     }
     final unit = raw['unit'] as String? ?? '';
     final currency = raw['currency'] as String? ?? '';
     final packed = raw['prices'] as String? ?? '';
-    final basis = scope.basis;
-    // Same decision as `resolvedRowBasis(unpackPrices(packed), unit)`, read
-    // straight from the packed form: unpacking built a Map and several
-    // substrings for every one of the archive's rows on every keystroke.
-    final basisKey = basis == 'original' || basis.isEmpty
-        ? (unit != 'unknown' && comparableUnits.contains(unit)
-            ? unit
-            : packedPriceOf(packed, 'kg') != null
-                ? 'kg'
-                : packedPriceOf(packed, 'piece') != null
-                    ? 'piece'
-                    : '')
-        : basis;
-    final price = toman(packedPriceOf(packed, basisKey), currency) ??
-        (basisKey.isEmpty
-            ? toman((raw['amount'] as num?)?.toDouble(), currency)
-            : null);
+    final price = _resolvePrice(
+        packed, unit, scope.basis, currency, raw['amount'] as num?);
     final comparable = price != null && price.isFinite && price > 0;
     if (!comparable) {
       final hasTextAmount = (raw['amount_raw'] as String? ?? '').isNotEmpty;
       if (!scope.includeUnpriced && !hasTextAmount) {
         unpriced++;
-        (_held[endpoint] ??= {}).add(offerId);
-        return;
+        if (offerSlot != null) {
+          _slotState![offerSlot] = 2;
+        } else if (endpoint != null && offerId != null) {
+          (_held[endpoint] ??= {}).add(offerId);
+        }
+        return false;
       }
-      if (scope.minPrice != null || scope.maxPrice != null) return;
+      if (scope.minPrice != null || scope.maxPrice != null) return false;
     } else if ((scope.minPrice != null && price < scope.minPrice!) ||
         (scope.maxPrice != null && price > scope.maxPrice!)) {
-      return;
+      return false;
     }
-    if (scope.category.isNotEmpty && raw['category'] != scope.category) {
-      return;
+    final cat = raw['category'] as String? ?? '';
+    if (scope.category.isNotEmpty && cat != scope.category) {
+      return false;
     }
-    if (scope.material.isNotEmpty && raw['material'] != scope.material) {
-      return;
+    final material = raw['material'] as String? ?? '';
+    if (scope.material.isNotEmpty && material != scope.material) {
+      return false;
     }
-    if (scope.unit.isNotEmpty && unit != scope.unit) return;
+    if (scope.unit.isNotEmpty && unit != scope.unit) return false;
+    final sizeLabel = raw['size_label'] as String? ?? '';
+    final thicknessLabel = raw['thickness_label'] as String? ?? '';
+    final gradeLabel = raw['grade_label'] as String? ?? '';
     if ((scope.size.isNotEmpty &&
-            !_sameMeasure(scope.size, _sizeWanted,
-                raw['size_num'] as num?, raw['size_label'] as String? ?? '')) ||
+            !_sameMeasure(
+                scope.size, _sizeWanted, raw['size_num'] as num?, sizeLabel)) ||
         (scope.thickness.isNotEmpty &&
             !_sameMeasure(scope.thickness, _thicknessWanted,
-                raw['thickness_num'] as num?,
-                raw['thickness_label'] as String? ?? '')) ||
+                raw['thickness_num'] as num?, thicknessLabel)) ||
         (_grade.isNotEmpty &&
-            raw['grade_label'] != null &&
-            latin(raw['grade_label'] as String).toUpperCase() != _grade)) {
-      return;
+            gradeLabel.isNotEmpty &&
+            latin(gradeLabel).toUpperCase() != _grade)) {
+      return false;
     }
+    final sellerCity = raw['seller_city'] as String? ?? '';
     if (scope.city.isNotEmpty &&
         (scope.cityKind == 'all'
             ? !(_cityBoundary?.hasMatch(raw['haystack'] as String? ?? '') ??
                 true)
-            : (raw['seller_city'] as String? ?? '') != scope.city)) {
-      return;
+            : sellerCity != scope.city)) {
+      return false;
     }
-    if (scope.onlyFresh && !_fresh(raw, nowMs)) return;
+    if (scope.onlyFresh) {
+      final age = nowMs - marketAt;
+      if (age < -5 * 60 * 1000 || age > 30 * 3600 * 1000) return false;
+    }
     final intent = _intent;
     if (intent != null) {
-      if (intent.nonMetal) return;
-      final cat = raw['category'] as String? ?? '';
+      if (intent.nonMetal) return false;
       if (intent.spec.category.isNotEmpty && intent.spec.category != cat) {
-        return;
+        return false;
       }
-      final searchHay = intent.words.isEmpty && intent.width.isEmpty
-          ? title
-          : '${raw['search'] ?? ''} $cat ${raw['material'] ?? ''} '
-              '${raw['brand'] ?? ''} ${raw['seller_city'] ?? ''} '
-              '${raw['loading'] ?? ''} ${raw['loading_city'] ?? ''} '
-              '${raw['terms'] ?? ''} ${raw['tax'] ?? ''}';
-      if (!intent.matches(
-          category: cat,
-          thickness: raw['thickness_label'] as String? ?? '',
-          size: raw['size_label'] as String? ?? '',
-          dimensions: raw['dimensions_label'] as String? ?? '',
-          grade: raw['grade_label'] as String? ?? '',
-          sellerCity: raw['seller_city'] as String? ?? '',
-          material: raw['material'] as String? ?? '',
-          text: searchHay)) {
-        return;
+      if (intent.words.isEmpty && intent.width.isEmpty) {
+        if (!intent.matches(
+            category: cat,
+            thickness: thicknessLabel,
+            size: sizeLabel,
+            dimensions: raw['dimensions_label'] as String? ?? '',
+            grade: gradeLabel,
+            sellerCity: sellerCity,
+            material: material,
+            text: title,
+            knownMetal: true)) {
+          return false;
+        }
+      } else {
+        if (!intent.matchesRow(
+            category: cat,
+            thickness: thicknessLabel,
+            size: sizeLabel,
+            dimensions: raw['dimensions_label'] as String? ?? '',
+            grade: gradeLabel,
+            sellerCity: sellerCity,
+            material: material,
+            search: raw['search'] as String? ?? '',
+            brand: raw['brand'] as String? ?? '',
+            loading: raw['loading'] as String? ?? '',
+            loadingCity: raw['loading_city'] as String? ?? '',
+            terms: raw['terms'] as String? ?? '',
+            tax: raw['tax'] as String? ?? '')) {
+          return false;
+        }
       }
     }
-    (_slot[endpoint] ??= {})[offerId] = wires.length;
-    wires.add(raw);
+    return true;
   }
 
   ({List<Map<String, Object?>> wires, int withheld, int undated, int unpriced})
@@ -755,16 +873,6 @@ bool _sameMeasure(
   }
   return latin(wanted) == latin(storedLabel);
 }
-
-/// The 30-hour freshness rule of `Quote.isFresh`, from the stored date only.
-bool _fresh(Map<String, Object?> raw, int nowMs) {
-  final at = raw['market_at'] as int?;
-  if (at == null) return false;
-  final age = nowMs - at;
-  return age >= -5 * 60 * 1000 && age <= 30 * 3600 * 1000;
-}
-
-
 
 /// Catalogue search text of a row, prepared once per confirmation.
 String catalogueSearch(Map<String, Object?> wire) =>

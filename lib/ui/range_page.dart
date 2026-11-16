@@ -38,9 +38,11 @@ String candidatePriceTextOf(Quote q) {
 class RangePage extends StatefulWidget {
   final MarketController c;
   final Duration taskTimeout, readTimeout;
+  final ValueChanged<Quote>? onChart;
   const RangePage(
       {super.key,
       required this.c,
+      this.onChart,
       this.taskTimeout = const Duration(seconds: 45),
       this.readTimeout = const Duration(seconds: 20)});
   @override
@@ -74,6 +76,10 @@ class _RangePageState extends State<RangePage> {
   String mode = 'mean', basis = '', error = '';
   bool calculating = false;
   ProductRangeResult? result;
+  ProductRangeResult? _filteredForResult;
+  String _filteredForNeedle = '';
+  List<Quote> _shownCache = const [];
+  int _hiddenUnpricedCache = 0;
   final fields = <String, TextEditingController>{};
   final search = TextEditingController();
   @override
@@ -89,6 +95,9 @@ class _RangePageState extends State<RangePage> {
     generation++;
     selection = null;
     result = null;
+    _filteredForResult = null;
+    _shownCache = const [];
+    _hiddenUnpricedCache = 0;
     calculating = false;
     error = '';
     visible = 40;
@@ -114,9 +123,29 @@ class _RangePageState extends State<RangePage> {
             // Every candidate carries the price the archive actually holds
             // for it, in the unit that price was announced with: a row is
             // never offered without its number.
-            trailing: Text(candidatePriceText(p),
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.bold, color: teal)),
+            trailing: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Flexible(
+                  child: Text(candidatePriceText(p),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: teal)),
+                ),
+                if (widget.onChart != null)
+                  IconButton(
+                    tooltip: 'نمایش نمودار',
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
+                    icon: const Icon(Icons.show_chart, size: 20),
+                    onPressed: () => widget.onChart!(p.example),
+                  ),
+              ]),
+            ),
             subtitle: Text(faDigits(
                 '${p.example.specificationLabel} • ${p.example.seller}\n'
                 '${dateLabel(p.example.marketAt, time: false)}\n'
@@ -129,6 +158,14 @@ class _RangePageState extends State<RangePage> {
                           child: Text(faDigits(
                               '${p.example.specificationLabel}\n${p.example.seller}\n${dateLabel(p.example.marketAt)}\n${p.counted ? 'در آمار همین واحد حساب شده است؛ میانگین، بالاترین و پایین‌ترین از همین فهرست گرفته می‌شود' : rangeUnavailableReasons(p.example, result!.at).join('؛ ')}\nاین نمایش از آرشیو محلی است؛ برای بازهٔ انتخاب‌شده محاسبه شده است.'))),
                       actions: [
+                        if (widget.onChart != null)
+                          TextButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                widget.onChart!(p.example);
+                              },
+                              icon: const Icon(Icons.show_chart),
+                              label: const Text('نمایش نمودار')),
                         TextButton(
                             onPressed: () => Navigator.pop(context),
                             child: const Text('بستن'))
@@ -332,20 +369,29 @@ class _RangePageState extends State<RangePage> {
     // — and named — under the footer line, so a shorter list is always
     // explained rather than silent.
     bool hasPrice(Quote q) => q.amount != null && q.amount! > 0;
-    final hiddenUnpriced = result?.announcements
-            .where((q) =>
-                !hasPrice(q) &&
-                specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
-                    .contains(needle))
-            .length ??
-        0;
-    final shown = result?.announcements
-            .where((q) =>
-                hasPrice(q) &&
-                specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
-                    .contains(needle))
-            .toList() ??
-        <Quote>[];
+    if (!identical(_filteredForResult, result) || _filteredForNeedle != needle) {
+      _filteredForResult = result;
+      _filteredForNeedle = needle;
+      final list = result?.announcements ?? const <Quote>[];
+      final shownList = <Quote>[];
+      var unpricedCount = 0;
+      for (final q in list) {
+        if (needle.isNotEmpty &&
+            !specNorm('${q.title} ${q.specificationLabel} ${q.seller}')
+                .contains(needle)) {
+          continue;
+        }
+        if (hasPrice(q)) {
+          shownList.add(q);
+        } else {
+          unpricedCount++;
+        }
+      }
+      _shownCache = shownList;
+      _hiddenUnpricedCache = unpricedCount;
+    }
+    final hiddenUnpriced = _hiddenUnpricedCache;
+    final shown = _shownCache;
     return ListView(padding: const EdgeInsets.all(14), children: [
       Text('رنج‌گیری ${windowText(widget.c.rangeWindow)}',
           style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
