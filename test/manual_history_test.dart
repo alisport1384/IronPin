@@ -41,6 +41,7 @@ void main() {
     final store = await MarketStore.open(
         dbPath: inMemoryDatabasePath, factory: databaseFactoryFfi);
     await store.setSetting('autoRefresh', 'true');
+    await store.setSetting('finder.enabled', 'false');
     final c = MarketController(store,
         client: SourceClient(client: MockClient((_) async {
       requests++;
